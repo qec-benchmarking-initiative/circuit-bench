@@ -95,7 +95,8 @@ does not settle the scientific choice of future headline metrics.
 11. Credits do not require accounts. A name string is not a person identifier
    and identical strings on different records assert no relationship.
 12. Accounts have no local passwords in v0.1. A local account UUID is connected
-    to one or more GitHub or ORCID identities.
+    to one or more GitHub or ORCID identities, and every account-backed credit
+    publicly displays all identities currently linked to that account.
 13. Custom and official content use the same data structures. Official status
     is explicit governance metadata, never inferred from popularity.
 14. Foreign keys to published scientific records use `ON DELETE RESTRICT`.
@@ -156,11 +157,10 @@ moderation. It is not itself an authentication credential.
 
 There is deliberately no username, email address, password hash, or
 local-password reset state. Authentication uses the immutable provider subject
-in `external_identity`; email is neither required nor used to identify or
-automatically merge accounts. If email notifications are introduced later,
-they use a separate optional contact address verified by this site. Removing an
-account with published activity means deactivating and, when required,
-anonymising profile fields; it does not delete scientific records.
+in `external_identity`; email is neither collected nor used to identify or
+automatically merge accounts. Removing an account with published activity
+means deactivating and, when required, anonymising profile fields; it does not
+delete scientific records.
 
 ### 4.2 `external_identity`
 
@@ -170,7 +170,8 @@ anonymising profile fields; it does not delete scientific records.
 | `account_id` | UUID | no | FK → `account.id` | Owning local account |
 | `provider` | TEXT | no | `github` or `orcid` | Authentication provider |
 | `provider_subject` | TEXT | no | | Provider's immutable subject ID |
-| `provider_display_name` | TEXT | yes | | Last observed presentation name |
+| `public_identifier` | TEXT | no | | GitHub login or ORCID iD shown on credits |
+| `profile_url` | TEXT | no | | Public provider-profile link shown on credits |
 | `created_at` | TIMESTAMPTZ | no | server default | |
 | `last_authenticated_at` | TIMESTAMPTZ | yes | | |
 
@@ -179,6 +180,10 @@ Constraints:
 - unique (`provider`, `provider_subject`);
 - unique (`account_id`, `provider`), so v0.1 links at most one identity from
   each provider to an account;
+- `public_identifier` and `profile_url` are obtained from the provider, never
+  typed by the user, and refreshed on authentication;
+- GitHub profile URLs use `https://github.com/<login>` and ORCID profile URLs
+  use `https://orcid.org/<orcid-id>`;
 - the application prevents removal of an account's final identity;
 - OAuth access and refresh tokens are not retained after authentication.
 
@@ -365,6 +370,14 @@ Constraints:
 - identical `display_name` values do not imply common identity.
 
 The record's `submitted_by_id` is separate and is never inferred from credits.
+
+An account-backed credit is rendered as the account's `display_name` followed
+by linked GitHub and/or ORCID identifiers, each linking to `profile_url`. There
+is no per-credit option to hide those provider identities. Linking or removing
+a second provider updates their presentation on every account-backed credit;
+the credit itself continues to point only to the stable local `account.id`.
+A name-string credit displays only its unverified `display_name` and never
+acquires an identity link without an approved claim.
 
 ### 6.2 `credit_claim`
 
