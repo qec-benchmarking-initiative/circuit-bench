@@ -1,0 +1,21 @@
+services:
+  database:
+    image: postgres:17.11-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-decoderbench}
+      POSTGRES_USER: ${POSTGRES_USER:-decoderbench}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-decoderbench_dev}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - decoderbench_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 5s
+
+volumes:
+  decoderbench_postgres_data:
+
