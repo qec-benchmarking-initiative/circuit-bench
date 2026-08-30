@@ -6,12 +6,16 @@ flowchart LR
     Account -->|uploads| ScientificRecords[Scientific records]
 
     SchemaRelease[Schema release] --> DecoderVersion[Decoder version]
+    SchemaRelease --> Tag[Tag registry]
     SchemaRelease --> NoiseModel[Noise model]
     SchemaRelease --> CircuitRevision[Circuit revision]
+    SchemaRelease --> Machine[Machine]
+    SchemaRelease --> Evaluator[Evaluator release]
     SchemaRelease --> Result[Result]
+    SchemaRelease --> BenchmarkRevision[Benchmark revision]
 
     DecoderVersion -->|unique previous-version link| DecoderVersion
-    DecoderVersion -->|algorithm tags| Tag[Tag registry]
+    DecoderVersion -->|algorithm tags| Tag
 
     CircuitRevision -->|unique previous-revision link| CircuitRevision
     CircuitRevision -->|code + experiment tags| Tag
@@ -20,15 +24,15 @@ flowchart LR
 
     DecoderVersion --> Result
     CircuitRevision --> Result
-    Machine[Machine] --> Result
-    Evaluator[Evaluator release] --> Result
+    Machine --> Result
+    Evaluator --> Result
     Result -->|small optional supporting files| Artifact
 
     Evaluator --> ScoreDefinition[Score definition]
     Result --> ResultScore[Result score]
     ScoreDefinition --> ResultScore
 
-    BenchmarkRevision[Benchmark revision] -->|unique previous-revision link| BenchmarkRevision
+    BenchmarkRevision -->|unique previous-revision link| BenchmarkRevision
     BenchmarkRevision -->|ordered items| CircuitRevision
     BenchmarkRevision --> BenchmarkAttempt[Benchmark attempt]
     BenchmarkAttempt -->|groups, never combines| Result
@@ -216,7 +220,7 @@ human-readable scientific meaning.
 | `id` | UUID | no | PK | |
 | `record_type` | TEXT | no | controlled vocabulary | Kind of record governed |
 | `version` | TEXT | no | | `0.1` for every initial release |
-| `json_schema_artifact_id` | UUID | yes | FK → `artifact.id` | Exact JSON Schema, if applicable |
+| `json_schema_artifact_id` | UUID | no | FK → `artifact.id` | Exact JSON Schema for the public record |
 | `definitions_artifact_id` | UUID | no | FK → `artifact.id` | Exact human definitions file |
 | `permanent_url` | TEXT | no | unique | Public canonical definition URL |
 | `state` | TEXT | no | `draft`, `frozen`, `retired` | Contract lifecycle |
@@ -226,8 +230,8 @@ human-readable scientific meaning.
 Constraints:
 
 - unique (`record_type`, `version`);
-- `record_type` initially permits `decoder`, `noise_model`, `circuit`,
-  `machine`, `result`, and `benchmark`;
+- `record_type` initially permits `decoder`, `tag`, `noise_model`, `circuit`,
+  `machine`, `evaluator`, `result`, and `benchmark`;
 - a retained published record may reference only a frozen release;
 - a frozen release and its artifacts are immutable;
 - retiring a release prevents new submissions but does not invalidate existing
@@ -236,6 +240,43 @@ Constraints:
 The public `schema` string is derived as `record_type/version` (for example,
 `decoder/0.1` uses the decoder-version release). It is not independently typed
 by a contributor.
+
+Every top-level scientific record has its own required, direct
+`schema_release_id`. The complete v0.1 mapping is:
+
+| Public scientific record | `record_type` | Anchor table | Scientifically meaningful component rows covered by the same contract |
+|---|---|---|---|
+| Decoder version | `decoder` | `decoder_version` | Algorithm-tag memberships |
+| Tag | `tag` | `tag` | None; it is a reusable controlled-vocabulary record |
+| Noise model | `noise_model` | `noise_model` | None |
+| Circuit revision | `circuit` | `circuit_revision` | Code/experiment-tag memberships |
+| Machine | `machine` | `machine` | None |
+| Evaluator release | `evaluator` | `evaluator_release` | `score_definition` rows |
+| Result | `result` | `result` | `result_score` rows |
+| Benchmark revision | `benchmark` | `benchmark_revision` | Items, attempts, and attempt-result memberships |
+
+Before any record of these types can be published or referenced by a published
+record, its checked-in
+`schemas/<record_type>/0.1.schema.json` and
+`definitions/<record_type>/0.1.md` must exist and be frozen as the two
+artifacts named by `schema_release`. The JSON Schema defines the complete
+public record, including its component arrays; the definitions file gives the
+human scientific meaning of every scientific field. Infrastructure fields may
+be documented without separate scientific definitions.
+
+A relational helper row does not repeat `schema_release_id` when it has exactly
+one unambiguous owning scientific record. It inherits that owner's contract;
+duplicating the key would permit contradictory declarations. Reusable linked
+scientific records, such as a tag, machine, or noise model, are not helpers and
+therefore carry their own direct schema-release key. A `result_score` is
+additionally bound to its exact immutable `score_definition`, which supplies
+the numeric meaning as well as the result schema supplying its storage shape.
+
+Accounts, authentication identities, credits and claims, external links,
+moderation events, and object-storage bookkeeping are operational,
+attribution, or audit data rather than scientific content. Django migrations
+still define and version their database shape, but they do not receive
+scientific `schema_release` records.
 
 Database migration numbers are intentionally absent. Django migrations version
 the physical database; `schema_release` versions scientific interchange and
@@ -363,6 +404,7 @@ One registry serves algorithm, experiment, and code tags.
 | Column | Type | Null | Key/default | Meaning |
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Stable tag identity |
+| `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `tag` |
 | `namespace` | TEXT | no | `algorithm`, `experiment`, or `code` | Tag axis |
 | `slug` | TEXT | no | | Stable URL/export slug |
 | `label` | TEXT | no | 1–200 chars | Display label |
@@ -380,11 +422,13 @@ Constraints and behaviour:
 - unique (`namespace`, `slug`);
 - slugs match `^[a-z0-9]+(?:-[a-z0-9]+)*$`;
 - `canonical_tag_id` is not self and has the same namespace;
-- an official tag may be promoted in place without changing `id`;
+- a custom tag may be promoted to official in place without changing `id`;
 - merged/deprecated slugs continue resolving to their canonical tag;
 - search presents official matches before custom matches;
-- tag changes are descriptive curation and do not create new decoder or
-  circuit revisions.
+- after first scientific use, a tag's namespace, slug, and scientific meaning
+  are immutable; a semantic change creates a new tag row;
+- status promotion, aliasing, and non-semantic wording corrections do not
+  create new decoder or circuit revisions.
 
 ### 7.2 Tag membership tables
 
@@ -612,6 +656,7 @@ contracts, score membership, and exact calculation semantics.
 | Column | Type | Null | Key/default | Meaning |
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Exact evaluator release |
+| `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `evaluator` |
 | `version` | TEXT | no | unique | `0.1` initially |
 | `source_url` | TEXT | no | | Canonical source repository URL |
 | `source_revision` | TEXT | no | | Immutable commit identifier |
@@ -978,6 +1023,7 @@ After publication, the following scientific content cannot be edited:
 
 - decoder capability, preparation, description, hyperparameter, and version
   fields;
+- a used tag's namespace, slug, and scientific meaning;
 - noise-model scientific meaning and randomisation property;
 - circuit files, DEM, priors, tags, distances, Stim parameters, counts, and
   noise-model reference;
@@ -990,7 +1036,8 @@ The following audited metadata may change without a scientific replacement:
 
 - account display profile;
 - approved credit claims and visibility of the claimed name string;
-- tag promotion, merge, deprecation, labels, and descriptions;
+- tag promotion, merge, deprecation, and wording corrections that preserve its
+  scientific meaning;
 - community → official curation status where scientific meaning is unchanged;
 - external-link repair where the target content is unchanged;
 - lifecycle withdrawal;
