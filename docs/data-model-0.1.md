@@ -149,16 +149,18 @@ moderation. It is not itself an authentication credential.
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Stable account identity |
 | `display_name` | TEXT | no | 1–200 chars | Current public name |
-| `primary_email` | TEXT | yes | partial unique on `lower(primary_email)` | Contact/recovery address obtained from a provider |
-| `primary_email_verified_at` | TIMESTAMPTZ | yes | | Provider verification time |
 | `is_active` | BOOLEAN | no | default `true` | May authenticate and act |
 | `is_admin` | BOOLEAN | no | default `false` | May curate and moderate |
 | `created_at` | TIMESTAMPTZ | no | server default | |
 | `updated_at` | TIMESTAMPTZ | no | server managed | |
 
-There is deliberately no username, password hash, or local-password reset
-state. Removing an account with published activity means deactivating and, when
-required, anonymising profile fields; it does not delete scientific records.
+There is deliberately no username, email address, password hash, or
+local-password reset state. Authentication uses the immutable provider subject
+in `external_identity`; email is neither required nor used to identify or
+automatically merge accounts. If email notifications are introduced later,
+they use a separate optional contact address verified by this site. Removing an
+account with published activity means deactivating and, when required,
+anonymising profile fields; it does not delete scientific records.
 
 ### 4.2 `external_identity`
 
