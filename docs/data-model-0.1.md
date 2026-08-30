@@ -10,10 +10,10 @@ flowchart LR
     SchemaRelease --> CircuitRevision[Circuit revision]
     SchemaRelease --> Result[Result]
 
-    Decoder[Decoder family] --> DecoderVersion
+    DecoderVersion -->|unique previous-version link| DecoderVersion
     DecoderVersion -->|algorithm tags| Tag[Tag registry]
 
-    Circuit[Circuit family] --> CircuitRevision
+    CircuitRevision -->|unique previous-revision link| CircuitRevision
     CircuitRevision -->|code + experiment tags| Tag
     CircuitRevision --> NoiseModel
     CircuitRevision -->|frozen circuit, DEM, manifest| Artifact[Artifact store]
@@ -22,13 +22,13 @@ flowchart LR
     CircuitRevision --> Result
     Machine[Machine] --> Result
     Evaluator[Evaluator release] --> Result
-    Result -->|shot data + evaluator output| Artifact
+    Result -->|small optional supporting files| Artifact
 
     Evaluator --> ScoreDefinition[Score definition]
     Result --> ResultScore[Result score]
     ScoreDefinition --> ResultScore
 
-    Benchmark[Benchmark family] --> BenchmarkRevision[Benchmark revision]
+    BenchmarkRevision[Benchmark revision] -->|unique previous-revision link| BenchmarkRevision
     BenchmarkRevision -->|ordered items| CircuitRevision
     BenchmarkRevision --> BenchmarkAttempt[Benchmark attempt]
     BenchmarkAttempt -->|groups, never combines| Result
@@ -72,22 +72,29 @@ does not settle the scientific choice of future headline metrics.
 4. Published scientific content is immutable. Corrections create a replacement
    record and an explicit predecessor or supersession link. Withdrawal never
    deletes the old record.
-5. A result is one self-contained claim over one declared set of shots. The
+5. Decoder, circuit, and benchmark histories have no separate family rows. The
+   root revision is the lineage identity, the unique leaf is current, and the
+   linear history is derived only from predecessor links.
+6. A lineage root has a general description. Later descriptions are optional.
+   A lineage page shows the newest non-null description found by walking back
+   from the leaf, the leaf's mandatory revision description, and previous links.
+7. A result is one self-contained claim over one declared set of shots. The
    site never pools or combines result records.
-6. Raw facts and evaluator-derived scores are stored separately. Shot counts
-   do not change when scoring definitions change.
-7. A score meaning is immutable and versioned. A changed formula, input rule,
+8. Aggregate facts and evaluator-derived scores are stored separately. Raw
+   shot data and timing traces never leave the contributor's machine. Stored
+   shot counts do not change when scoring definitions change.
+9. A score meaning is immutable and versioned. A changed formula, input rule,
    confidence construction, tie rule, or population definition creates a new
    `score_definition` and normally a new `evaluator_release`.
-8. Potentially large files live in object storage. PostgreSQL stores their
+10. Potentially large files live in object storage. PostgreSQL stores their
    hashes, metadata, ownership, and relationships.
-9. Credits do not require accounts. A name string is not a person identifier
+11. Credits do not require accounts. A name string is not a person identifier
    and identical strings on different records assert no relationship.
-10. Accounts have no local passwords in v0.1. A local account UUID is connected
+12. Accounts have no local passwords in v0.1. A local account UUID is connected
     to one or more GitHub or ORCID identities.
-11. Custom and official content use the same data structures. Official status
+13. Custom and official content use the same data structures. Official status
     is explicit governance metadata, never inferred from popularity.
-12. Foreign keys to published scientific records use `ON DELETE RESTRICT`.
+14. Foreign keys to published scientific records use `ON DELETE RESTRICT`.
     Draft cleanup is an explicit application operation, not cascading deletion.
 
 ## 2. Type and naming conventions
@@ -121,10 +128,10 @@ For the shared four-state lifecycle:
 | Contracts and files | `schema_release`, `artifact`, `artifact_attachment`, `external_link` |
 | Attribution | `credit`, `credit_claim` |
 | Discovery | `tag`, `decoder_version_algorithm_tag`, `circuit_revision_code_tag`, `circuit_revision_experiment_tag` |
-| Decoders | `decoder`, `decoder_version` |
-| Noise and circuits | `noise_model`, `circuit`, `circuit_revision` |
+| Decoders | `decoder_version` |
+| Noise and circuits | `noise_model`, `circuit_revision` |
 | Evaluation | `machine`, `evaluator_release`, `score_definition`, `result`, `result_score`, `result_author_approval_event` |
-| Benchmarks | `benchmark`, `benchmark_revision`, `benchmark_revision_item`, `benchmark_attempt`, `benchmark_attempt_result` |
+| Benchmarks | `benchmark_revision`, `benchmark_revision_item`, `benchmark_attempt`, `benchmark_attempt_result` |
 | Governance | `moderation_event` |
 
 ## 4. Identity
@@ -220,8 +227,7 @@ Constraints:
 
 - unique (`record_type`, `version`);
 - `record_type` initially permits `decoder`, `noise_model`, `circuit`,
-  `machine`, `result`, `shot_data`, `evaluator_output`, and
-  `benchmark`;
+  `machine`, `result`, and `benchmark`;
 - a retained published record may reference only a frozen release;
 - a frozen release and its artifacts are immutable;
 - retiring a release prevents new submissions but does not invalidate existing
@@ -259,9 +265,9 @@ Exactly one subject foreign key is non-null. Unique (`subject`, `role`,
 indexes for each subject type.
 
 Initial roles include `source_archive`, `documentation`, `configuration`,
-`reproduction_bundle`, `raw_trace`, and `other`. Required circuit, DEM,
-manifest, shot-data, evaluator-output, and hyperparameter files use dedicated
-columns instead.
+`reproduction_bundle`, and `other`. Required circuit, DEM, manifest, and
+hyperparameter files use dedicated columns instead. Raw shot data and timing
+traces are never accepted as stored artifacts.
 
 ### 5.4 `external_link`
 
@@ -396,32 +402,21 @@ plain foreign key cannot express it across tables.
 
 ## 8. Decoders
 
-### 8.1 `decoder`
+### 8.1 `decoder_version`
 
-A stable family page grouping contributor-declared versions.
-
-| Column | Type | Null | Key/default | Meaning |
-|---|---:|:---:|---|---|
-| `id` | UUID | no | PK | Family identity |
-| `slug` | TEXT | no | unique | Stable public slug |
-| `name` | TEXT | no | 1–200 chars | Public family name |
-| `current_version_id` | UUID | yes | FK → `decoder_version.id` | Explicit current version |
-| `created_by_id` | UUID | no | FK → `account.id` | Family creator |
-| `created_at` | TIMESTAMPTZ | no | server default | |
-| `updated_at` | TIMESTAMPTZ | no | server managed | |
-
-The current version must belong to this family and be published. Version labels
-are never sorted to infer recency.
-
-### 8.2 `decoder_version`
+There is no decoder-family table. A root version has
+`previous_version_id = NULL`; its `id` is the stable identity of the derived
+lineage. Following predecessor links reaches the root, and following the unique
+child reaches the current leaf.
 
 | Column | Type | Null | Key/default | Meaning |
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Exact decoder-version identity |
 | `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `decoder` |
-| `decoder_id` | UUID | no | FK → `decoder.id` | Family |
+| `slug` | TEXT | no | unique, slug format | Direct-link slug for this exact version only |
+| `name` | TEXT | no | 1–200 chars | Public name at this version |
 | `version` | TEXT | no | 1–100 chars | Contributor version label |
-| `previous_version_id` | UUID | yes | self-FK | Predecessor in same family |
+| `previous_version_id` | UUID | yes | unique self-FK | Direct predecessor; null only at a root |
 | `description` | TEXT | yes | 1–10,000 chars | Optional replacement general description |
 | `revision_description` | TEXT | no | 1–10,000 chars | What this exact version introduced/changed |
 | `circuit_skeleton_preparation` | TEXT | no | `required` or `not_required` | Decoder-level preparation capability |
@@ -437,11 +432,19 @@ are never sorted to infer recency.
 
 Constraints and publication rules:
 
-- unique (`decoder_id`, `version`);
-- predecessor is not self, belongs to the same family, and the chain is acyclic;
-- the root of a published predecessor chain has a non-null description;
-- public description resolution walks backwards to the first non-null
-  `description`;
+- `slug` is globally unique but does not identify or group a lineage;
+- unique `previous_version_id` where non-null, so a predecessor has at most one
+  child and branching is impossible;
+- predecessor is not self and the history is acyclic;
+- version labels are unique within the lineage, checked by walking the chain;
+- a root has a non-null description; later versions may have null descriptions;
+- the current version is the unique leaf and is never stored separately;
+- the lineage page starts at that leaf, walks backwards to the first non-null
+  `description`, shows it with the leaf's `revision_description`, and links the
+  earlier versions;
+- the root-version form prepopulates the mandatory revision-description field
+  with `first revision`; later forms provide no default; the database field
+  itself is always non-null and has no default;
 - at least one visible credit is required;
 - optional hyperparameter schema is UTF-8 JSON, at most 32 KiB, declares and
   validates under JSON Schema Draft 2020-12, has top-level instance type
@@ -495,30 +498,19 @@ Constraints and behaviour:
 - there is no license field and no attempt to encode the full noise model in
   relational columns.
 
-### 9.2 `circuit`
-
-| Column | Type | Null | Key/default | Meaning |
-|---|---:|:---:|---|---|
-| `id` | UUID | no | PK | Circuit-family identity |
-| `slug` | TEXT | no | unique | Stable public slug |
-| `name` | TEXT | no | 1–200 chars | Family name |
-| `current_revision_id` | UUID | yes | FK → `circuit_revision.id` | Explicit current published revision |
-| `created_by_id` | UUID | no | FK → `account.id` | |
-| `created_at` | TIMESTAMPTZ | no | server default | |
-| `updated_at` | TIMESTAMPTZ | no | server managed | |
-
-### 9.3 `circuit_revision`
+### 9.2 `circuit_revision`
 
 One immutable sampling circuit together with its exact DEM, generation
-parameters, scientific metadata, and manifest.
+parameters, scientific metadata, and manifest. There is no circuit-family
+table; the root revision is the stable lineage identity.
 
 | Column | Type | Null | Key/default | Meaning |
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Exact revision identity |
 | `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `circuit` |
-| `circuit_id` | UUID | no | FK → `circuit.id` | Family |
-| `revision_number` | INTEGER | no | check ≥ 1 | Server-assigned family revision |
-| `previous_revision_id` | UUID | yes | self-FK | Previous revision in same family |
+| `slug` | TEXT | no | unique, slug format | Direct-link slug for this exact revision only |
+| `name` | TEXT | no | 1–200 chars | Public name at this revision |
+| `previous_revision_id` | UUID | yes | unique self-FK | Direct predecessor; null only at a root |
 | `description` | TEXT | yes | max 10,000 chars | Optional replacement general description |
 | `revision_description` | TEXT | no | 1–10,000 chars | What changed or was introduced |
 | `noise_model_id` | UUID | no | FK → `noise_model.id` | Exact registry entry |
@@ -550,13 +542,17 @@ parameters, scientific metadata, and manifest.
 
 Constraints and publication rules:
 
-- unique (`circuit_id`, `revision_number`);
+- `slug` is globally unique but does not identify or group a lineage;
+- unique `previous_revision_id` where non-null, so branching is impossible;
 - each required artifact role is distinct unless byte identity is explicitly
   valid and accepted by the schema;
-- `previous_revision_id` is in the same family, is not self, and forms an
-  acyclic chain;
-- public description inheritance follows the same first-non-null rule as
-  decoder versions, and the published root has a description;
+- `previous_revision_id` is not self and the history is acyclic;
+- the root is the lineage identity and has a non-null description;
+- later descriptions are optional; the lineage page is derived from the unique
+  leaf and shows the newest non-null description, the leaf's mandatory
+  `revision_description`, and links to previous revisions;
+- the root form prepopulates `revision_description` with `first revision` and
+  later forms provide no default;
 - if either detector-only boolean is true, `is_css` is true;
 - both detector-only booleans cannot be true when `num_detectors > 0`;
 - code and circuit distance fields are expressly **upper bounds**, not claims
@@ -567,6 +563,9 @@ Constraints and publication rules:
   explicitly, even when its default was used;
 - the manifest records the schema release, artifact hashes, noise-model ID,
   tags, all Stim parameters, distances, and derived counts;
+- v0.1 stores both the sampling circuit and its generated DEM. If DEM size later
+  makes circuit-only storage preferable, that policy is introduced by a new
+  circuit schema release; existing revisions keep their stored DEMs;
 - at least one code tag, one experiment tag, and one visible credit are
   required for publication;
 - there is no license field;
@@ -617,8 +616,8 @@ contracts, score membership, and exact calculation semantics.
 | `source_url` | TEXT | no | | Canonical source repository URL |
 | `source_revision` | TEXT | no | | Immutable commit identifier |
 | `source_bundle_artifact_id` | UUID | no | FK → `artifact.id` | Frozen executable/reference source |
-| `shot_data_schema_release_id` | UUID | no | FK → `schema_release.id` | Exact evaluator input contract |
-| `output_schema_release_id` | UUID | no | FK → `schema_release.id` | Exact evaluator output contract |
+| `input_contract_url` | TEXT | no | | Permanent definition of accepted local inputs |
+| `summary_contract_url` | TEXT | no | | Permanent definition of the submitted summary |
 | `submitted_by_id` | UUID | no | FK → `account.id` | Release maintainer |
 | `state` | TEXT | no | `draft`, `published`, `withdrawn` | |
 | `created_at` | TIMESTAMPTZ | no | server default | |
@@ -628,42 +627,13 @@ contracts, score membership, and exact calculation semantics.
 The source bundle includes deterministic conformance fixtures. Browser and
 Python/command-line implementations must reproduce them before release.
 
-### 11.2 Shot-data 0.1 logical rows
+Raw shot data stays on the contributor's machine. The browser or command-line
+evaluator reads it locally and produces a small summary conforming to
+`summary_contract_url`. Submission validates that summary and writes its counts
+and score values directly into `result` and `result_score`. The site neither
+uploads nor retains the raw input or the submitted summary as an artifact.
 
-Shot data is an immutable evaluator input artifact, not a PostgreSQL row per
-shot. This avoids placing millions or billions of shot rows in the application
-database. The `shot_data/0.1` schema defines a sequence of records with exactly
-these logical fields:
-
-| Field | Type | Null | Meaning |
-|---|---:|:---:|---|
-| `shot_index` | integer | no | Unique zero-based ordinal within this result |
-| `outcome` | string enum | no | `success`, `logical_failure`, `timeout`, or `decoder_error` |
-| `failure_probability` | decimal number | yes | Decoder's claimed probability in `[0,1]` |
-| `latency_ns` | integer | yes | Standard-boundary latency, check > 0 |
-
-Rules:
-
-- indices are contiguous from zero and file order is index order;
-- `failure_probability` is permitted only for `success` and
-  `logical_failure` rows;
-- a score requiring failure probability is absent unless the evaluator
-  definition's completeness rule is satisfied;
-- `latency_ns` is permitted only when a valid correction was returned;
-- no row contains a raw syndrome, correction bit-string, or several logical
-  outcomes in v0.1—the primary event is whether at least one logical result was
-  wrong;
-- the transport encoding (initially CSV and/or JSONL), column spelling,
-  canonical digest procedure, maximum upload size, score treatment of missing
-  values, and 5% acceptance tie rule are frozen by the shot-data schema and
-  evaluator release before implementation is considered conformant;
-- aggregate counts in `result` must reproduce exactly from these rows.
-
-The evaluator may run in the browser so raw shot data need not be uploaded.
-Even then, the exact canonical input digest and evaluator output are retained;
-`result.shot_data_artifact_id` simply remains null.
-
-### 11.3 `score_definition`
+### 11.2 `score_definition`
 
 A generic, immutable definition of one numeric quantity emitted by one
 evaluator release.
@@ -700,7 +670,7 @@ This is a controlled generic score table, not an unconstrained entity–attribut
 store: each row has a versioned definition, numeric shape, evaluator code, and
 permanent semantics.
 
-### 11.4 Provisional evaluator 0.1 score seeds
+### 11.3 Provisional evaluator 0.1 score seeds
 
 These two rows exist only to exercise the infrastructure:
 
@@ -731,10 +701,6 @@ one declared set of attempted shots.
 | `description` | TEXT | yes | max 10,000 chars | Optional result-specific explanation |
 | `hyperparameter_values` | TEXT | yes | max 20,000 chars | Optional free-text values |
 | `hyperparameter_values_artifact_id` | UUID | yes | FK → `artifact.id` | Optional frozen UTF-8 JSON object, max 8 KiB |
-| `shot_data_schema_release_id` | UUID | no | FK → `schema_release.id` | Exact input-row meaning |
-| `shot_data_sha256` | CHAR(64) | no | | Digest of the declared evaluator input |
-| `shot_data_artifact_id` | UUID | yes | FK → `artifact.id` | Optional retained raw/per-shot input |
-| `evaluator_output_artifact_id` | UUID | no | unique FK → `artifact.id` | Frozen complete evaluator JSON output |
 | `shots_total` | BIGINT | no | check ≥ 1 | All attempted shots in this result |
 | `successful_shots` | BIGINT | no | check ≥ 0 | Returned valid correction, no logical failure |
 | `logical_failure_shots` | BIGINT | no | check ≥ 0 | Returned valid correction with ≥1 logical error |
@@ -768,24 +734,22 @@ latency_shots             <= successful_shots + logical_failure_shots
 
 Additional constraints and rules:
 
-- `shot_data_sha256` is a lower-case SHA-256 digest;
-- when `shot_data_artifact_id` is present, its artifact digest equals
-  `shot_data_sha256`;
 - the uploaded hyperparameter object rejects duplicate keys and, when the
   decoder version provides a hyperparameter schema, validates against it;
 - unique (`id`, `evaluator_version_id`) supports composite score-integrity
   foreign keys;
-- the result's `shot_data_schema_release_id` equals the named evaluator
-  release's shot-data schema release;
 - reporting failure probabilities requires
   `decoder_version.provides_failure_probability=true`;
 - `machine_id` is non-null when `latency_shots > 0`, `t_1000_ns` is present,
   or any emitted score definition declares machine-dependent inputs;
-- the evaluator output names the result schema, shot-data schema, input digest,
-  evaluator release, every score definition, raw counts, and calculation
-  details;
-- the server reproduces all promoted `result_score` rows from the frozen
-  evaluator output before publication;
+- the submitted local-evaluator summary names the exact evaluator release,
+  every included score definition, aggregate counts, confidence components,
+  and definition-required details;
+- the server validates the summary's schema, internal arithmetic, ranges,
+  required fields, and score membership, then writes the values directly into
+  `result` and `result_score`;
+- neither the local shot data nor the submitted summary is retained as an
+  artifact, so the server does not claim to independently reproduce scores;
 - a superseding result is not self and uses the same decoder version and
   circuit revision; materially different work is a separate result rather than
   a correction;
@@ -810,7 +774,8 @@ A name-only decoder credit cannot authenticate an approval.
 
 ### 12.2 `result_score`
 
-One reproduced numeric output for one result and one score definition.
+One locally computed, server-validated numeric summary for one result and one
+score definition.
 
 | Column | Type | Null | Key/default | Meaning |
 |---|---:|:---:|---|---|
@@ -857,31 +822,22 @@ whether that account currently approves. Events are never edited or deleted.
 
 ## 13. Benchmarks
 
-### 13.1 `benchmark`
-
-| Column | Type | Null | Key/default | Meaning |
-|---|---:|:---:|---|---|
-| `id` | UUID | no | PK | Family identity |
-| `slug` | TEXT | no | unique | Stable public slug |
-| `name` | TEXT | no | 1–200 chars | |
-| `current_revision_id` | UUID | yes | FK → `benchmark_revision.id` | Explicit current published revision |
-| `created_by_id` | UUID | no | FK → `account.id` | |
-| `created_at` | TIMESTAMPTZ | no | server default | |
-| `updated_at` | TIMESTAMPTZ | no | server managed | |
-
-### 13.2 `benchmark_revision`
+### 13.1 `benchmark_revision`
 
 An immutable, ordered community or official collection of exact circuit
-revisions. Approval and official recognition are deliberately distinct.
+revisions. Approval and official recognition are deliberately distinct. There
+is no benchmark-family table; the root revision is the stable lineage identity.
 
 | Column | Type | Null | Key/default | Meaning |
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Exact benchmark revision |
 | `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `benchmark` |
-| `benchmark_id` | UUID | no | FK → `benchmark.id` | Family |
+| `slug` | TEXT | no | unique, slug format | Direct-link slug for this exact revision only |
+| `name` | TEXT | no | 1–200 chars | Public name at this revision |
 | `version` | TEXT | no | | Contributor version label |
-| `previous_revision_id` | UUID | yes | self-FK | Previous same-family revision |
-| `description` | TEXT | no | 1–10,000 chars | Scope and purpose |
+| `previous_revision_id` | UUID | yes | unique self-FK | Direct predecessor; null only at a root |
+| `description` | TEXT | yes | 1–10,000 chars | Optional replacement scope/purpose description |
+| `revision_description` | TEXT | no | 1–10,000 chars | What this revision introduced or changed |
 | `recognition_status` | TEXT | no | `community_submitted`, `admin_approved`, `official`, or `deprecated` | Governance standing |
 | `manifest_artifact_id` | UUID | no | FK → `artifact.id` | Exact ordered membership manifest |
 | `submitted_by_id` | UUID | no | FK → `account.id` | |
@@ -892,15 +848,22 @@ revisions. Approval and official recognition are deliberately distinct.
 
 Constraints and behaviour:
 
-- unique (`benchmark_id`, `version`);
-- predecessor belongs to the same family and the chain is acyclic;
+- `slug` is globally unique but does not identify or group a lineage;
+- unique `previous_revision_id` where non-null, so branching is impossible;
+- predecessor is not self and the history is acyclic;
+- version labels are unique within the derived lineage;
+- the root has a description; later descriptions are optional;
+- the page is derived from the unique leaf and shows the newest non-null
+  description, the leaf's mandatory `revision_description`, and previous links;
+- the root form prepopulates `revision_description` with `first revision` and
+  later forms provide no default;
 - publication requires `admin_approved` or `official`;
 - admin approval does not imply official status;
 - a transition to `official` is a separate admin action and moderation event;
 - changing membership or meaning creates a new revision;
 - no aggregate benchmark score is present in v0.1.
 
-### 13.3 `benchmark_revision_item`
+### 13.2 `benchmark_revision_item`
 
 | Column | Type | Null | Key/default | Meaning |
 |---|---:|:---:|---|---|
@@ -912,7 +875,7 @@ Constraints and behaviour:
 Only published circuit revisions may appear in a published benchmark revision.
 The rows must reproduce the frozen manifest exactly.
 
-### 13.4 `benchmark_attempt`
+### 13.3 `benchmark_attempt`
 
 A grouping of already-existing results; it never combines their shots or
 recalculates them as one result.
@@ -929,7 +892,7 @@ recalculates them as one result.
 | `published_at` | TIMESTAMPTZ | yes | | |
 | `withdrawn_at` | TIMESTAMPTZ | yes | | |
 
-### 13.5 `benchmark_attempt_result`
+### 13.4 `benchmark_attempt_result`
 
 | Column | Type | Null | Key/default | Meaning |
 |---|---:|:---:|---|---|
@@ -988,19 +951,20 @@ database constraints plus the following cross-row rules:
 3. Every referenced scientific record is already published and not withdrawn,
    unless a contract explicitly permits otherwise.
 4. Required visible credits exist.
-5. Decoder and circuit predecessor chains are acyclic, remain inside their
-   family, and resolve to a root general description.
+5. Decoder, circuit, and benchmark histories are acyclic and strictly linear:
+   every record has at most one predecessor, every predecessor has at most one
+   child, and each root has a general description.
 6. Decoder hyperparameter schemas and result hyperparameter objects pass all
    size, JSON, duplicate-key, meta-schema, and instance-validation checks.
 7. Circuit counts and the DEM reproduce from the frozen Stim circuit and the
    complete recorded DEM-generation arguments.
 8. Circuit tag namespaces are correct and the manifest matches every
    scientific field and artifact digest.
-9. Result raw counts add up, the input digest matches any retained shot-data
-   artifact, and probability/timing capabilities are consistent with the
-   decoder and machine fields.
-10. The named evaluator release reproduces the output artifact and every
-    `result_score` exactly.
+9. Result aggregate counts add up and probability/timing capabilities are
+   consistent with the decoder and machine fields.
+10. The submitted local-evaluator summary conforms to the named evaluator
+    release; its arithmetic, ranges, definition membership, and direct
+    `result_score` projection validate. No raw data reproduction is claimed.
 11. Result reproduction status is derived from account credits and current
     approval events.
 12. A benchmark revision's item rows exactly match its manifest, and its
@@ -1017,9 +981,9 @@ After publication, the following scientific content cannot be edited:
 - noise-model scientific meaning and randomisation property;
 - circuit files, DEM, priors, tags, distances, Stim parameters, counts, and
   noise-model reference;
-- result input references, raw facts, artifacts, hyperparameters, execution
-  facts, and scores;
-- evaluator source, schemas, definitions, and score membership;
+- result references, aggregate facts, hyperparameters, execution facts, and
+  scores;
+- evaluator source, contracts, definitions, and score membership;
 - benchmark membership, order, and description.
 
 The following audited metadata may change without a scientific replacement:
@@ -1028,7 +992,6 @@ The following audited metadata may change without a scientific replacement:
 - approved credit claims and visibility of the claimed name string;
 - tag promotion, merge, deprecation, labels, and descriptions;
 - community → official curation status where scientific meaning is unchanged;
-- decoder/circuit/benchmark family's explicitly selected current version;
 - external-link repair where the target content is unchanged;
 - lifecycle withdrawal;
 - result decoder-author approval events.
@@ -1042,8 +1005,6 @@ for the initial query patterns:
 
 | Index | Columns/predicate | Purpose |
 |---|---|---|
-| `idx_decoder_version_family_state` | (`decoder_id`, `state`, `published_at DESC`) | Family/version page |
-| `idx_circuit_revision_family_state` | (`circuit_id`, `state`, `published_at DESC`) | Circuit revisions |
 | `idx_tag_search` | (`namespace`, `status`, `label`) | Official-first tag search |
 | `idx_result_circuit_state` | (`circuit_revision_id`, `state`, `created_at DESC`) | Circuit results |
 | `idx_result_decoder_state` | (`decoder_version_id`, `state`, `created_at DESC`) | Decoder results |
@@ -1083,11 +1044,13 @@ The model intentionally does not include:
 - arbitrary user-defined score values;
 - local passwords or stored OAuth API tokens;
 - licenses on circuit or noise-model records;
+- storage of raw shot data, syndrome data, or timing traces;
 - deletion of published scientific history.
 
 The provisional evaluator 0.1 supplies enough score definitions to exercise the
-upload → validate → evaluate → store → rank path. Scientific replacement later
-means adding new immutable releases and definitions, not modifying these rows.
+local evaluate → submit summary → validate → store → rank path. Scientific
+replacement later means adding new immutable releases and definitions, not
+modifying these rows.
 
 ## 20. Evolution and migrations
 
@@ -1104,9 +1067,10 @@ Scientific schema evolution and physical database migration are separate:
 4. Changing scientific meaning creates a new field/score definition and a new
    schema or evaluator release. The old field and definition remain available
    for historical records.
-5. A deterministic re-evaluation or backfill records its source release,
-   destination release, code revision, input digest, counts, and outcome. It
-   never relabels an old value as if it had always had the new meaning.
+5. The server cannot re-evaluate historical results because it has no raw shot
+   data. A contributor who retains the data may run a new evaluator locally and
+   submit a new result which supersedes the old one. The old values retain their
+   original meaning and are never relabelled.
 6. Destructive cleanup is a later, separate migration performed only after old
    application versions no longer read the representation and retained
    scientific history is demonstrably unaffected.
