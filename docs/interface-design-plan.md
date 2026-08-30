@@ -1,9 +1,8 @@
 # DecoderBench interface design plan
 
-Status: design proposal for review. This document records a direction; it does
-not authorize implementation. The discovery/explorer page is specified in
-detail. The record-detail page is intentionally left at the level of a design
-hypothesis until a separate workshop.
+Status: implemented working default, pending further visual critique. This
+document records both the agreed direction and the current reusable explorer
+and record-detail anatomy.
 
 ## 1. Design position
 
@@ -172,15 +171,13 @@ table. This page family is specified below.
 Examples: a decoder version, exact circuit revision, noise model, result or
 benchmark revision.
 
-The provisional direction is a compact reference article: a small contextual
-heading, conventional sections separated by rules, a concise exact-record
-metadata block and one or more instances of the same scientific table used by
-explorers. It should not be a dashboard of cards.
-
-The record-detail composition, especially the relationship between narrative
-definition, provenance and comparison table, remains open for the next design
-workshop. Existing detail pages are not accepted as the visual default merely
-because they exist.
+The working default is a compact reference article: a small record heading;
+conventional sections separated by rules; a narrow, subordinate exact-record
+metadata rail; and one or more instances of the same scientific table used by
+explorers. Narrative scientific content takes the primary width. There are no
+card panels, floating islands or dashboard statistics. Decoder, circuit and
+noise-model pages now share this anatomy; their content remains open to
+scientific critique without requiring a new visual shell.
 
 ## 6. Explorer page anatomy
 
@@ -268,6 +265,13 @@ not replace the data with an error page or silently fall back to name search.
 Principal filters are present on the page, not hidden in a generic “advanced
 filters” dialog.
 
+The implementation is a compact instrument strip rather than a grid of
+fieldset panels. Short group titles, labels and native inputs share a line;
+fine vertical rules separate logical groups, and groups wrap as units at
+narrower desktop widths. Controls use their natural content width instead of
+expanding to fill uneven cards. The apply/reset actions remain small and
+visibly part of the same continuous surface.
+
 - Tags are the exception to the otherwise-visible filter rule: each namespace
   uses the shared, explicitly labelled tag-picker button and a substantial
   modal selection surface rather than a strip of inline checkboxes.
@@ -303,10 +307,13 @@ One reusable tag picker has two modes:
 
 The modal has three ordered regions: a tag-name search input, the currently
 selected tags, and the available tags. Available tags wrap left-to-right as
-button-like choices. Official tags come first and use the restrained accent
-treatment; custom tags remain neutral/white. Selecting an available tag moves
-it into the selected region, and its remove button returns it to the available
-region. A search with no matches says so explicitly. In filter mode, the
+button-like choices. Official tags come first and use a restrained colour
+selected by an administrator on the tag record; custom tags remain
+neutral/white. Colour is presentation metadata rather than scientific meaning,
+and the filled or hollow diamond remains the non-colour distinction. Selecting
+an available tag moves it into the selected region, and its remove button
+returns it to the available region. A search with no matches says so explicitly
+in an empty state that fills the available-tags region. In filter mode, the
 candidate population is:
 
 ```text
@@ -528,8 +535,8 @@ This is graceful fallback, not a mobile-first redesign.
 
 ## 12. Workshop and acceptance process
 
-Before implementation, make static or fixture-backed versions of exactly two
-explorer states:
+The implemented fixture-backed explorer should continue to be reviewed in two
+states:
 
 1. a normal decoder table with enough columns to require deliberate selection;
 2. a difficult state with a long name, many tags, nulls, multiple sort keys and
@@ -547,7 +554,10 @@ Review them at 1440 px first. The proposal is accepted only when:
 - sort priority and direction are obvious without explanation;
 - the invalid-query state does not destroy or move the previous table;
 - column selection is explicit and reproducible in the URL;
-- the same fixture query can later be reproduced through HTML, JSON and CSV.
+- the same fixture query can later be reproduced through HTML, JSON and CSV;
+- the header, work surface and table use the same near-full-width frame and
+  table edge rules are symmetrical;
+- record pages read as flat scientific references rather than card decks.
 
 ## 13. Decisions still requiring review
 
@@ -561,7 +571,8 @@ The current proposal deliberately leaves these choices open:
 - whether the first column is sticky by default;
 - whether structured changes rewrite the query input itself or show a separate
   canonical query in the status row;
-- the record-detail page composition, to be handled in the next workshop.
+- the precise width of the record metadata rail and the section density after
+  real, longer scientific submissions arrive.
 
 None of these open choices prevents agreement on the explorer's structure or
 interaction model.

@@ -208,6 +208,15 @@ Browser review covered all three explorers at the primary desktop width, the
 tag-picker no-match/selection paths, AND/OR URL state, column selection and
 ordinary/Shift-click sorting.
 
+The second visual-review pass made this surface genuinely continuous: the
+persistent header, page shell and edge-ruled table now share a near-full-width
+frame, and endpoint filters are a compact wrapping instrument strip rather than
+uneven panels. Official tags may carry an administrator-selected hexadecimal
+presentation colour; custom tags always render neutral and glyph shape remains
+the colour-independent status cue. Decoder, circuit and noise-model detail
+views now use a shared flat reference-page layout with ruled sections, a narrow
+exact-revision rail and dense relationship tables instead of card lists.
+
 ## Parallel wave B: remaining read views and contract coverage
 
 ### B1. Result detail

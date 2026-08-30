@@ -67,8 +67,12 @@
     const tag = document.createElement("span");
     tag.className = `selected-tag selected-tag-${checkbox.dataset.status}`;
     tag.dataset.selectedTag = checkbox.value;
+    if (checkbox.dataset.status === "official" && checkbox.dataset.color) {
+      tag.style.setProperty("--tag-color", checkbox.dataset.color);
+    }
 
     const icon = document.createElement("span");
+    icon.className = "tag-glyph";
     icon.setAttribute("aria-hidden", "true");
     icon.textContent = checkbox.dataset.status === "official" ? "◆" : "◇";
     tag.append(icon, document.createTextNode(` ${checkbox.dataset.label} `));

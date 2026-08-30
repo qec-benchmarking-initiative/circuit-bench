@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <article class="page-shell entity-layout">
-    <header class="entity-heading">{% block entity_heading %}{% endblock %}</header>
-    <div class="entity-columns">
-      <div class="entity-main">{% block entity_main %}{% endblock %}</div>
-      <aside class="entity-aside" aria-label="Record metadata">
+  <article class="page-shell record-layout">
+    <header class="record-heading">{% block entity_heading %}{% endblock %}</header>
+    <div class="record-columns">
+      <div class="record-main">{% block entity_main %}{% endblock %}</div>
+      <aside class="record-aside" aria-label="Record metadata">
         {% block entity_aside %}{% endblock %}
       </aside>
     </div>
-    <section class="entity-related">{% block entity_related %}{% endblock %}</section>
+    <section class="record-related">{% block entity_related %}{% endblock %}</section>
   </article>
 {% endblock %}

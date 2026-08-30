@@ -50,12 +50,25 @@ def test_critical_postgresql_constraints_exist():
         "account_password_unusable",
         "artifact_sha256_format",
         "credit_one_subject",
+        "tag_display_color_hex",
         "circuit_dem_approximate_disjoint_errors_valid",
         "result_outcome_counts_sum",
         "result_score_result_evaluator_fk",
         "result_score_definition_evaluator_fk",
         "benchmark_attempt_result_pkey",
     } <= names
+
+
+@pytest.mark.django_db
+def test_tag_display_colour_must_be_a_safe_hex_value():
+    from registry.demo import seed_demo_data
+    from registry.models import Tag
+
+    seed_demo_data()
+    tag = Tag.objects.get(slug="matching")
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        Tag.objects.filter(pk=tag.pk).update(display_color="red;bad")
 
 
 @pytest.mark.django_db
@@ -126,4 +139,3 @@ def _constraint_names() -> set[str]:
             """
         )
         return {row[0] for row in cursor.fetchall()}
-

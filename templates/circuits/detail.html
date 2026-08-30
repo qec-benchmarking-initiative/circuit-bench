@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block entity_main %}
-  <section class="content-section">
+  <section class="record-section">
     <h2>Description</h2>
     <p>{{ description|default:"No description supplied for this revision or its predecessors." }}</p>
     <h3>Revision note</h3>
@@ -17,7 +17,7 @@
     {% endif %}
   </section>
 
-  <section class="content-section">
+  <section class="record-section">
     <h2>Frozen artifacts</h2>
     <div class="table-scroll">
       <table class="data-table">
@@ -36,17 +36,17 @@
     </div>
   </section>
 
-  <section class="content-section">
+  <section class="record-section">
     <h2>Detector error model construction</h2>
     <dl class="metadata-list">
       <div><dt>Stim version</dt><dd>{{ circuit.stim_version }}</dd></div>
       <div><dt>Method</dt><dd><code>{{ circuit.dem_generation_method }}</code></dd></div>
-      <div><dt>decompose_errors</dt><dd>{{ circuit.dem_decompose_errors|yesno:"true,false" }}</dd></div>
-      <div><dt>flatten_loops</dt><dd>{{ circuit.dem_flatten_loops|yesno:"true,false" }}</dd></div>
-      <div><dt>allow_gauge_detectors</dt><dd>{{ circuit.dem_allow_gauge_detectors|yesno:"true,false" }}</dd></div>
-      <div><dt>approximate_disjoint_errors</dt><dd>{{ circuit.dem_approximate_disjoint_errors }}</dd></div>
-      <div><dt>ignore_decomposition_failures</dt><dd>{{ circuit.dem_ignore_decomposition_failures|yesno:"true,false" }}</dd></div>
-      <div><dt>block remnant edges</dt><dd>{{ circuit.dem_block_decomposition_from_introducing_remnant_edges|yesno:"true,false" }}</dd></div>
+      <div><dt>Decompose errors</dt><dd>{{ circuit.dem_decompose_errors|yesno:"true,false" }}</dd></div>
+      <div><dt>Flatten loops</dt><dd>{{ circuit.dem_flatten_loops|yesno:"true,false" }}</dd></div>
+      <div><dt>Allow gauge detectors</dt><dd>{{ circuit.dem_allow_gauge_detectors|yesno:"true,false" }}</dd></div>
+      <div><dt>Approximate disjoint errors</dt><dd>{{ circuit.dem_approximate_disjoint_errors }}</dd></div>
+      <div><dt>Ignore decomposition failures</dt><dd>{{ circuit.dem_ignore_decomposition_failures|yesno:"true,false" }}</dd></div>
+      <div><dt>Block remnant edges</dt><dd>{{ circuit.dem_block_decomposition_from_introducing_remnant_edges|yesno:"true,false" }}</dd></div>
     </dl>
   </section>
 {% endblock %}
@@ -72,11 +72,26 @@
 
 {% block entity_related %}
   <h2>Decoder results on this circuit</h2>
-  <ol class="record-list record-list--compact">
-    {% for result in circuit.published_results %}
-      <li><div><strong>{{ result.decoder_version.name }} {{ result.decoder_version.version }}</strong><p>{{ result.shots_total }} shots · {{ result.get_reproduction_status_display }}</p></div></li>
-    {% empty %}
-      <li>{% include "components/empty_state.html" with title="No results yet" message="No published decoder result references this exact circuit revision." only %}</li>
-    {% endfor %}
-  </ol>
+  {% if circuit.published_results %}
+    <div class="table-scroll record-table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr><th>Decoder</th><th>Version</th><th class="numeric">Shots</th><th>Reproduction</th><th>Published</th></tr>
+        </thead>
+        <tbody>
+          {% for result in circuit.published_results %}
+            <tr>
+              <td><a href="{% url 'decoders:detail' result.decoder_version.slug %}">{{ result.decoder_version.name }}</a></td>
+              <td>{{ result.decoder_version.version }}</td>
+              <td class="numeric">{{ result.shots_total }}</td>
+              <td>{{ result.get_reproduction_status_display }}</td>
+              <td>{{ result.published_at|date:"Y-m-d" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {% include "components/empty_state.html" with title="No results yet" message="No published decoder result references this exact circuit revision." only %}
+  {% endif %}
 {% endblock %}

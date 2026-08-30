@@ -1,7 +1,7 @@
 <div class="tag-picker" data-tag-picker data-mode="{{ mode|default:'filter' }}">
   <input type="hidden" name="{{ match_name }}" value="{{ match_value|default:'all' }}" data-tag-match-input>
   <div class="tag-picker-summary" data-tag-summary>
-    {% for tag in tags %}{% if tag.slug in selected_keys %}<span class="selected-tag selected-tag-{{ tag.status }}" data-selected-tag="{{ tag.slug }}"><span aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }} <button type="button" data-tag-remove="{{ tag.slug }}" aria-label="Remove {{ tag.label }}">×</button></span>{% endif %}{% endfor %}
+    {% for tag in tags %}{% if tag.slug in selected_keys %}<span class="selected-tag selected-tag-{{ tag.status }}" data-selected-tag="{{ tag.slug }}"{% if tag.status == "official" and tag.display_color %} style="--tag-color: {{ tag.display_color }}"{% endif %}><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }} <button type="button" data-tag-remove="{{ tag.slug }}" aria-label="Remove {{ tag.label }}">×</button></span>{% endif %}{% endfor %}
     <span class="tag-picker-empty-summary{% if selected_keys %} hidden{% endif %}" data-tag-empty-summary>No tags selected</span>
   </div>
   <button class="button-secondary button-compact" type="button" data-tag-dialog-open="{{ picker_id }}">Choose tags…</button>
@@ -18,7 +18,7 @@
       <section class="tag-selection" aria-labelledby="{{ picker_id }}-selected-title">
         <h3 id="{{ picker_id }}-selected-title">Selected</h3>
         <div class="selected-tag-area" data-tag-selected-area>
-          {% for tag in tags %}{% if tag.slug in selected_keys %}<span class="selected-tag selected-tag-{{ tag.status }}" data-selected-tag="{{ tag.slug }}"><span aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }} <button type="button" data-tag-remove="{{ tag.slug }}" aria-label="Remove {{ tag.label }}">×</button></span>{% endif %}{% endfor %}
+          {% for tag in tags %}{% if tag.slug in selected_keys %}<span class="selected-tag selected-tag-{{ tag.status }}" data-selected-tag="{{ tag.slug }}"{% if tag.status == "official" and tag.display_color %} style="--tag-color: {{ tag.display_color }}"{% endif %}><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }} <button type="button" data-tag-remove="{{ tag.slug }}" aria-label="Remove {{ tag.label }}">×</button></span>{% endif %}{% endfor %}
           <span class="muted{% if selected_keys %} hidden{% endif %}" data-tag-empty-selected>No tags selected.</span>
         </div>
       </section>
@@ -26,7 +26,7 @@
       <section class="tag-available" aria-labelledby="{{ picker_id }}-available-title">
         <h3 id="{{ picker_id }}-available-title">Available tags</h3>
         <div class="tag-choice-grid" data-tag-options>
-          {% for tag in tags %}<label class="tag-choice tag-choice-{{ tag.status }}" data-tag-choice data-tag-label="{{ tag.label|lower }}" data-tag-status="{{ tag.status }}"><input type="checkbox" name="{{ input_name }}" value="{{ tag.slug }}" data-label="{{ tag.label }}" data-status="{{ tag.status }}"{% if tag.slug in selected_keys %} checked{% endif %}><span><span aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }}</span></label>{% endfor %}
+          {% for tag in tags %}<label class="tag-choice tag-choice-{{ tag.status }}" data-tag-choice data-tag-label="{{ tag.label|lower }}" data-tag-status="{{ tag.status }}"{% if tag.status == "official" and tag.display_color %} style="--tag-color: {{ tag.display_color }}"{% endif %}><input type="checkbox" name="{{ input_name }}" value="{{ tag.slug }}" data-label="{{ tag.label }}" data-status="{{ tag.status }}" data-color="{{ tag.display_color|default:'' }}"{% if tag.slug in selected_keys %} checked{% endif %}><span><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }}</span></label>{% endfor %}
         </div>
         <p class="tag-no-results hidden" data-tag-no-results role="status">No matching tags.</p>
       </section>

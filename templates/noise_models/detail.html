@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block entity_main %}
-  <section class="content-section">
+  <section class="record-section">
     <h2>Definition</h2>
     <p>{{ noise_model.short_description }}</p>
     <p><a href="{{ noise_model.paper_url }}">Read the defining paper</a></p>
@@ -26,16 +26,22 @@
 
 {% block entity_related %}
   <h2>Circuits using this noise model</h2>
-  <ol class="record-list record-list--compact">
-    {% for circuit in circuits %}
-      <li>
-        <div>
-          <a class="record-title" href="{% url 'circuits:detail' circuit.slug %}">{{ circuit.name }}</a>
-          <p>{{ circuit.num_detectors }} detectors · {{ circuit.num_errors }} errors</p>
-        </div>
-      </li>
-    {% empty %}
-      <li>{% include "components/empty_state.html" with title="No circuits yet" message="No published circuit references this noise model." only %}</li>
-    {% endfor %}
-  </ol>
+  {% if circuits %}
+    <div class="table-scroll record-table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Circuit</th><th class="numeric">Detectors</th><th class="numeric">Errors</th></tr></thead>
+        <tbody>
+          {% for circuit in circuits %}
+            <tr>
+              <td><a href="{% url 'circuits:detail' circuit.slug %}">{{ circuit.name }}</a></td>
+              <td class="numeric">{{ circuit.num_detectors }}</td>
+              <td class="numeric">{{ circuit.num_errors }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {% include "components/empty_state.html" with title="No circuits yet" message="No published circuit references this noise model." only %}
+  {% endif %}
 {% endblock %}

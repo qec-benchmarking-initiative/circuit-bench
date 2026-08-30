@@ -16,32 +16,32 @@
 {% block explorer_status %}Plain-text mode · {{ result_count }} exact published version{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
 
 {% block explorer_filters %}
-  <fieldset class="filter-group filter-group-tags">
-    <legend>Algorithm tags</legend>
+  <div class="filter-control-group filter-control-tags">
+    <span class="filter-group-title">Algorithm tags</span>
     {% include "components/tag_picker.html" with picker_id="decoder-algorithm-tags" label="Algorithm tags" input_name="tag" tags=filter_tags selected_keys=selected_tags match_name="tag_match" match_value=tag_match mode="filter" only %}
-  </fieldset>
-  <fieldset class="filter-group">
-    <legend>Preparation</legend>
-    <label>Skeleton
+  </div>
+  <div class="filter-control-group">
+    <span class="filter-group-title">Preparation</span>
+    <label class="compact-select-label">Skeleton
       <select name="skeleton">
         <option value="">Any</option><option value="not_required"{% if selected_skeleton == "not_required" %} selected{% endif %}>Not required</option><option value="required"{% if selected_skeleton == "required" %} selected{% endif %}>Required</option>
       </select>
     </label>
-    <label>Priors
+    <label class="compact-select-label">Priors
       <select name="priors">
         <option value="">Any</option><option value="not_required"{% if selected_priors == "not_required" %} selected{% endif %}>Not required</option><option value="required"{% if selected_priors == "required" %} selected{% endif %}>Required</option>
       </select>
     </label>
-  </fieldset>
-  <fieldset class="filter-group">
-    <legend>Capabilities and evidence</legend>
-    <label>Failure probability
+  </div>
+  <div class="filter-control-group filter-control-evidence">
+    <span class="filter-group-title">Evidence</span>
+    <label class="compact-select-label">Probability
       <select name="probability">
         <option value="">Any</option><option value="yes"{% if selected_probability == "yes" %} selected{% endif %}>Yes</option><option value="no"{% if selected_probability == "no" %} selected{% endif %}>No</option>
       </select>
     </label>
-    <span class="range-control"><span>Published results</span><label>min <input name="result_min" type="number" min="0" inputmode="numeric" value="{{ result_min }}"></label><label>max <input name="result_max" type="number" min="0" inputmode="numeric" value="{{ result_max }}"></label></span>
-  </fieldset>
+    <span class="range-control"><span>Results</span><input aria-label="Minimum published results" name="result_min" type="number" min="0" inputmode="numeric" placeholder="min" value="{{ result_min }}"><span aria-hidden="true">–</span><input aria-label="Maximum published results" name="result_max" type="number" min="0" inputmode="numeric" placeholder="max" value="{{ result_max }}"></span>
+  </div>
   <div class="filter-actions"><button class="button-compact" type="submit">Apply filters</button>{% if filters_active %}<a href="{% url 'decoders:list' %}">Reset</a>{% endif %}</div>
 {% endblock %}
 

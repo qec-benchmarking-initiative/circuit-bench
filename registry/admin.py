@@ -37,7 +37,7 @@ class SchemaReleaseAdmin(admin.ModelAdmin):
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ("label", "namespace", "status", "slug")
+    list_display = ("label", "namespace", "status", "display_color", "slug")
     list_filter = ("namespace", "status")
     search_fields = ("label", "slug", "description")
 

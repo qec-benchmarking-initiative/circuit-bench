@@ -425,6 +425,7 @@ One registry serves algorithm, experiment, and code tags.
 | `label` | TEXT | no | 1–200 chars | Display label |
 | `description` | TEXT | no | | Human meaning |
 | `status` | TEXT | no | `custom`, `official`, or `deprecated` | Curation lifecycle |
+| `display_color` | CHAR(7) | yes | `#RRGGBB` | Admin-selected presentation colour for an official tag; not scientific meaning |
 | `canonical_tag_id` | UUID | yes | self-FK → `tag.id` | Replacement after merge/deprecation |
 | `submitted_by_id` | UUID | no | FK → `account.id` | Creator |
 | `curated_by_id` | UUID | yes | FK → `account.id` | Last admin curator |
@@ -440,6 +441,8 @@ Constraints and behaviour:
 - a custom tag may be promoted to official in place without changing `id`;
 - merged/deprecated slugs continue resolving to their canonical tag;
 - search presents official matches before custom matches;
+- official tags may carry an admin-selected display colour; custom and
+  deprecated tags render neutrally even if historical colour metadata remains;
 - after first scientific use, a tag's namespace, slug, and scientific meaning
   are immutable; a semantic change creates a new tag row;
 - status promotion, aliasing, and non-semantic wording corrections do not

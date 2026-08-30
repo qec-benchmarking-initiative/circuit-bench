@@ -4,7 +4,7 @@
 
 {% block entity_heading %}
   {% include "components/entity_header.html" with entity=entity only %}
-  <nav aria-label="Decoder version history">
+  <nav class="record-history" aria-label="Decoder version history">
     {% if predecessor %}<a href="{{ predecessor_url }}">← Previous: {{ predecessor.version }}</a>{% endif %}
     {% if predecessor and successor %} · {% endif %}
     {% if successor %}<a href="{{ successor_url }}">Next: {{ successor.version }} →</a>{% endif %}
@@ -12,8 +12,8 @@
 {% endblock %}
 
 {% block entity_main %}
-  <div class="gallery">
-    <section class="gallery-section">
+  <div class="record-sections">
+    <section class="record-section">
       <h2>General description</h2>
       {% if description_source %}
         <p>{{ description_source.description|linebreaksbr }}</p>
@@ -25,17 +25,17 @@
       {% endif %}
     </section>
 
-    <section class="gallery-section">
+    <section class="record-section">
       <h2>What changed in this exact version</h2>
       <p>{{ decoder.revision_description|linebreaksbr }}</p>
     </section>
 
-    <section class="gallery-section">
+    <section class="record-section">
       <h2>Preparation and output capabilities</h2>
       {% include "components/metadata_list.html" with items=capabilities only %}
     </section>
 
-    <section class="gallery-section">
+    <section class="record-section">
       <h2>Hyperparameters</h2>
       {% if decoder.hyperparameter_definitions %}
         <p>{{ decoder.hyperparameter_definitions|linebreaksbr }}</p>
@@ -58,7 +58,7 @@
     </section>
 
     {% if decoder.display_external_links or decoder.display_artifact_attachments %}
-      <section class="gallery-section">
+      <section class="record-section">
         <h2>Links and supporting artifacts</h2>
         <ul>
           {% for link in decoder.display_external_links %}
@@ -79,7 +79,7 @@
   <p><a href="{{ decoder.schema_release.permanent_url }}">Schema contract {{ decoder.schema_release.version }}</a></p>
 
   <h2>Credits</h2>
-  <ol>
+  <ol class="credit-list">
     {% for credit in decoder.visible_credits %}
       <li>
         {% if credit.account %}

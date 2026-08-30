@@ -159,6 +159,19 @@ def test_detail_shows_credits_identities_tags_and_results(client, demo_decoders)
     assert "LER upper 95% bound at 5% acceptance" in content
 
 
+def test_official_tag_colour_is_rendered_but_custom_tag_stays_neutral(
+    client, demo_decoders
+):
+    response = client.get(reverse("decoders:list"))
+    content = response.content.decode()
+
+    assert 'style="--tag-color: #315f7d"' in content
+    custom_choice = content.split('data-tag-label="belief propagation"', 1)[1].split(
+        "</label>", 1
+    )[0]
+    assert "--tag-color" not in custom_choice
+
+
 def test_root_version_has_no_predecessor_and_an_empty_results_state(
     client, demo_decoders
 ):

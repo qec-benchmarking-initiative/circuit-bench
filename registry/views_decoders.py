@@ -86,6 +86,7 @@ class DecoderCatalogueView(ListView):
                 {
                     "label": tag.label,
                     "url": f"{reverse('decoders:list')}?{urlencode({'tag': tag.slug})}",
+                    "display_color": tag.display_color,
                 }
                 for tag in decoder.display_algorithm_tags
             ]
@@ -188,6 +189,7 @@ class DecoderDetailView(DetailView):
                         {
                             "label": tag.label,
                             "status": tag.status,
+                            "display_color": tag.display_color,
                             "url": f"{list_url}?{urlencode({'tag': tag.slug})}",
                         }
                         for tag in decoder.display_algorithm_tags

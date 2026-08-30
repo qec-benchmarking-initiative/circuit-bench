@@ -45,6 +45,7 @@ def demo_id(name: str) -> uuid.UUID:
 @transaction.atomic
 def seed_demo_data() -> dict[str, int]:
     if Account.objects.filter(id=DEMO_ACCOUNT_ID).exists():
+        _refresh_demo_tag_colours()
         return demo_counts()
 
     Site.objects.update_or_create(
@@ -104,6 +105,7 @@ def seed_demo_data() -> dict[str, int]:
         label="Matching",
         description="Uses a matching-based decoding step.",
         status="official",
+        display_color="#315f7d",
         submitted_by=uploader,
         curated_by=uploader,
         curated_at=published_at,
@@ -126,6 +128,7 @@ def seed_demo_data() -> dict[str, int]:
         label="Rotated surface code",
         description="A rotated-layout surface-code circuit.",
         status="official",
+        display_color="#87563d",
         submitted_by=uploader,
         curated_by=uploader,
         curated_at=published_at,
@@ -138,6 +141,7 @@ def seed_demo_data() -> dict[str, int]:
         label="Memory",
         description="Preserves encoded quantum information over time.",
         status="official",
+        display_color="#4f704b",
         submitted_by=uploader,
         curated_by=uploader,
         curated_at=published_at,
@@ -500,6 +504,19 @@ def seed_demo_data() -> dict[str, int]:
     )
 
     return demo_counts()
+
+
+def _refresh_demo_tag_colours() -> None:
+    """Keep presentation-only demo metadata current without rebuilding the data set."""
+    colours = {
+        "tag/algorithm/matching": "#315f7d",
+        "tag/code/rotated-surface-code": "#87563d",
+        "tag/experiment/memory": "#4f704b",
+    }
+    for key, display_color in colours.items():
+        Tag.objects.filter(id=demo_id(key), status=Tag.Status.OFFICIAL).update(
+            display_color=display_color
+        )
 
 
 def demo_counts() -> dict[str, int]:

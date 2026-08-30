@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.db import models
 
 from .artifacts import SchemaRelease
@@ -26,6 +27,18 @@ class Tag(UUIDModel):
     label = models.CharField(max_length=200)
     description = models.TextField()
     status = models.CharField(max_length=20, choices=Status, default=Status.CUSTOM)
+    display_color = models.CharField(
+        max_length=7,
+        null=True,
+        blank=True,
+        validators=[
+            RegexValidator(
+                regex=r"^#[0-9A-Fa-f]{6}$",
+                message="Use a six-digit hexadecimal colour such as #315f7d.",
+            )
+        ],
+        help_text="Optional admin-selected colour for an official tag.",
+    )
     canonical_tag = models.ForeignKey(
         "self",
         null=True,
@@ -59,6 +72,13 @@ class Tag(UUIDModel):
             models.CheckConstraint(
                 condition=models.Q(status__in=["custom", "official", "deprecated"]),
                 name="tag_status_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(display_color__isnull=True)
+                    | models.Q(display_color__regex=r"^#[0-9A-Fa-f]{6}$")
+                ),
+                name="tag_display_color_hex",
             ),
             models.UniqueConstraint(
                 fields=["namespace", "slug"],

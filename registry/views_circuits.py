@@ -151,6 +151,7 @@ def circuit_list(request):
                     {
                         "label": tag.label,
                         "url": f"{list_url}?{urlencode({'code_tag': tag.slug})}",
+                        "display_color": tag.display_color,
                     }
                     for tag in circuit.code_tags.all()
                 ],
@@ -161,6 +162,7 @@ def circuit_list(request):
                     {
                         "label": tag.label,
                         "url": f"{list_url}?{urlencode({'experiment_tag': tag.slug})}",
+                        "display_color": tag.display_color,
                     }
                     for tag in circuit.experiment_tags.all()
                 ],
@@ -289,6 +291,7 @@ def circuit_detail(request, slug):
                         {
                             "label": tag.label,
                             "status": tag.status,
+                            "display_color": tag.display_color,
                             "url": (
                                 f"{list_url}?{urlencode({'tag': f'code:{tag.slug}'})}"
                             ),
@@ -299,6 +302,7 @@ def circuit_detail(request, slug):
                         {
                             "label": tag.label,
                             "status": tag.status,
+                            "display_color": tag.display_color,
                             "url": (
                                 f"{list_url}?"
                                 f"{urlencode({'tag': f'experiment:{tag.slug}'})}"

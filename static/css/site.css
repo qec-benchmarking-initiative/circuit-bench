@@ -120,9 +120,14 @@ textarea {
 
 .site-header,
 .site-footer,
-.page-shell,
+.page-shell {
+  width: calc(100% - 2rem);
+  max-width: none;
+  margin-inline: auto;
+}
+
 .hero {
-  width: min(78rem, calc(100% - 2rem));
+  width: min(58rem, calc(100% - 2rem));
   margin-inline: auto;
 }
 
@@ -183,7 +188,7 @@ textarea {
 }
 
 .messages {
-  width: min(78rem, calc(100% - 2rem));
+  width: calc(100% - 2rem);
   margin: 1rem auto;
   padding: 0.1rem 1rem;
   border-left: 4px solid var(--accent);
@@ -535,6 +540,11 @@ code {
   background: var(--surface-muted);
 }
 
+.tag-official {
+  border-color: var(--tag-color, var(--accent));
+  background: color-mix(in srgb, var(--tag-color, var(--accent)) 14%, var(--surface));
+}
+
 .tag-custom {
   border-style: dashed;
   color: var(--muted);
@@ -770,6 +780,239 @@ code {
   }
 }
 
+/* Scientific record pages ------------------------------------------------ */
+
+.record-layout {
+  padding-top: 0.65rem;
+}
+
+.record-heading {
+  padding: 0.35rem 0 0.55rem;
+  border-bottom: 2px solid var(--line-strong);
+}
+
+.record-heading .entity-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.record-heading .entity-title-row h1 {
+  margin: 0.05rem 0 0;
+  font-size: clamp(1.6rem, 2.5vw, 2.1rem);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+}
+
+.record-heading .entity-version {
+  margin-left: 0.35rem;
+  color: var(--muted);
+  font: 400 0.8rem/1 var(--font-technical);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.record-heading .status-badge {
+  margin-top: 0.95rem;
+  padding: 0.17rem 0.42rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: 700 0.7rem/1.2 var(--font-interface);
+}
+
+.record-heading .tag-list {
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+}
+
+.record-heading .tag {
+  padding: 0.12rem 0.38rem;
+  border-radius: var(--radius);
+  font: 700 0.7rem/1.2 var(--font-interface);
+}
+
+.record-history {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font: 0.73rem/1.2 var(--font-interface);
+}
+
+.record-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+  gap: 1.25rem;
+}
+
+.record-main {
+  min-width: 0;
+}
+
+.record-sections {
+  display: grid;
+}
+
+.record-section {
+  min-width: 0;
+  padding: 0.75rem 0 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.record-section > :first-child {
+  margin-top: 0;
+}
+
+.record-section > :last-child {
+  margin-bottom: 0;
+}
+
+.record-section h2,
+.record-related > h2,
+.record-aside h2 {
+  margin: 0 0 0.45rem;
+  font: 700 0.88rem/1.2 var(--font-interface);
+  letter-spacing: 0.01em;
+}
+
+.record-section h3 {
+  margin: 0.8rem 0 0.3rem;
+  font: 700 0.78rem/1.2 var(--font-interface);
+}
+
+.record-section p,
+.record-section li {
+  max-width: 78ch;
+}
+
+.record-aside {
+  min-width: 0;
+  padding: 0.8rem 0 0 0.9rem;
+  border-left: 1px solid var(--line-strong);
+  font-size: 0.86rem;
+}
+
+.record-aside h2 {
+  margin-top: 1rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.record-aside > :first-child {
+  margin-top: 0;
+}
+
+.record-layout .metadata-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(12rem, 1fr));
+  gap: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+}
+
+.record-layout .metadata-list > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.9fr) minmax(0, 1.1fr);
+  gap: 0.45rem;
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+.record-layout .metadata-list > div:nth-child(odd) {
+  border-right: 1px solid var(--line);
+}
+
+.record-layout .metadata-list dt,
+.record-layout .metadata-list dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.record-aside .metadata-list {
+  grid-template-columns: 1fr;
+}
+
+.record-aside .metadata-list > div,
+.record-aside .metadata-list > div:nth-child(odd) {
+  grid-template-columns: 1fr;
+  gap: 0.08rem;
+  padding-inline: 0;
+  border-right: 0;
+}
+
+.record-aside .stacked-metadata > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(0, 1fr);
+  gap: 0.45rem;
+  padding-block: 0.3rem;
+}
+
+.record-aside .stacked-metadata dd {
+  margin: 0;
+  text-align: right;
+}
+
+.credit-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.credit-list > li {
+  padding-block: 0.15rem;
+}
+
+.credit-list ul {
+  margin: 0.15rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.78rem;
+}
+
+.record-related {
+  margin-top: 1rem;
+  padding-top: 0.7rem;
+  border-top: 2px solid var(--line-strong);
+}
+
+.record-table-scroll,
+.record-related > .table-scroll {
+  max-height: none;
+}
+
+.record-layout .empty-state {
+  min-height: 6rem;
+  padding: 1rem;
+  border-inline: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+@media (max-width: 48rem) {
+  .record-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .record-aside {
+    padding-left: 0;
+    border-top: 1px solid var(--line-strong);
+    border-left: 0;
+  }
+
+  .record-layout .metadata-list {
+    grid-template-columns: 1fr;
+  }
+
+  .record-layout .metadata-list > div:nth-child(odd) {
+    border-right: 0;
+  }
+}
+
 /* Desktop-first scientific explorer ------------------------------------- */
 
 .visually-hidden {
@@ -836,62 +1079,63 @@ code {
 }
 
 .explorer-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
-  align-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   border-top: 1px solid var(--line);
   background: var(--surface);
 }
 
-.filter-group {
+.filter-control-group {
   display: flex;
-  align-content: start;
   flex-wrap: wrap;
-  gap: 0.35rem 0.75rem;
+  align-items: center;
+  gap: 0.25rem 0.48rem;
+  min-height: 2.65rem;
   min-width: 0;
-  margin: 0;
-  padding: 0.45rem 0.6rem 0.55rem;
-  border: 0;
+  padding: 0.28rem 0.48rem;
   border-right: 1px solid var(--line);
-  font: 0.78rem/1.25 var(--font-interface);
+  font: 0.75rem/1.15 var(--font-interface);
 }
 
-.filter-group legend {
-  width: 100%;
-  padding: 0;
+.filter-group-title {
   color: var(--ink);
   font-weight: 700;
+  white-space: nowrap;
 }
 
-.filter-group legend span {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 400;
+.filter-control-tags {
+  flex: 1 1 17rem;
 }
 
-.filter-group > label {
-  display: grid;
-  grid-template-columns: auto minmax(6rem, 1fr);
+.filter-control-science {
+  flex: 1 1 27rem;
+}
+
+.filter-control-evidence {
+  flex: 1 1 24rem;
+}
+
+.compact-select-label {
+  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
+  white-space: nowrap;
 }
 
-.filter-group select {
+.filter-control-group select {
   width: auto;
-  min-width: 6rem;
-  min-height: 1.7rem;
-  padding-block: 0.15rem;
-}
-
-.filter-group-tags {
-  min-width: 18rem;
+  min-width: 4.7rem;
+  max-width: 15rem;
+  min-height: 1.55rem;
+  padding: 0.1rem 1.4rem 0.1rem 0.28rem;
+  font-size: 0.74rem;
 }
 
 .filter-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.22rem 0.8rem;
-  width: 100%;
+  gap: 0.18rem 0.55rem;
 }
 
 .filter-options label {
@@ -913,51 +1157,42 @@ code {
 }
 
 .range-control {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
+  display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  width: 100%;
+  gap: 0.2rem;
+  white-space: nowrap;
 }
 
 .range-control > span {
-  min-width: 8rem;
-}
-
-.range-control label {
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
-  color: var(--muted);
+  min-width: auto;
 }
 
 .range-control input {
-  width: 4.4rem;
-  min-height: 1.7rem;
-  padding-block: 0.12rem;
+  width: 3.55rem;
+  min-height: 1.55rem;
+  padding: 0.08rem 0.25rem;
   color: var(--ink);
+  font-size: 0.73rem;
 }
 
-.filter-ranges {
-  display: grid;
-  grid-column: span 2;
-  grid-template-columns: repeat(2, minmax(16rem, 1fr));
-}
-
-.filter-ranges .range-control > span {
-  min-width: 7rem;
-}
-
-.filter-ranges .range-control input {
-  width: 3.4rem;
+.filter-control-ranges {
+  flex: 2 1 34rem;
 }
 
 .filter-actions {
   display: flex;
-  align-items: end;
-  gap: 0.6rem;
-  padding: 0.45rem 0.6rem;
-  font: 0.78rem/1.25 var(--font-interface);
+  align-self: stretch;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.65rem;
+  padding: 0.28rem 0.48rem;
+  font: 0.75rem/1.15 var(--font-interface);
+}
+
+.filter-actions .button-compact {
+  min-height: 1.55rem;
+  padding: 0.12rem 0.42rem;
+  font-size: 0.73rem;
 }
 
 .collection-results {
@@ -986,6 +1221,7 @@ code {
   max-height: calc(100vh - 14rem);
   overflow: auto;
   border: 0;
+  border-inline: 1px solid var(--line-strong);
   border-bottom: 1px solid var(--line-strong);
   border-radius: 0;
   background: var(--surface);
@@ -1007,6 +1243,11 @@ code {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.data-table th:last-child,
+.data-table td:last-child {
+  border-right: 0;
 }
 
 .data-table th {
@@ -1176,6 +1417,11 @@ code {
   width: 100%;
 }
 
+.filter-control-tags .tag-picker {
+  flex: 1;
+  width: auto;
+}
+
 .tag-picker-summary {
   display: flex;
   flex-wrap: wrap;
@@ -1202,9 +1448,14 @@ code {
 }
 
 .selected-tag-official {
-  border-color: var(--accent);
-  color: var(--accent-hover);
-  background: var(--accent-soft);
+  border-color: var(--tag-color, var(--accent));
+  color: var(--ink);
+  background: color-mix(in srgb, var(--tag-color, var(--accent)) 14%, var(--surface));
+}
+
+.tag-glyph {
+  margin-right: 0.2rem;
+  color: var(--tag-color, currentColor);
 }
 
 .selected-tag button {
@@ -1235,7 +1486,7 @@ code {
 
 .tag-dialog-body {
   display: grid;
-  align-content: start;
+  grid-template-rows: auto auto auto minmax(10rem, 1fr);
   gap: 0.85rem;
   min-height: min(25rem, calc(78vh - 7rem));
   max-height: calc(78vh - 7rem);
@@ -1257,6 +1508,12 @@ code {
 .tag-available {
   padding-top: 0.65rem;
   border-top: 1px solid var(--line);
+}
+
+.tag-available {
+  display: flex;
+  flex-direction: column;
+  min-height: 10rem;
 }
 
 .tag-selection h3,
@@ -1304,9 +1561,9 @@ code {
 }
 
 .tag-choice-official > span {
-  border-color: var(--accent);
-  color: var(--accent-hover);
-  background: var(--accent-soft);
+  border-color: var(--tag-color, var(--accent));
+  color: var(--ink);
+  background: color-mix(in srgb, var(--tag-color, var(--accent)) 14%, var(--surface));
 }
 
 .tag-choice:hover > span {
@@ -1319,9 +1576,13 @@ code {
 }
 
 .tag-no-results {
-  min-height: 3rem;
+  display: grid;
+  flex: 1;
+  width: 100%;
+  min-height: 8rem;
   margin: 0;
   padding: 0.75rem;
+  place-content: center;
   border: 1px dashed var(--line);
   color: var(--muted);
   font-style: italic;
@@ -1347,10 +1608,6 @@ code {
     grid-column: 1 / -1;
   }
 
-  .filter-ranges {
-    grid-column: auto;
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 48rem) {
@@ -1362,11 +1619,8 @@ code {
     grid-template-columns: 1fr auto auto;
   }
 
-  .explorer-filters {
-    grid-template-columns: 1fr;
-  }
-
-  .filter-group {
+  .filter-control-group {
+    flex: 1 1 100%;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
