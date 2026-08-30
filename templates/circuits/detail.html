@@ -1,97 +1,99 @@
-{% extends "layouts/entity_detail.html" %}
+{% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ circuit.name }} — Circuit Bench{% endblock %}
 
-{% block entity_heading %}
-  {% include "components/entity_header.html" with entity=entity only %}
+{% block content %}
+  <article class="page-shell record-layout circuit-record-layout">
+    <header class="record-heading">
+      {% include "components/entity_header.html" with entity=entity only %}
+    </header>
+
+    <section class="circuit-dossier" aria-label="Circuit information">
+      <div class="circuit-description">
+        <h2>Description</h2>
+        <p>{{ description|default:"No description supplied for this revision or its predecessors." }}</p>
+        <p><strong>Revision note:</strong> {{ circuit.revision_description }}</p>
+        {% if previous_revision %}<p><a href="{% url 'circuits:detail' previous_revision.slug %}">View previous revision</a></p>{% endif %}
+      </div>
+      <dl class="circuit-facts">
+        <div class="circuit-fact-wide"><dt>Noise model</dt><dd><a href="{% url 'noise-models:detail' circuit.noise_model.slug %}">{{ circuit.noise_model.name }}</a></dd></div>
+        <div><dt>Priors randomised</dt><dd>{{ circuit.noise_model.randomises_priors|yesno:"Yes,No" }}</dd></div>
+        <div><dt>Code distance upper bound</dt><dd>{{ circuit.code_distance_upper_bound|default:"—" }}</dd></div>
+        <div><dt>Circuit distance upper bound</dt><dd>{{ circuit.circuit_distance_upper_bound|default:"—" }}</dd></div>
+        <div><dt>Rounds</dt><dd>{{ circuit.rounds|default:"—" }}</dd></div>
+        <div><dt>Detectors</dt><dd>{{ circuit.num_detectors }}</dd></div>
+        <div><dt>Errors</dt><dd>{{ circuit.num_errors }}</dd></div>
+        <div><dt>Observables</dt><dd>{{ circuit.num_observables }}</dd></div>
+        <div><dt>CSS</dt><dd>{{ circuit.is_css|yesno:"Yes,No" }}</dd></div>
+        <div><dt>X only</dt><dd>{{ circuit.dem_x_detectors_only|yesno:"Yes,No" }}</dd></div>
+        <div><dt>Z only</dt><dd>{{ circuit.dem_z_detectors_only|yesno:"Yes,No" }}</dd></div>
+      </dl>
+    </section>
+
+    <details class="record-disclosure circuit-provenance">
+      <summary>
+        <span>Frozen artifacts and DEM construction</span>
+        <span>schema {{ circuit.schema_release.public_name }} · exact immutable provenance</span>
+      </summary>
+      <div class="circuit-provenance-grid">
+        <section>
+          <h2>Frozen artifacts</h2>
+          <div class="table-scroll record-table-scroll">
+            <table class="data-table">
+              <thead><tr><th>Role</th><th>File</th><th>Bytes</th><th>SHA-256</th></tr></thead>
+              <tbody>
+                {% for role, artifact in artifacts %}
+                  <tr>
+                    <td>{{ role }}</td>
+                    <td><a href="{% url 'artifacts:download' artifact.id %}">{{ artifact.original_filename }}</a></td>
+                    <td class="numeric">{{ artifact.byte_size }}</td>
+                    <td><code>{{ artifact.sha256 }}</code></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section>
+          <h2>Detector error model construction</h2>
+          <dl class="stacked-metadata compact-technical-metadata">
+            <div><dt>Stim version</dt><dd>{{ circuit.stim_version }}</dd></div>
+            <div><dt>Method</dt><dd><code>{{ circuit.dem_generation_method }}</code></dd></div>
+            <div><dt>Decompose errors</dt><dd>{{ circuit.dem_decompose_errors|yesno:"true,false" }}</dd></div>
+            <div><dt>Flatten loops</dt><dd>{{ circuit.dem_flatten_loops|yesno:"true,false" }}</dd></div>
+            <div><dt>Allow gauge detectors</dt><dd>{{ circuit.dem_allow_gauge_detectors|yesno:"true,false" }}</dd></div>
+            <div><dt>Approximate disjoint errors</dt><dd>{{ circuit.dem_approximate_disjoint_errors }}</dd></div>
+            <div><dt>Ignore decomposition failures</dt><dd>{{ circuit.dem_ignore_decomposition_failures|yesno:"true,false" }}</dd></div>
+            <div><dt>Block remnant edges</dt><dd>{{ circuit.dem_block_decomposition_from_introducing_remnant_edges|yesno:"true,false" }}</dd></div>
+          </dl>
+        </section>
+      </div>
+    </details>
+
+    <section class="circuit-leaderboard" aria-label="Decoder results">
+      <header class="leaderboard-heading">
+        <div>
+          <h2>Decoder results on this circuit</h2>
+          <p>Filter the exact published results by decoder method or execution hardware.</p>
+        </div>
+      </header>
+      <form class="leaderboard-filter-form" method="get">
+        {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+        {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+        {% include "components/filters/algorithm_strip.html" with picker_id="circuit-result-algorithm-tags" filter_tags=algorithm_filter_tags selected_tags=selected_tags tag_match=tag_match selected_skeleton=selected_skeleton selected_priors=selected_priors selected_probability=selected_probability only %}
+        {% include "components/filters/machine_strip.html" with machine_classes=machine_classes selected_machine_class=selected_machine_class only %}
+        <div class="leaderboard-filter-actions">
+          <button class="button-compact" type="submit">Apply filters</button>
+          {% if leaderboard_filters_active %}<a href="{{ circuit_reset_url }}">Reset</a>{% endif %}
+        </div>
+      </form>
+      <div class="collection-results" aria-live="polite">
+        {% include "components/explorer_toolbar.html" with explorer_id="circuit-results" %}
+        {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No results yet. No published results on this circuit match the selected algorithm and machine filters." only %}
+      </div>
+    </section>
+  </article>
 {% endblock %}
 
-{% block entity_main %}
-  <section class="record-section">
-    <h2>Description</h2>
-    <p>{{ description|default:"No description supplied for this revision or its predecessors." }}</p>
-    <h3>Revision note</h3>
-    <p>{{ circuit.revision_description }}</p>
-    {% if previous_revision %}
-      <p><a href="{% url 'circuits:detail' previous_revision.slug %}">View previous revision</a></p>
-    {% endif %}
-  </section>
-
-  <section class="record-section">
-    <h2>Frozen artifacts</h2>
-    <div class="table-scroll">
-      <table class="data-table">
-        <thead><tr><th>Role</th><th>File</th><th>Bytes</th><th>SHA-256</th></tr></thead>
-        <tbody>
-          {% for role, artifact in artifacts %}
-            <tr>
-              <td>{{ role }}</td>
-              <td><a href="{% url 'artifacts:download' artifact.id %}">{{ artifact.original_filename }}</a></td>
-              <td class="numeric">{{ artifact.byte_size }}</td>
-              <td><code>{{ artifact.sha256 }}</code></td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="record-section">
-    <h2>Detector error model construction</h2>
-    <dl class="metadata-list">
-      <div><dt>Stim version</dt><dd>{{ circuit.stim_version }}</dd></div>
-      <div><dt>Method</dt><dd><code>{{ circuit.dem_generation_method }}</code></dd></div>
-      <div><dt>Decompose errors</dt><dd>{{ circuit.dem_decompose_errors|yesno:"true,false" }}</dd></div>
-      <div><dt>Flatten loops</dt><dd>{{ circuit.dem_flatten_loops|yesno:"true,false" }}</dd></div>
-      <div><dt>Allow gauge detectors</dt><dd>{{ circuit.dem_allow_gauge_detectors|yesno:"true,false" }}</dd></div>
-      <div><dt>Approximate disjoint errors</dt><dd>{{ circuit.dem_approximate_disjoint_errors }}</dd></div>
-      <div><dt>Ignore decomposition failures</dt><dd>{{ circuit.dem_ignore_decomposition_failures|yesno:"true,false" }}</dd></div>
-      <div><dt>Block remnant edges</dt><dd>{{ circuit.dem_block_decomposition_from_introducing_remnant_edges|yesno:"true,false" }}</dd></div>
-    </dl>
-  </section>
-{% endblock %}
-
-{% block entity_aside %}
-  <h2>Exact revision</h2>
-  <dl class="stacked-metadata">
-    <div><dt>Schema</dt><dd>{{ circuit.schema_release.public_name }}</dd></div>
-    <div><dt>Code distance upper bound</dt><dd>{{ circuit.code_distance_upper_bound|default:"—" }}</dd></div>
-    <div><dt>Circuit distance upper bound</dt><dd>{{ circuit.circuit_distance_upper_bound|default:"—" }}</dd></div>
-    <div><dt>Rounds</dt><dd>{{ circuit.rounds|default:"—" }}</dd></div>
-    <div><dt>Detectors</dt><dd>{{ circuit.num_detectors }}</dd></div>
-    <div><dt>Errors</dt><dd>{{ circuit.num_errors }}</dd></div>
-    <div><dt>Observables</dt><dd>{{ circuit.num_observables }}</dd></div>
-    <div><dt>CSS</dt><dd>{{ circuit.is_css|yesno:"Yes,No" }}</dd></div>
-    <div><dt>X detectors only</dt><dd>{{ circuit.dem_x_detectors_only|yesno:"Yes,No" }}</dd></div>
-    <div><dt>Z detectors only</dt><dd>{{ circuit.dem_z_detectors_only|yesno:"Yes,No" }}</dd></div>
-  </dl>
-  <h2>Noise model</h2>
-  <p><a href="{% url 'noise-models:detail' circuit.noise_model.slug %}">{{ circuit.noise_model.name }}</a></p>
-  <p>Priors randomised: <strong>{{ circuit.noise_model.randomises_priors|yesno:"Yes,No" }}</strong></p>
-{% endblock %}
-
-{% block entity_related %}
-  <h2>Decoder results on this circuit</h2>
-  {% if circuit.published_results %}
-    <div class="table-scroll record-table-scroll">
-      <table class="data-table">
-        <thead>
-          <tr><th>Decoder</th><th>Version</th><th class="numeric">Shots</th><th>Reproduction</th><th>Published</th></tr>
-        </thead>
-        <tbody>
-          {% for result in circuit.published_results %}
-            <tr>
-              <td><a href="{% url 'decoders:detail' result.decoder_version.slug %}">{{ result.decoder_version.name }}</a></td>
-              <td>{{ result.decoder_version.version }}</td>
-              <td class="numeric">{{ result.shots_total }}</td>
-              <td>{{ result.get_reproduction_status_display }}</td>
-              <td>{{ result.published_at|date:"Y-m-d" }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    {% include "components/empty_state.html" with title="No results yet" message="No published decoder result references this exact circuit revision." only %}
-  {% endif %}
-{% endblock %}
+{% block extra_scripts %}<script src="{% static 'js/explorer.js' %}" defer></script>{% endblock %}

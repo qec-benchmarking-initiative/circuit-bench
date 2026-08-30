@@ -104,6 +104,59 @@ def test_circuit_detail_exposes_only_published_results(client, demo_registry):
     assert b"No results yet" in response.content
 
 
+def test_circuit_leaderboard_uses_reusable_algorithm_and_machine_strips(
+    client, demo_registry
+):
+    circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
+    response = client.get(reverse("circuits:detail", args=[circuit.slug]))
+    content = response.content.decode()
+
+    assert 'class="filter-strip filter-strip-algorithm"' in content
+    assert 'class="filter-strip filter-strip-machine"' in content
+    assert "Algorithm filters" in content
+    assert "Machine filters" in content
+    assert "Table view options (9/12)" in content
+    assert response.context["result_count"] == 1
+
+
+def test_circuit_leaderboard_filters_results_by_algorithm_and_machine(
+    client, demo_registry
+):
+    circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
+    url = reverse("circuits:detail", args=[circuit.slug])
+
+    matching_cpu = client.get(
+        url,
+        {"tag": "matching", "skeleton": "not_required", "machine_class": "cpu"},
+    )
+    incompatible_machine = client.get(url, {"machine_class": "gpu"})
+    incompatible_preparation = client.get(url, {"skeleton": "required"})
+
+    assert matching_cpu.context["result_count"] == 1
+    assert matching_cpu.context["selected_machine_class"] == "cpu"
+    assert incompatible_machine.context["result_count"] == 0
+    assert incompatible_preparation.context["result_count"] == 0
+    assert b"No results yet" in incompatible_machine.content
+
+
+def test_circuit_leaderboard_table_state_is_url_backed(client, demo_registry):
+    circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
+    response = client.get(
+        reverse("circuits:detail", args=[circuit.slug]),
+        {
+            "columns": "decoder,machine_class,shots",
+            "sort": "-shots,decoder",
+        },
+    )
+
+    assert [column["key"] for column in response.context["table_columns"]] == [
+        "decoder",
+        "machine_class",
+        "shots",
+    ]
+    assert response.context["sort_summary"] == "Shots descending, Decoder ascending"
+
+
 def test_circuit_tag_filter_keeps_namespace(client, demo_registry):
     circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
     Tag = circuit.code_tags.model
@@ -149,4 +202,5 @@ def test_randomised_priors_are_derived_from_noise_model(client, demo_registry):
 
     response = client.get(reverse("circuits:detail", args=[circuit.slug]))
 
-    assert b"Priors randomised: <strong>Yes</strong>" in response.content
+    assert response.context["circuit"].noise_model.randomises_priors is True
+    assert b"Priors randomised" in response.content

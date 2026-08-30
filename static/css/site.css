@@ -780,6 +780,237 @@ code {
   }
 }
 
+/* Reusable result-filter strips and circuit leaderboard ----------------- */
+
+.filter-strip {
+  width: 100%;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.filter-strip > summary,
+.record-disclosure > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  min-height: 1.8rem;
+  padding: 0.28rem 0.48rem;
+  color: var(--ink);
+  background: var(--surface-muted);
+  font: 700 0.76rem/1.2 var(--font-interface);
+  cursor: pointer;
+}
+
+.filter-strip > summary::before,
+.record-disclosure > summary::before {
+  content: "▸";
+  color: var(--accent);
+  font-family: var(--font-technical);
+}
+
+.filter-strip[open] > summary::before,
+.record-disclosure[open] > summary::before {
+  content: "▾";
+}
+
+.filter-strip-description,
+.record-disclosure > summary span:last-child {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.filter-strip-active {
+  margin-left: auto;
+  color: var(--accent-hover);
+  font-size: 0.69rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.filter-strip-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.filter-strip-controls .filter-control-tags {
+  flex-basis: 20rem;
+}
+
+.filter-strip-controls .filter-control-evidence {
+  flex-basis: 26rem;
+}
+
+.filter-strip-algorithm:not(.filter-strip-has-range) .filter-strip-controls {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1fr) auto minmax(17rem, 0.8fr);
+}
+
+.explorer-filters > .filter-strip:last-child {
+  border-bottom: 0;
+}
+
+.circuit-record-layout {
+  padding-top: 0.65rem;
+}
+
+.circuit-dossier {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1fr) minmax(0, 2fr);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.circuit-description {
+  padding: 0.6rem 0.8rem 0.65rem 0;
+}
+
+.circuit-description h2,
+.circuit-provenance h2,
+.leaderboard-heading h2 {
+  margin: 0 0 0.35rem;
+  font: 700 0.88rem/1.2 var(--font-interface);
+}
+
+.circuit-description p {
+  max-width: 68ch;
+  margin: 0.25rem 0;
+}
+
+.circuit-facts {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(5rem, 1fr));
+  align-self: stretch;
+  margin: 0;
+  border-left: 1px solid var(--line-strong);
+}
+
+.circuit-facts > div {
+  min-width: 0;
+  padding: 0.38rem 0.5rem;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.circuit-facts > div:nth-last-child(-n + 6) {
+  border-bottom: 0;
+}
+
+.circuit-fact-wide {
+  grid-column: span 2;
+}
+
+.circuit-facts dt,
+.compact-technical-metadata dt {
+  color: var(--muted);
+  font: 700 0.67rem/1.2 var(--font-interface);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.circuit-facts dd {
+  margin: 0.12rem 0 0;
+  overflow-wrap: anywhere;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.record-disclosure {
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.record-disclosure > summary {
+  background: transparent;
+}
+
+.circuit-provenance-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+  gap: 1rem;
+  padding: 0.65rem 0 0.8rem;
+}
+
+.circuit-provenance-grid > section {
+  min-width: 0;
+}
+
+.compact-technical-metadata > div {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  padding-block: 0.25rem;
+}
+
+.compact-technical-metadata dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.circuit-leaderboard {
+  margin-top: 0.7rem;
+  border-top: 2px solid var(--line-strong);
+}
+
+.leaderboard-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.48rem 0.45rem;
+}
+
+.leaderboard-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.leaderboard-filter-form {
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.leaderboard-filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.48rem;
+  font: 0.75rem/1.15 var(--font-interface);
+}
+
+@media (max-width: 64rem) {
+  .filter-strip-algorithm:not(.filter-strip-has-range) .filter-strip-controls {
+    display: flex;
+  }
+
+  .circuit-dossier,
+  .circuit-provenance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .circuit-facts {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 48rem) {
+  .circuit-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .circuit-facts > div:nth-last-child(-n + 6) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .filter-strip-description,
+  .record-disclosure > summary span:last-child {
+    display: none;
+  }
+}
+
 /* Scientific record pages ------------------------------------------------ */
 
 .record-layout {

@@ -217,6 +217,14 @@ the colour-independent status cue. Decoder, circuit and noise-model detail
 views now use a shared flat reference-page layout with ruled sections, a narrow
 exact-revision rail and dense relationship tables instead of card lists.
 
+The circuit detail has since become the comparison-heavy record variant: a
+compact dossier and collapsed exact-provenance disclosure lead into a dominant
+circuit-scoped result explorer. Decoder method/capability controls are packaged
+as a reusable native-disclosure `Algorithm filters` strip shared with decoder
+discovery; execution hardware is a parallel reusable `Machine filters` strip.
+The scoped table uses the ordinary shared sorting and URL-backed column
+controls, and all strip predicates are applied on the server.
+
 ## Parallel wave B: remaining read views and contract coverage
 
 ### B1. Result detail

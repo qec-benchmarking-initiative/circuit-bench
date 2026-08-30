@@ -116,6 +116,10 @@ def test_catalogue_table_state_is_reproducible_in_the_url(client, demo_decoders)
     content = response.content.decode()
     assert "Table view options (2/8)" in content
     assert 'aria-current="page"' in content
+    assert (
+        'class="filter-strip filter-strip-algorithm filter-strip-has-range"'
+        in content
+    )
 
 
 def test_catalogue_has_an_explicit_empty_state(client, demo_decoders):

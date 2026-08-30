@@ -179,6 +179,13 @@ card panels, floating islands or dashboard statistics. Decoder, circuit and
 noise-model pages now share this anatomy; their content remains open to
 scientific critique without requiring a new visual shell.
 
+Circuit pages are the comparison-heavy variant. Their compact dossier occupies
+the top of the page, with immutable artifact/DEM provenance in a native
+disclosure immediately below. The bulk of the page is then a circuit-scoped
+result explorer: reusable decoder-algorithm filters, reusable machine filters,
+the standard table toolbar and a full-width scientific result table. Circuit
+facts must not force the leaderboard into a small appendix or narrow column.
+
 ## 6. Explorer page anatomy
 
 The default desktop composition is:
@@ -503,6 +510,11 @@ responsibilities:
 - `QueryBar`: name/query input and explicit actions;
 - `QueryStatus`: validation and execution result;
 - `FilterMatrix`: endpoint-provided visible structured controls;
+- `FilterStrip`: a natively collapsible, reusable group of related predicates;
+- `AlgorithmFilterStrip`: decoder tags, preparation requirements and output
+  capabilities, shared by decoder discovery and result leaderboards;
+- `MachineFilterStrip`: machine class, shared by circuit, decoder, benchmark
+  and general result leaderboards as those pages are implemented;
 - `ExplorerToolbar`: count, sort summary, view options and formats;
 - `ScientificTable`: semantic table, sorting and horizontal viewport;
 - `ColumnChooser`: visible columns and ordering.
@@ -514,7 +526,10 @@ sorting JavaScript or table markup.
 
 On a record-detail page the same table can receive a locked scope—for example,
 “results for this exact decoder version”—while retaining query, sort, column
-and export behaviour.
+and export behaviour. Filter strips receive page-supplied values and allowed
+choices; they do not own database queries. The containing view applies the
+same named URL parameters server-side, so reusing a strip never creates a
+browser-only filtering path.
 
 ## 11. Desktop-first fallback behaviour
 

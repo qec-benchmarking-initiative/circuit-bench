@@ -1,6 +1,16 @@
-from django.db.models import Count, Prefetch, Q, QuerySet
+from django.db.models import (
+    Case,
+    Count,
+    IntegerField,
+    Prefetch,
+    Q,
+    QuerySet,
+    Value,
+    When,
+)
+from django.db.models.functions import Lower
 
-from registry.models import CircuitRevision, NoiseModel, Result
+from registry.models import CircuitRevision, NoiseModel, Result, Tag
 
 PUBLIC_DETAIL_STATES = ("published", "withdrawn")
 
@@ -102,11 +112,6 @@ def circuit_catalogue(
 
 
 def circuit_detail_queryset() -> QuerySet:
-    published_results = (
-        Result.objects.filter(state="published")
-        .select_related("decoder_version")
-        .order_by("-published_at", "id")
-    )
     return (
         CircuitRevision.objects.filter(
             state__in=PUBLIC_DETAIL_STATES,
@@ -124,13 +129,82 @@ def circuit_detail_queryset() -> QuerySet:
         .prefetch_related(
             "code_tags",
             "experiment_tags",
-            Prefetch(
-                "results",
-                queryset=published_results,
-                to_attr="published_results",
-            ),
         )
     )
+
+
+def circuit_result_leaderboard(
+    *,
+    circuit: CircuitRevision,
+    tag_slugs: tuple[str, ...] = (),
+    tag_match: str = "all",
+    skeleton_preparation: str = "",
+    priors_preparation: str = "",
+    probability_output: str = "",
+    machine_class: str = "",
+) -> QuerySet[Result]:
+    """Return published results scoped to one circuit and reusable filters."""
+
+    algorithm_tags = (
+        Tag.objects.filter(namespace=Tag.Namespace.ALGORITHM)
+        .annotate(
+            official_order=Case(
+                When(status=Tag.Status.OFFICIAL, then=Value(0)),
+                When(status=Tag.Status.CUSTOM, then=Value(1)),
+                default=Value(2),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("official_order", Lower("label"), "id")
+    )
+    results = (
+        Result.objects.filter(circuit_revision=circuit, state="published")
+        .select_related(
+            "decoder_version",
+            "evaluator_version",
+            "machine",
+        )
+        .prefetch_related(
+            Prefetch(
+                "decoder_version__algorithm_tags",
+                queryset=algorithm_tags,
+                to_attr="display_algorithm_tags",
+            ),
+            "scores__score_definition",
+        )
+    )
+
+    selected_tags = tuple(tag for tag in tag_slugs if tag)
+    if tag_match == "any" and selected_tags:
+        results = results.filter(
+            decoder_version__algorithm_tags__namespace=Tag.Namespace.ALGORITHM,
+            decoder_version__algorithm_tags__slug__in=selected_tags,
+        )
+    else:
+        for selected_tag in selected_tags:
+            results = results.filter(
+                decoder_version__algorithm_tags__namespace=Tag.Namespace.ALGORITHM,
+                decoder_version__algorithm_tags__slug=selected_tag,
+            )
+
+    if skeleton_preparation in {"required", "not_required"}:
+        results = results.filter(
+            decoder_version__circuit_skeleton_preparation=skeleton_preparation
+        )
+    if priors_preparation in {"required", "not_required"}:
+        results = results.filter(
+            decoder_version__circuit_priors_preparation=priors_preparation
+        )
+    if probability_output in {"yes", "no"}:
+        results = results.filter(
+            decoder_version__provides_failure_probability=probability_output == "yes"
+        )
+    if machine_class == "unreported":
+        results = results.filter(machine__isnull=True)
+    elif machine_class in {"cpu", "gpu", "fpga", "asic", "hybrid"}:
+        results = results.filter(machine__machine_class=machine_class)
+
+    return results.distinct()
 
 
 def inherited_circuit_description(circuit: CircuitRevision) -> str | None:

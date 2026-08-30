@@ -1,0 +1,36 @@
+<details class="filter-strip filter-strip-algorithm{% if show_result_range %} filter-strip-has-range{% endif %}" open>
+  <summary>
+    <span>Algorithm filters</span>
+    <span class="filter-strip-description">decoder method and capabilities</span>
+    {% if selected_tags or selected_skeleton or selected_priors or selected_probability %}<span class="filter-strip-active">active</span>{% endif %}
+  </summary>
+  <div class="filter-strip-controls">
+    <div class="filter-control-group filter-control-tags">
+      <span class="filter-group-title">Algorithm tags</span>
+      {% include "components/tag_picker.html" with picker_id=picker_id label="Algorithm tags" input_name="tag" tags=filter_tags selected_keys=selected_tags match_name="tag_match" match_value=tag_match mode="filter" only %}
+    </div>
+    <div class="filter-control-group">
+      <span class="filter-group-title">Preparation</span>
+      <label class="compact-select-label">Skeleton
+        <select name="skeleton">
+          <option value="">Any</option><option value="not_required"{% if selected_skeleton == "not_required" %} selected{% endif %}>Not required</option><option value="required"{% if selected_skeleton == "required" %} selected{% endif %}>Required</option>
+        </select>
+      </label>
+      <label class="compact-select-label">Priors
+        <select name="priors">
+          <option value="">Any</option><option value="not_required"{% if selected_priors == "not_required" %} selected{% endif %}>Not required</option><option value="required"{% if selected_priors == "required" %} selected{% endif %}>Required</option>
+        </select>
+      </label>
+    </div>
+    <div class="filter-control-group filter-control-evidence">
+      <span class="filter-group-title">Output</span>
+      <label class="compact-select-label">Failure probability
+        <select name="probability">
+          <option value="">Any</option><option value="yes"{% if selected_probability == "yes" %} selected{% endif %}>Yes</option><option value="no"{% if selected_probability == "no" %} selected{% endif %}>No</option>
+        </select>
+      </label>
+      {% if show_result_range %}<span class="range-control"><span>Published results</span><input aria-label="Minimum published results" name="result_min" type="number" min="0" inputmode="numeric" placeholder="min" value="{{ result_min }}"><span aria-hidden="true">–</span><input aria-label="Maximum published results" name="result_max" type="number" min="0" inputmode="numeric" placeholder="max" value="{{ result_max }}"></span>{% endif %}
+    </div>
+    {% if include_actions %}<div class="filter-actions"><button class="button-compact" type="submit">Apply filters</button>{% if filters_active %}<a href="{{ reset_url }}">Reset</a>{% endif %}</div>{% endif %}
+  </div>
+</details>

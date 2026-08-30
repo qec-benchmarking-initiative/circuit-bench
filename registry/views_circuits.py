@@ -13,12 +13,46 @@ from registry.explorer import (
     table_context,
     url_without,
 )
-from registry.models import NoiseModel, Tag
+from registry.models import Machine, NoiseModel, Tag
 from registry.services.circuits import (
     circuit_catalogue,
     circuit_detail_queryset,
+    circuit_result_leaderboard,
     inherited_circuit_description,
 )
+from registry.services.decoders import catalogue_algorithm_tags
+
+CIRCUIT_RESULT_COLUMNS = (
+    ColumnSpec("decoder", "Decoder"),
+    ColumnSpec("version", "Version"),
+    ColumnSpec("algorithm_tags", "Algorithm tags", sortable=False),
+    ColumnSpec(
+        "skeleton",
+        "Skeleton preparation",
+        default_visible=False,
+    ),
+    ColumnSpec("priors", "Prior preparation", default_visible=False),
+    ColumnSpec("probability", "Failure probability", default_visible=False),
+    ColumnSpec("machine_class", "Machine type"),
+    ColumnSpec("machine", "Machine"),
+    ColumnSpec("shots", "Shots", numeric=True, default_direction="desc"),
+    ColumnSpec("scores", "Evaluator scores", sortable=False),
+    ColumnSpec("reproduction", "Reproduction"),
+    ColumnSpec("published", "Published", default_direction="desc"),
+)
+
+CIRCUIT_RESULT_SORT_FIELDS = {
+    "decoder": "decoder_version__name",
+    "version": "decoder_version__version",
+    "skeleton": "decoder_version__circuit_skeleton_preparation",
+    "priors": "decoder_version__circuit_priors_preparation",
+    "probability": "decoder_version__provides_failure_probability",
+    "machine_class": "machine__machine_class",
+    "machine": "machine__slug",
+    "shots": "shots_total",
+    "reproduction": "reproduction_status",
+    "published": "published_at",
+}
 
 
 def circuit_list(request):
@@ -268,6 +302,111 @@ def circuit_list(request):
 def circuit_detail(request, slug):
     circuit = get_object_or_404(circuit_detail_queryset(), slug=slug)
     list_url = reverse("circuits:list")
+    detail_url = reverse("circuits:detail", args=[circuit.slug])
+    selected_tags = tuple(
+        dict.fromkeys(
+            tag.strip() for tag in request.GET.getlist("tag") if tag.strip()
+        )
+    )
+    tag_match = request.GET.get("tag_match", "all").strip()
+    if tag_match not in {"all", "any"}:
+        tag_match = "all"
+    skeleton_preparation = request.GET.get("skeleton", "").strip()
+    priors_preparation = request.GET.get("priors", "").strip()
+    probability_output = request.GET.get("probability", "").strip()
+    machine_class = request.GET.get("machine_class", "").strip()
+    valid_machine_classes = {value for value, _label in Machine.MachineClass.choices}
+    if machine_class not in {*valid_machine_classes, "unreported"}:
+        machine_class = ""
+    sort_keys = parse_sort(
+        request.GET.get("sort", ""),
+        CIRCUIT_RESULT_COLUMNS,
+        (("decoder", "asc"),),
+    )
+    results = list(
+        apply_sort(
+            circuit_result_leaderboard(
+                circuit=circuit,
+                tag_slugs=selected_tags,
+                tag_match=tag_match,
+                skeleton_preparation=skeleton_preparation,
+                priors_preparation=priors_preparation,
+                probability_output=probability_output,
+                machine_class=machine_class,
+            ),
+            sort_keys,
+            CIRCUIT_RESULT_SORT_FIELDS,
+        )
+    )
+    table = table_context(request, CIRCUIT_RESULT_COLUMNS, sort_keys)
+    result_rows = []
+    for result in results:
+        scores = "; ".join(
+            (
+                f"{score.score_definition.name}: {score.value} "
+                f"{score.score_definition.unit}"
+            ).rstrip()
+            for score in sorted(
+                result.scores.all(),
+                key=lambda score: score.score_definition.display_order,
+            )
+        )
+        decoder = result.decoder_version
+        cell_by_key = {
+            "decoder": {
+                "key": "decoder",
+                "value": decoder.name,
+                "url": reverse("decoders:detail", args=[decoder.slug]),
+            },
+            "version": {"key": "version", "value": decoder.version},
+            "algorithm_tags": {
+                "key": "algorithm_tags",
+                "tags": [
+                    {
+                        "label": tag.label,
+                        "display_color": tag.display_color,
+                        "url": f"{detail_url}?{urlencode({'tag': tag.slug})}",
+                    }
+                    for tag in decoder.display_algorithm_tags
+                ],
+            },
+            "skeleton": {
+                "key": "skeleton",
+                "value": decoder.get_circuit_skeleton_preparation_display(),
+            },
+            "priors": {
+                "key": "priors",
+                "value": decoder.get_circuit_priors_preparation_display(),
+            },
+            "probability": {
+                "key": "probability",
+                "value": "Yes" if decoder.provides_failure_probability else "No",
+            },
+            "machine_class": {
+                "key": "machine_class",
+                "value": result.machine.get_machine_class_display()
+                if result.machine
+                else "Unreported",
+            },
+            "machine": {
+                "key": "machine",
+                "value": result.machine.slug if result.machine else None,
+            },
+            "shots": {"key": "shots", "value": result.shots_total, "numeric": True},
+            "scores": {"key": "scores", "value": scores},
+            "reproduction": {
+                "key": "reproduction",
+                "value": result.get_reproduction_status_display(),
+            },
+            "published": {"key": "published", "value": result.published_at},
+        }
+        result_rows.append(
+            {
+                "cells": cells_for_visible_columns(
+                    table["visible_column_keys"], cell_by_key
+                )
+            }
+        )
     artifacts = [
         ("Sampling circuit", circuit.sampling_circuit_artifact),
         ("Detector error model", circuit.detector_error_model_artifact),
@@ -318,5 +457,27 @@ def circuit_detail(request, slug):
                 and circuit.previous_revision.state in {"published", "withdrawn"}
                 else None
             ),
+            "algorithm_filter_tags": catalogue_algorithm_tags(),
+            "selected_tags": selected_tags,
+            "tag_match": tag_match,
+            "selected_skeleton": skeleton_preparation,
+            "selected_priors": priors_preparation,
+            "selected_probability": probability_output,
+            "machine_classes": Machine.MachineClass.choices,
+            "selected_machine_class": machine_class,
+            "result_count": len(results),
+            "result_rows": result_rows,
+            "reset_sort_url": url_without(request, "sort"),
+            "raw_sort": request.GET.get("sort", ""),
+            "raw_columns": request.GET.get("columns", ""),
+            "leaderboard_filters_active": bool(
+                selected_tags
+                or skeleton_preparation
+                or priors_preparation
+                or probability_output
+                or machine_class
+            ),
+            "circuit_reset_url": detail_url,
+            **table,
         },
     )
