@@ -116,10 +116,11 @@ def test_catalogue_table_state_is_reproducible_in_the_url(client, demo_decoders)
     content = response.content.decode()
     assert "Table view options (2/8)" in content
     assert 'aria-current="page"' in content
-    assert (
-        'class="filter-strip filter-strip-algorithm filter-strip-has-range"'
-        in content
-    )
+    assert 'id="decoder-algorithm-filters"' in content
+    assert 'class="filter-grid"' in content
+    assert "selected values shown in green" in content
+    assert 'data-filter-range-cell data-filter-key="result_count"' in content
+    assert ">active<" not in content
 
 
 def test_catalogue_has_an_explicit_empty_state(client, demo_decoders):
@@ -161,6 +162,25 @@ def test_detail_shows_credits_identities_tags_and_results(client, demo_decoders)
     assert "100000" in content
     assert "Brier loss upper 95% bound" in content
     assert "LER upper 95% bound at 5% acceptance" in content
+    assert 'id="decoder-result-circuit-filters"' in content
+    assert 'id="decoder-result-machine-filters"' in content
+
+
+def test_detail_result_leaderboard_filters_by_circuit_and_machine(
+    client, demo_decoders
+):
+    decoder = demo_decoders["clear-matcher-0-2"]
+    url = reverse("decoders:detail", args=[decoder.slug])
+
+    matching = client.get(
+        url,
+        {"code_tag": "rotated-surface-code", "machine_class": "cpu"},
+    )
+    wrong_machine = client.get(url, {"machine_class": "gpu"})
+
+    assert matching.context["result_count"] == 1
+    assert wrong_machine.context["result_count"] == 0
+    assert b"No published results yet" in wrong_machine.content
 
 
 def test_official_tag_colour_is_rendered_but_custom_tag_stays_neutral(

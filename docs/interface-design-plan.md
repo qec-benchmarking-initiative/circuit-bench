@@ -272,17 +272,31 @@ not replace the data with an error page or silently fall back to name search.
 Principal filters are present on the page, not hidden in a generic “advanced
 filters” dialog.
 
-The implementation is a compact instrument strip rather than a grid of
-fieldset panels. Short group titles, labels and native inputs share a line;
-fine vertical rules separate logical groups, and groups wrap as units at
-narrower desktop widths. Controls use their natural content width instead of
-expanding to fill uneven cards. The apply/reset actions remain small and
-visibly part of the same continuous surface.
+The implementation is a compact, square-celled instrument grid rather than a
+set of fieldset panels. Every ordinary cell has exactly two visible lines: a
+bold parameter name and its current value. Fine rules make the grid explicit,
+selected values use the central green filter token, and the small summary
+legend says “selected values shown in green”; no separate “active” label is
+painted over a cell. Each related grid is natively collapsible. Apply/reset
+actions remain small and visibly part of the same continuous surface.
 
 - Tags are the exception to the otherwise-visible filter rule: each namespace
-  uses the shared, explicitly labelled tag-picker button and a substantial
-  modal selection surface rather than a strip of inline checkboxes.
-- Numeric values use paired minimum/maximum fields with the unit in the label.
+  displays its selected coloured tag cards and an `Add tags…` button. The tag
+  cell spans as many regular grid tracks as its content needs, up to the full
+  row, allowing later controls to flow onto a new row. Matching `any of` or
+  `all of` is chosen only when the shared modal picker is applied.
+- Opening an enum or Boolean cell telescopes a temporary run of dotted option
+  cells outward through the same grid, with a short stagger. The labelled
+  “Choose filter” cell is one end of the run; the run goes forward when there
+  is room, backward otherwise, and may relocate to the nearest clear run. The
+  measured base grid is frozen while these cells paint over it, so underlying
+  controls do not disappear or reflow. Choosing an option retracts and commits;
+  clicking elsewhere or pressing Escape retracts without changing the value.
+- Opening a numeric cell replaces its grid row with minimum and maximum number
+  fields followed by a histogram of the public database distribution. Both
+  labelled limits have draggable handles; excluded regions are muted. `Reset
+  limits` restores the canonical `0–∞` state, with infinity shown rather than
+  the current observed maximum.
 - Boolean scientific properties use `Any / Yes / No`, not a single checkbox,
   because filtering for false is meaningful.
 - Enum fields use compact select controls or short radio groups.
@@ -299,7 +313,7 @@ The initial filter groups should be endpoint-specific:
 | Circuits | code tags; experiment tags; noise model; randomised priors; CSS; code/circuit distance bounds; detector/error ranges |
 | Noise models | curation status; randomises priors; circuit-count range |
 | Benchmarks | curation status; official-recognition state; required/optional circuit counts |
-| Results | decoder; circuit; benchmark membership; evaluator; reproduction status; machine class; score/rate/timing ranges |
+| Results | the complete algorithm grid; complete circuit grid; machine class |
 
 This list describes interface groups, not final query fields or scientific
 definitions.
@@ -509,11 +523,13 @@ responsibilities:
 - `ExplorerPage`: page-level composition and endpoint identity;
 - `QueryBar`: name/query input and explicit actions;
 - `QueryStatus`: validation and execution result;
-- `FilterMatrix`: endpoint-provided visible structured controls;
-- `FilterStrip`: a natively collapsible, reusable group of related predicates;
-- `AlgorithmFilterStrip`: decoder tags, preparation requirements and output
+- `FilterGrid`: a natively collapsible, declaration-driven group of square
+  parameter cells and temporary choice/range overlays;
+- `AlgorithmFilterGrid`: decoder tags, preparation requirements and output
   capabilities, shared by decoder discovery and result leaderboards;
-- `MachineFilterStrip`: machine class, shared by circuit, decoder, benchmark
+- `CircuitFilterGrid`: code/experiment tags, noise model, circuit properties
+  and size bounds, shared by circuit discovery and result leaderboards;
+- `MachineFilterGrid`: machine class, shared by circuit, decoder, benchmark
   and general result leaderboards as those pages are implemented;
 - `ExplorerToolbar`: count, sort summary, view options and formats;
 - `ScientificTable`: semantic table, sorting and horizontal viewport;
@@ -526,9 +542,9 @@ sorting JavaScript or table markup.
 
 On a record-detail page the same table can receive a locked scope—for example,
 “results for this exact decoder version”—while retaining query, sort, column
-and export behaviour. Filter strips receive page-supplied values and allowed
+and export behaviour. Filter grids receive page-supplied values and allowed
 choices; they do not own database queries. The containing view applies the
-same named URL parameters server-side, so reusing a strip never creates a
+same named URL parameters server-side, so reusing a grid never creates a
 browser-only filtering path.
 
 ## 11. Desktop-first fallback behaviour

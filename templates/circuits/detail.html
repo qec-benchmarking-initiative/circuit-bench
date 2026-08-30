@@ -81,8 +81,8 @@
       <form class="leaderboard-filter-form" method="get">
         {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
         {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
-        {% include "components/filters/algorithm_strip.html" with picker_id="circuit-result-algorithm-tags" filter_tags=algorithm_filter_tags selected_tags=selected_tags tag_match=tag_match selected_skeleton=selected_skeleton selected_priors=selected_priors selected_probability=selected_probability only %}
-        {% include "components/filters/machine_strip.html" with machine_classes=machine_classes selected_machine_class=selected_machine_class only %}
+        {% include "components/filters/grid.html" with grid=algorithm_filter_grid only %}
+        {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
         <div class="leaderboard-filter-actions">
           <button class="button-compact" type="submit">Apply filters</button>
           {% if leaderboard_filters_active %}<a href="{{ circuit_reset_url }}">Reset</a>{% endif %}
@@ -96,4 +96,7 @@
   </article>
 {% endblock %}
 
-{% block extra_scripts %}<script src="{% static 'js/explorer.js' %}" defer></script>{% endblock %}
+{% block extra_scripts %}
+  <script src="{% static 'js/filter-grid.js' %}" defer></script>
+  <script src="{% static 'js/explorer.js' %}" defer></script>
+{% endblock %}

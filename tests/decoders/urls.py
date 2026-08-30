@@ -19,6 +19,11 @@ artifact_patterns = (
 
 urlpatterns = [
     path("decoders/", include("registry.urls_decoders", namespace="decoders")),
+    path("circuits/", include("registry.urls_circuits", namespace="circuits")),
+    path(
+        "noise-models/",
+        include("registry.urls_noise_models", namespace="noise-models"),
+    ),
     path("artifacts/", include(artifact_patterns, namespace="artifacts")),
     path("", include("pages.urls")),
 ]

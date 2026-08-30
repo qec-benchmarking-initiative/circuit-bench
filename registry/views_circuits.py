@@ -1,6 +1,5 @@
 from urllib.parse import urlencode
 
-from django.db.models import Case, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
@@ -13,7 +12,16 @@ from registry.explorer import (
     table_context,
     url_without,
 )
-from registry.models import Machine, NoiseModel, Tag
+from registry.filter_grids import (
+    algorithm_grid as build_algorithm_grid,
+)
+from registry.filter_grids import (
+    circuit_grid as build_circuit_grid,
+)
+from registry.filter_grids import (
+    machine_grid as build_machine_grid,
+)
+from registry.models import Machine
 from registry.services.circuits import (
     circuit_catalogue,
     circuit_detail_queryset,
@@ -21,6 +29,7 @@ from registry.services.circuits import (
     inherited_circuit_description,
 )
 from registry.services.decoders import catalogue_algorithm_tags
+from registry.services.filter_options import public_circuit_filter_options
 
 CIRCUIT_RESULT_COLUMNS = (
     ColumnSpec("decoder", "Decoder"),
@@ -150,25 +159,24 @@ def circuit_list(request):
             },
         )
     )
-    filter_tags = list(
-        Tag.objects.filter(
-            namespace__in=[Tag.Namespace.CODE, Tag.Namespace.EXPERIMENT],
-            status__in=[Tag.Status.OFFICIAL, Tag.Status.CUSTOM],
+    filter_options = public_circuit_filter_options()
+    code_filter_tags = filter_options["code_tags"]
+    experiment_filter_tags = filter_options["experiment_tags"]
+    noise_models = filter_options["noise_models"]
+    raw_values = {
+        key: request.GET.get(key, "")
+        for key in (
+            "code_d_min",
+            "code_d_max",
+            "circuit_d_min",
+            "circuit_d_max",
+            "detector_min",
+            "detector_max",
+            "error_min",
+            "error_max",
         )
-        .filter(
-            Q(status=Tag.Status.OFFICIAL)
-            | Q(code_circuit_revisions__state="published")
-            | Q(experiment_circuit_revisions__state="published")
-        )
-        .annotate(
-            official_order=Case(
-                When(status=Tag.Status.OFFICIAL, then=Value(0)),
-                default=Value(1),
-                output_field=IntegerField(),
-            )
-        )
-        .order_by("namespace", "official_order", "label")
-    )
+    }
+    distributions = filter_options["distributions"]
     table = table_context(request, columns, sort_keys)
     list_url = reverse("circuits:list")
     rows = []
@@ -252,15 +260,23 @@ def circuit_list(request):
         "circuits/list.html",
         {
             "circuits": circuits,
-            "filter_tags": filter_tags,
-            "code_filter_tags": [
-                tag for tag in filter_tags if tag.namespace == Tag.Namespace.CODE
-            ],
-            "experiment_filter_tags": [
-                tag for tag in filter_tags if tag.namespace == Tag.Namespace.EXPERIMENT
-            ],
-            "noise_models": NoiseModel.objects.filter(state="published").order_by(
-                "name"
+            "code_filter_tags": code_filter_tags,
+            "experiment_filter_tags": experiment_filter_tags,
+            "noise_models": noise_models,
+            "circuit_filter_grid": build_circuit_grid(
+                grid_id="circuit-filters",
+                code_tags=code_filter_tags,
+                selected_code_tags=code_tags,
+                code_tag_match=code_tag_match,
+                experiment_tags=experiment_filter_tags,
+                selected_experiment_tags=experiment_tags,
+                experiment_tag_match=experiment_tag_match,
+                noise_models=noise_models,
+                noise_model_slug=filters["noise_model_slug"],
+                randomises_priors=filters["randomises_priors"],
+                is_css=filters["is_css"],
+                raw_values=raw_values,
+                distributions=distributions,
             ),
             "query": query,
             "selected_tag": legacy_tag,
@@ -269,19 +285,7 @@ def circuit_list(request):
             "code_tag_match": code_tag_match,
             "experiment_tag_match": experiment_tag_match,
             "filters": filters,
-            "raw_values": {
-                key: request.GET.get(key, "")
-                for key in (
-                    "code_d_min",
-                    "code_d_max",
-                    "circuit_d_min",
-                    "circuit_d_max",
-                    "detector_min",
-                    "detector_max",
-                    "error_min",
-                    "error_max",
-                )
-            },
+            "raw_values": raw_values,
             "result_count": len(circuits),
             "table_rows": rows,
             "reset_sort_url": url_without(request, "sort"),
@@ -412,6 +416,7 @@ def circuit_detail(request, slug):
         ("Detector error model", circuit.detector_error_model_artifact),
         ("Manifest", circuit.manifest_artifact),
     ]
+    algorithm_filter_tags = list(catalogue_algorithm_tags())
     return render(
         request,
         "circuits/detail.html",
@@ -457,7 +462,17 @@ def circuit_detail(request, slug):
                 and circuit.previous_revision.state in {"published", "withdrawn"}
                 else None
             ),
-            "algorithm_filter_tags": catalogue_algorithm_tags(),
+            "algorithm_filter_tags": algorithm_filter_tags,
+            "algorithm_filter_grid": build_algorithm_grid(
+                grid_id="circuit-result-algorithm-filters",
+                picker_id="circuit-result-algorithm-tags",
+                tags=algorithm_filter_tags,
+                selected_tags=selected_tags,
+                tag_match=tag_match,
+                skeleton=skeleton_preparation,
+                priors=priors_preparation,
+                probability=probability_output,
+            ),
             "selected_tags": selected_tags,
             "tag_match": tag_match,
             "selected_skeleton": skeleton_preparation,
@@ -465,6 +480,11 @@ def circuit_detail(request, slug):
             "selected_probability": probability_output,
             "machine_classes": Machine.MachineClass.choices,
             "selected_machine_class": machine_class,
+            "machine_filter_grid": build_machine_grid(
+                grid_id="circuit-result-machine-filters",
+                machine_classes=Machine.MachineClass.choices,
+                selected_machine_class=machine_class,
+            ),
             "result_count": len(results),
             "result_rows": result_rows,
             "reset_sort_url": url_without(request, "sort"),

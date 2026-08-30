@@ -10,6 +10,7 @@ from registry.explorer import (
     table_context,
     url_without,
 )
+from registry.filter_grids import noise_model_grid as build_noise_model_grid
 from registry.services.circuits import (
     noise_model_catalogue,
     noise_model_detail_queryset,
@@ -54,6 +55,9 @@ def noise_model_list(request):
                 "published": "published_at",
             },
         )
+    )
+    circuit_values = list(
+        noise_model_catalogue().values_list("circuit_count", flat=True)
     )
     table = table_context(request, columns, sort_keys)
     rows = []
@@ -101,6 +105,14 @@ def noise_model_list(request):
             "selected_priors": randomises_priors,
             "circuit_min": request.GET.get("circuit_min", ""),
             "circuit_max": request.GET.get("circuit_max", ""),
+            "noise_model_filter_grid": build_noise_model_grid(
+                grid_id="noise-model-filters",
+                status=status,
+                priors=randomises_priors,
+                circuit_minimum=request.GET.get("circuit_min", ""),
+                circuit_maximum=request.GET.get("circuit_max", ""),
+                circuit_values=circuit_values,
+            ),
             "result_count": len(noise_models),
             "table_rows": rows,
             "reset_sort_url": url_without(request, "sort"),

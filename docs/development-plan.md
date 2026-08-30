@@ -190,6 +190,15 @@ official/custom tags visually, and commits either AND or OR matching through
 explicit action buttons. The same component boundary is reserved for later
 data-entry mode and custom-tag creation.
 
+The visible controls now use one declaration-driven square filter grid. Choice
+cells telescope temporary dotted options over a frozen base layout; numeric
+cells expose the database distribution with draggable minimum/maximum handles;
+tag cells expand across grid tracks as their selected cards require. Algorithm,
+circuit and machine grids are composed on decoder and circuit leaderboards and
+on the implemented `/results/` explorer. All pages call the same published
+result query service, and combined result URLs distinguish decoder preparation
+(`decoder_priors`) from randomised circuit priors (`circuit_priors`).
+
 This work deliberately does not define the scripted query language, JSON/CSV
 formats, public null ordering or API field registry. The serial comparison
 query-contract task below remains the prerequisite for those promises and for

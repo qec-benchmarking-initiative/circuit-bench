@@ -12,7 +12,15 @@ from registry.explorer import (
     table_context,
     url_without,
 )
-from registry.models import DecoderVersion
+from registry.filter_grids import algorithm_grid as build_algorithm_grid
+from registry.filter_grids import (
+    circuit_grid as build_circuit_grid,
+)
+from registry.filter_grids import (
+    machine_grid as build_machine_grid,
+)
+from registry.models import DecoderVersion, Machine
+from registry.result_tables import result_cell_map
 from registry.services.decoders import (
     catalogue_algorithm_tags,
     inherited_description_source,
@@ -21,6 +29,35 @@ from registry.services.decoders import (
     public_predecessor,
     public_successor,
 )
+from registry.services.filter_options import public_circuit_filter_options
+from registry.services.results import public_result_catalogue
+
+DECODER_RESULT_COLUMNS = (
+    ColumnSpec("result", "Result UUID", default_visible=False),
+    ColumnSpec("circuit", "Circuit"),
+    ColumnSpec("code_tags", "Code tags", sortable=False, default_visible=False),
+    ColumnSpec(
+        "experiment_tags", "Experiment tags", sortable=False, default_visible=False
+    ),
+    ColumnSpec("noise_model", "Noise model"),
+    ColumnSpec("machine_class", "Machine type"),
+    ColumnSpec("machine", "Machine"),
+    ColumnSpec("shots", "Shots", numeric=True, default_direction="desc"),
+    ColumnSpec("scores", "Evaluator scores", sortable=False),
+    ColumnSpec("reproduction", "Reproduction"),
+    ColumnSpec("published", "Published", default_direction="desc"),
+)
+
+DECODER_RESULT_SORT_FIELDS = {
+    "result": "id",
+    "circuit": "circuit_revision__name",
+    "noise_model": "circuit_revision__noise_model__name",
+    "machine_class": "machine__machine_class",
+    "machine": "machine__slug",
+    "shots": "shots_total",
+    "reproduction": "reproduction_status",
+    "published": "published_at",
+}
 
 
 class DecoderCatalogueView(ListView):
@@ -80,6 +117,10 @@ class DecoderCatalogueView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         table = table_context(self.request, self.columns, self.sort_keys)
+        filter_tags = list(catalogue_algorithm_tags())
+        result_values = list(
+            public_decoder_catalogue().values_list("published_result_count", flat=True)
+        )
         rows = []
         for decoder in context["decoders"]:
             tag_cells = [
@@ -137,7 +178,20 @@ class DecoderCatalogueView(ListView):
                 "selected_probability": self.probability_output,
                 "result_min": self.request.GET.get("result_min", ""),
                 "result_max": self.request.GET.get("result_max", ""),
-                "filter_tags": catalogue_algorithm_tags(),
+                "filter_tags": filter_tags,
+                "algorithm_filter_grid": build_algorithm_grid(
+                    grid_id="decoder-algorithm-filters",
+                    picker_id="decoder-algorithm-tags",
+                    tags=filter_tags,
+                    selected_tags=self.tag_slugs,
+                    tag_match=self.tag_match,
+                    skeleton=self.skeleton_preparation,
+                    priors=self.priors_preparation,
+                    probability=self.probability_output,
+                    result_minimum=self.request.GET.get("result_min", ""),
+                    result_maximum=self.request.GET.get("result_max", ""),
+                    result_values=result_values,
+                ),
                 "result_count": len(context["decoders"]),
                 "table_rows": rows,
                 "reset_sort_url": url_without(self.request, "sort"),
@@ -176,6 +230,7 @@ class DecoderDetailView(DetailView):
         predecessor = public_predecessor(decoder)
         successor = public_successor(decoder)
         list_url = reverse("decoders:list")
+        result_context = self._result_context(decoder)
 
         context.update(
             {
@@ -204,15 +259,7 @@ class DecoderDetailView(DetailView):
                 "metadata": self._metadata(decoder),
                 "capabilities": self._capabilities(decoder),
                 "schema_download_url": self._schema_download_url(decoder),
-                "result_columns": [
-                    {"label": "Result"},
-                    {"label": "Circuit"},
-                    {"label": "Shots", "numeric": True},
-                    {"label": "Evaluator scores"},
-                    {"label": "Reproduction"},
-                    {"label": "Published"},
-                ],
-                "result_rows": self._result_rows(decoder),
+                **result_context,
             }
         )
         return context
@@ -275,30 +322,128 @@ class DecoderDetailView(DetailView):
             },
         ]
 
-    @staticmethod
-    def _result_rows(decoder: DecoderVersion) -> list[dict[str, object]]:
-        rows = []
-        for result in decoder.published_results:
-            scores = "; ".join(
-                (
-                    f"{score.score_definition.name}: {score.value} "
-                    f"{score.score_definition.unit}"
-                ).rstrip()
-                for score in sorted(
-                    result.scores.all(),
-                    key=lambda score: score.score_definition.display_order,
+    def _result_context(self, decoder: DecoderVersion) -> dict[str, object]:
+        request = self.request
+        code_tags = self._selected("code_tag")
+        experiment_tags = self._selected("experiment_tag")
+        code_tag_match = self._match("code_tag_match")
+        experiment_tag_match = self._match("experiment_tag_match")
+        noise_model = request.GET.get("noise_model", "").strip()
+        randomises_priors = request.GET.get("priors", "").strip()
+        is_css = request.GET.get("css", "").strip()
+        machine_class = request.GET.get("machine_class", "").strip()
+        valid_machine_classes = {
+            value for value, _label in Machine.MachineClass.choices
+        }
+        if machine_class not in {*valid_machine_classes, "unreported"}:
+            machine_class = ""
+        raw_ranges = {
+            name: request.GET.get(name, "")
+            for name in (
+                "code_d_min",
+                "code_d_max",
+                "circuit_d_min",
+                "circuit_d_max",
+                "detector_min",
+                "detector_max",
+                "error_min",
+                "error_max",
+            )
+        }
+        parsed_ranges = {
+            name: parse_nonnegative_int(value) for name, value in raw_ranges.items()
+        }
+        sort_keys = parse_sort(
+            request.GET.get("sort", ""),
+            DECODER_RESULT_COLUMNS,
+            (("circuit", "asc"),),
+        )
+        results = list(
+            apply_sort(
+                public_result_catalogue(
+                    decoder=decoder,
+                    code_tag_slugs=code_tags,
+                    code_tag_match=code_tag_match,
+                    experiment_tag_slugs=experiment_tags,
+                    experiment_tag_match=experiment_tag_match,
+                    noise_model_slug=noise_model,
+                    randomises_priors=randomises_priors,
+                    is_css=is_css,
+                    code_distance_min=parsed_ranges["code_d_min"],
+                    code_distance_max=parsed_ranges["code_d_max"],
+                    circuit_distance_min=parsed_ranges["circuit_d_min"],
+                    circuit_distance_max=parsed_ranges["circuit_d_max"],
+                    detector_min=parsed_ranges["detector_min"],
+                    detector_max=parsed_ranges["detector_max"],
+                    error_min=parsed_ranges["error_min"],
+                    error_max=parsed_ranges["error_max"],
+                    machine_class=machine_class,
+                ),
+                sort_keys,
+                DECODER_RESULT_SORT_FIELDS,
+            )
+        )
+        table = table_context(request, DECODER_RESULT_COLUMNS, sort_keys)
+        detail_url = reverse("decoders:detail", args=[decoder.slug])
+        rows = [
+            {
+                "cells": cells_for_visible_columns(
+                    table["visible_column_keys"],
+                    result_cell_map(result, filter_url=detail_url),
                 )
+            }
+            for result in results
+        ]
+        options = public_circuit_filter_options()
+        filters_active = bool(
+            code_tags
+            or experiment_tags
+            or noise_model
+            or randomises_priors
+            or is_css
+            or machine_class
+            or any(value is not None for value in parsed_ranges.values())
+        )
+        return {
+            "circuit_filter_grid": build_circuit_grid(
+                grid_id="decoder-result-circuit-filters",
+                code_tags=options["code_tags"],
+                selected_code_tags=code_tags,
+                code_tag_match=code_tag_match,
+                experiment_tags=options["experiment_tags"],
+                selected_experiment_tags=experiment_tags,
+                experiment_tag_match=experiment_tag_match,
+                noise_models=options["noise_models"],
+                noise_model_slug=noise_model,
+                randomises_priors=randomises_priors,
+                is_css=is_css,
+                raw_values=raw_ranges,
+                distributions=options["distributions"],
+            ),
+            "machine_filter_grid": build_machine_grid(
+                grid_id="decoder-result-machine-filters",
+                machine_classes=Machine.MachineClass.choices,
+                selected_machine_class=machine_class,
+            ),
+            "result_count": len(results),
+            "result_rows": rows,
+            "result_filters_active": filters_active,
+            "result_reset_url": detail_url,
+            "reset_sort_url": url_without(request, "sort"),
+            "raw_sort": request.GET.get("sort", ""),
+            "raw_columns": request.GET.get("columns", ""),
+            **table,
+        }
+
+    def _selected(self, name: str) -> tuple[str, ...]:
+        return tuple(
+            dict.fromkeys(
+                value.strip()
+                for value in self.request.GET.getlist(name)
+                if value.strip()
             )
-            rows.append(
-                {
-                    "cells": [
-                        {"value": str(result.id)},
-                        {"value": result.circuit_revision.name},
-                        {"value": result.shots_total, "numeric": True},
-                        {"value": scores},
-                        {"value": result.get_reproduction_status_display()},
-                        {"value": result.published_at},
-                    ]
-                }
-            )
-        return rows
+        )
+
+    def _match(self, name: str) -> str:
+        value = self.request.GET.get(name, "all").strip()
+        return value if value in {"all", "any"} else "all"

@@ -16,22 +16,7 @@
 {% block explorer_status %}Plain-text mode · {{ result_count }} published noise model{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
 
 {% block explorer_filters %}
-  <div class="filter-control-group filter-group-radios" role="group" aria-labelledby="noise-curation-label">
-    <span class="filter-group-title" id="noise-curation-label">Curation</span>
-    <div class="filter-options">
-      <label><input type="radio" name="status" value=""{% if not selected_status %} checked{% endif %}> Any</label>
-      <label><input type="radio" name="status" value="official"{% if selected_status == "official" %} checked{% endif %}> Official</label>
-      <label><input type="radio" name="status" value="community"{% if selected_status == "community" %} checked{% endif %}> Community</label>
-      <label><input type="radio" name="status" value="deprecated"{% if selected_status == "deprecated" %} checked{% endif %}> Deprecated</label>
-    </div>
-  </div>
-  <div class="filter-control-group filter-control-evidence">
-    <span class="filter-group-title">Properties</span>
-    <label class="compact-select-label">Randomised priors
-      <select name="priors"><option value="">Any</option><option value="yes"{% if selected_priors == "yes" %} selected{% endif %}>Yes</option><option value="no"{% if selected_priors == "no" %} selected{% endif %}>No</option></select>
-    </label>
-    <span class="range-control"><span>Circuits</span><input aria-label="Minimum published circuit count" name="circuit_min" type="number" min="0" placeholder="min" value="{{ circuit_min }}"><span aria-hidden="true">–</span><input aria-label="Maximum published circuit count" name="circuit_max" type="number" min="0" placeholder="max" value="{{ circuit_max }}"></span>
-  </div>
+  {% include "components/filters/grid.html" with grid=noise_model_filter_grid only %}
   <div class="filter-actions"><button class="button-compact" type="submit">Apply filters</button>{% if filters_active %}<a href="{% url 'noise-models:list' %}">Reset</a>{% endif %}</div>
 {% endblock %}
 

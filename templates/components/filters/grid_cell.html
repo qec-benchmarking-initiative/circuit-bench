@@ -1,0 +1,33 @@
+{% if cell.type == "tags" %}
+  <section class="filter-grid-cell filter-grid-tag-cell{% if cell.filtered %} is-filtered{% endif %}" data-filter-grid-cell data-filter-tag-cell data-filter-key="{{ cell.key }}">
+    <header class="filter-grid-tag-heading">
+      <strong>{{ cell.label }}</strong>
+      <span data-tag-rule-label>{{ cell.match_label }}</span>
+    </header>
+    {% include "components/tag_picker.html" with picker_id=cell.picker_id label=cell.label input_name=cell.input_name tags=cell.tags selected_keys=cell.selected_keys match_name=cell.match_name match_value=cell.match_value mode="filter" open_label="Add tags…" only %}
+  </section>
+{% elif cell.type == "choice" %}
+  <div class="filter-grid-cell filter-grid-choice-cell{% if cell.filtered %} is-filtered{% endif %}" data-filter-grid-cell data-filter-choice-cell data-filter-key="{{ cell.key }}">
+    <button class="filter-grid-trigger" type="button" data-filter-choice-trigger aria-expanded="false">
+      <span class="filter-grid-cell-title">{{ cell.label }}</span>
+      <span class="filter-grid-cell-value" data-filter-cell-value>{{ cell.display_value }}</span>
+    </button>
+    <label class="filter-grid-fallback">
+      <span>{{ cell.label }}</span>
+      <select name="{{ cell.name }}" data-filter-choice-input>
+        {% for choice in cell.choices %}<option value="{{ choice.value }}"{% if cell.value == choice.value %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+{% elif cell.type == "range" %}
+  <div class="filter-grid-cell filter-grid-range-cell{% if cell.filtered %} is-filtered{% endif %}" data-filter-grid-cell data-filter-range-cell data-filter-key="{{ cell.key }}" data-domain-min="{{ cell.histogram.domain_min }}" data-domain-max="{{ cell.histogram.domain_max }}" data-histogram-counts="{{ cell.histogram.counts|join:',' }}" data-histogram-label="{{ cell.histogram_label }}">
+    <button class="filter-grid-trigger" type="button" data-filter-range-trigger aria-expanded="false">
+      <span class="filter-grid-cell-title">{{ cell.label }}</span>
+      <span class="filter-grid-cell-value" data-filter-cell-value>{{ cell.display_minimum }}–{{ cell.display_maximum }}</span>
+    </button>
+    <span class="filter-grid-native-range">
+      <input name="{{ cell.minimum_name }}" type="number" min="0" step="1" value="{{ cell.minimum_value }}" data-filter-range-min>
+      <input name="{{ cell.maximum_name }}" type="number" min="0" step="1" value="{{ cell.maximum_value }}" data-filter-range-max>
+    </span>
+  </div>
+{% endif %}

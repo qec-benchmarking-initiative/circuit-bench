@@ -1,0 +1,31 @@
+{% extends "layouts/collection.html" %}
+
+{% block title %}Results · Circuit Bench{% endblock %}
+{% block explorer_name %}Results{% endblock %}
+
+{% block explorer_query %}
+  <label class="visually-hidden" for="result-query">Search results</label>
+  <input id="result-query" type="search" name="q" value="{{ query }}" placeholder="Search decoder, circuit, noise model, machine, or evaluator">
+  <button class="button-compact" type="submit">Run</button>
+  {% if query or filters_active %}<a class="button-link" href="{% url 'results:list' %}">Clear</a>{% endif %}
+  <span class="query-mode">Plain-text search · scripted query syntax is not enabled yet</span>
+{% endblock %}
+
+{% block explorer_status %}
+  Plain-text mode · {{ result_count }} exact published result{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL
+{% endblock %}
+
+{% block explorer_filters %}
+  {% include "components/filters/grid.html" with grid=algorithm_filter_grid only %}
+  {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
+  {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
+  <div class="filter-actions">
+    <button class="button-compact" type="submit">Apply filters</button>
+    {% if filters_active %}<a href="{% url 'results:list' %}">Reset</a>{% endif %}
+  </div>
+{% endblock %}
+
+{% block collection_results %}
+  {% include "components/explorer_toolbar.html" with explorer_id="results" %}
+  {% include "components/data_table.html" with columns=table_columns rows=table_rows empty_message="No matching results. Try removing one or more filters." only %}
+{% endblock %}

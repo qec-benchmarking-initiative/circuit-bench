@@ -1,4 +1,5 @@
 {% extends "layouts/entity_detail.html" %}
+{% load static %}
 
 {% block title %}{{ decoder.name }} {{ decoder.version }} · Circuit Bench{% endblock %}
 
@@ -103,9 +104,22 @@
 
 {% block entity_related %}
   <h2>Results for this exact decoder version</h2>
-  {% if result_rows %}
-    {% include "components/data_table.html" with columns=result_columns rows=result_rows only %}
-  {% else %}
-    {% include "components/empty_state.html" with title="No published results yet" message="This exact decoder version has no published circuit results." only %}
-  {% endif %}
+  <p class="muted">Filter the exact published results by circuit or execution hardware.</p>
+  <form class="leaderboard-filter-form" method="get">
+    {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
+    {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
+    <div class="leaderboard-filter-actions">
+      {% if result_filters_active %}<a href="{{ result_reset_url }}">Reset filters</a>{% endif %}
+      <button class="button-compact" type="submit">Apply filters</button>
+    </div>
+  </form>
+  <div class="collection-results" aria-live="polite">
+    {% include "components/explorer_toolbar.html" with explorer_id="decoder-results" %}
+    {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No published results yet. This exact decoder version has no results matching the selected circuit and machine filters." only %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/filter-grid.js' %}" defer></script>
+  <script src="{% static 'js/explorer.js' %}" defer></script>
 {% endblock %}

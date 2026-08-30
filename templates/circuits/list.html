@@ -16,33 +16,7 @@
 {% block explorer_status %}Plain-text mode · {{ result_count }} exact published circuit revision{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
 
 {% block explorer_filters %}
-  <div class="filter-control-group filter-control-tags">
-    <span class="filter-group-title">Code tags</span>
-    {% include "components/tag_picker.html" with picker_id="circuit-code-tags" label="Code tags" input_name="code_tag" tags=code_filter_tags selected_keys=selected_code_tags match_name="code_tag_match" match_value=code_tag_match mode="filter" only %}
-  </div>
-  <div class="filter-control-group filter-control-tags">
-    <span class="filter-group-title">Experiment tags</span>
-    {% include "components/tag_picker.html" with picker_id="circuit-experiment-tags" label="Experiment tags" input_name="experiment_tag" tags=experiment_filter_tags selected_keys=selected_experiment_tags match_name="experiment_tag_match" match_value=experiment_tag_match mode="filter" only %}
-  </div>
-  <div class="filter-control-group filter-control-science">
-    <span class="filter-group-title">Properties</span>
-    <label class="compact-select-label">Noise model
-      <select name="noise_model"><option value="">Any</option>{% for noise_model in noise_models %}<option value="{{ noise_model.slug }}"{% if filters.noise_model_slug == noise_model.slug %} selected{% endif %}>{{ noise_model.name }}</option>{% endfor %}</select>
-    </label>
-    <label class="compact-select-label">Priors
-      <select name="priors"><option value="">Any</option><option value="yes"{% if filters.randomises_priors == "yes" %} selected{% endif %}>Yes</option><option value="no"{% if filters.randomises_priors == "no" %} selected{% endif %}>No</option></select>
-    </label>
-    <label class="compact-select-label">CSS
-      <select name="css"><option value="">Any</option><option value="yes"{% if filters.is_css == "yes" %} selected{% endif %}>Yes</option><option value="no"{% if filters.is_css == "no" %} selected{% endif %}>No</option></select>
-    </label>
-  </div>
-  <div class="filter-control-group filter-control-ranges">
-    <span class="filter-group-title">Ranges</span>
-    <span class="range-control"><span>Code d≤</span><input aria-label="Minimum code distance upper bound" name="code_d_min" type="number" min="0" placeholder="min" value="{{ raw_values.code_d_min }}"><span aria-hidden="true">–</span><input aria-label="Maximum code distance upper bound" name="code_d_max" type="number" min="0" placeholder="max" value="{{ raw_values.code_d_max }}"></span>
-    <span class="range-control"><span>Circuit d≤</span><input aria-label="Minimum circuit distance upper bound" name="circuit_d_min" type="number" min="0" placeholder="min" value="{{ raw_values.circuit_d_min }}"><span aria-hidden="true">–</span><input aria-label="Maximum circuit distance upper bound" name="circuit_d_max" type="number" min="0" placeholder="max" value="{{ raw_values.circuit_d_max }}"></span>
-    <span class="range-control"><span>Detectors</span><input aria-label="Minimum detector count" name="detector_min" type="number" min="0" placeholder="min" value="{{ raw_values.detector_min }}"><span aria-hidden="true">–</span><input aria-label="Maximum detector count" name="detector_max" type="number" min="0" placeholder="max" value="{{ raw_values.detector_max }}"></span>
-    <span class="range-control"><span>Errors</span><input aria-label="Minimum error count" name="error_min" type="number" min="0" placeholder="min" value="{{ raw_values.error_min }}"><span aria-hidden="true">–</span><input aria-label="Maximum error count" name="error_max" type="number" min="0" placeholder="max" value="{{ raw_values.error_max }}"></span>
-  </div>
+  {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
   <div class="filter-actions"><button class="button-compact" type="submit">Apply filters</button>{% if filters_active %}<a href="{% url 'circuits:list' %}">Reset</a>{% endif %}</div>
 {% endblock %}
 

@@ -1,0 +1,11 @@
+<details class="filter-grid" id="{{ grid.id }}" data-filter-grid open>
+  <summary>
+    <span class="filter-grid-title">{{ grid.title }}</span>
+    <span class="filter-grid-legend">selected values shown in green</span>
+  </summary>
+  <div class="filter-grid-cells" data-filter-grid-cells>
+    {% for cell in grid.cells %}
+      {% include "components/filters/grid_cell.html" with cell=cell only %}
+    {% endfor %}
+  </div>
+</details>

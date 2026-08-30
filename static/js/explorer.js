@@ -132,6 +132,9 @@
     picker.querySelectorAll("[data-tag-apply]").forEach((button) => {
       button.disabled = selected.length === 0;
     });
+    picker.dispatchEvent(new CustomEvent("filtergrid:tags-changed", {
+      bubbles: true,
+    }));
   };
 
   document.querySelectorAll("[data-tag-picker]").forEach((picker) => {

@@ -16,7 +16,7 @@
         <a href="/benchmarks/">Benchmarks</a>
         <a href="/circuits/"{% if request.resolver_match.namespace == "circuits" %} class="active" aria-current="page"{% endif %}>Circuits</a>
         <a href="/noise-models/"{% if request.resolver_match.namespace == "noise-models" %} class="active" aria-current="page"{% endif %}>Noise models</a>
-        <a href="/results/">Results</a>
+        <a href="/results/"{% if request.resolver_match.namespace == "results" %} class="active" aria-current="page"{% endif %}>Results</a>
       </nav>
       {% if user.is_authenticated %}
         <a class="account-link" href="/accounts/">{{ user.display_name }}</a>

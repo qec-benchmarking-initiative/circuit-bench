@@ -73,6 +73,10 @@ def test_circuit_explorer_combines_scientific_filters_and_column_state(
         "errors",
     ]
     assert "Table view options (3/14)" in response.content.decode()
+    content = response.content.decode()
+    assert 'id="circuit-filters"' in content
+    assert 'data-filter-tag-cell data-filter-key="code_tags"' in content
+    assert 'data-filter-range-cell data-filter-key="detectors"' in content
 
 
 def test_noise_model_explorer_filters_derived_priors_and_circuit_count(
@@ -88,6 +92,10 @@ def test_noise_model_explorer_filters_derived_priors_and_circuit_count(
         "randomised-phenomenological"
     ]
     assert response.context["sort_summary"] == "Circuits descending"
+    content = response.content.decode()
+    assert 'id="noise-model-filters"' in content
+    assert 'data-filter-choice-cell data-filter-key="curation"' in content
+    assert 'data-filter-range-cell data-filter-key="circuit_count"' in content
 
 
 def test_circuit_detail_exposes_only_published_results(client, demo_registry):
@@ -104,17 +112,20 @@ def test_circuit_detail_exposes_only_published_results(client, demo_registry):
     assert b"No results yet" in response.content
 
 
-def test_circuit_leaderboard_uses_reusable_algorithm_and_machine_strips(
+def test_circuit_leaderboard_uses_reusable_algorithm_and_machine_grids(
     client, demo_registry
 ):
     circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
     response = client.get(reverse("circuits:detail", args=[circuit.slug]))
     content = response.content.decode()
 
-    assert 'class="filter-strip filter-strip-algorithm"' in content
-    assert 'class="filter-strip filter-strip-machine"' in content
+    assert 'id="circuit-result-algorithm-filters"' in content
+    assert 'id="circuit-result-machine-filters"' in content
+    assert content.count('class="filter-grid"') == 2
     assert "Algorithm filters" in content
     assert "Machine filters" in content
+    assert content.count("selected values shown in green") == 2
+    assert ">active<" not in content
     assert "Table view options (9/12)" in content
     assert response.context["result_count"] == 1
 

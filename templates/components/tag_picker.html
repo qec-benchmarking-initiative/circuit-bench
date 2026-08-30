@@ -4,7 +4,7 @@
     {% for tag in tags %}{% if tag.slug in selected_keys %}<span class="selected-tag selected-tag-{{ tag.status }}" data-selected-tag="{{ tag.slug }}"{% if tag.status == "official" and tag.display_color %} style="--tag-color: {{ tag.display_color }}"{% endif %}><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }} <button type="button" data-tag-remove="{{ tag.slug }}" aria-label="Remove {{ tag.label }}">×</button></span>{% endif %}{% endfor %}
     <span class="tag-picker-empty-summary{% if selected_keys %} hidden{% endif %}" data-tag-empty-summary>No tags selected</span>
   </div>
-  <button class="button-secondary button-compact" type="button" data-tag-dialog-open="{{ picker_id }}">Choose tags…</button>
+  <button class="button-secondary button-compact" type="button" data-tag-dialog-open="{{ picker_id }}">{{ open_label|default:"Choose tags…" }}</button>
 
   <dialog class="tag-dialog" id="{{ picker_id }}" data-tag-dialog aria-labelledby="{{ picker_id }}-title">
     <div class="dialog-heading">
