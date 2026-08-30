@@ -1,7 +1,8 @@
 # DecoderBench relational data model
 
-Status: early structural proposal; newer entity contracts under `schemas/` and
-`definitions/` take precedence where they differ  
+Status: superseded by `docs/data-model-0.1.md`; retained as design history.
+Newer entity contracts under `schemas/` and `definitions/` take precedence
+where they differ.
 Database: PostgreSQL  
 Identifier policy: UUID primary keys; public URLs use immutable slugs plus UUIDs
 
