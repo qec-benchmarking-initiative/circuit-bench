@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:decoderbench:schema:decoder:0.1",
+  "title": "Decoder record 0.1",
+  "description": "A published or in-review DecoderBench decoder-version record.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "decoder/0.1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Server-assigned identity of this exact decoder version."
+    },
+    "decoder_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Server-assigned identity shared by every version in the decoder family."
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 200
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Public name of the decoder family."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Contributor-supplied version label; semantic versioning is not required."
+    },
+    "credits": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": ["name"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "account_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": ["account_id"]
+          }
+        ]
+      }
+    },
+    "description": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 10000,
+      "description": "Optional general description which supersedes the inherited description for this and later versions."
+    },
+    "revision_description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000,
+      "description": "Required account of what this version introduced or changed."
+    },
+    "preparation_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "circuit_skeleton": {
+          "enum": ["required", "not_required"],
+          "x-definition": "../../definitions/decoder/0.1.md#circuit-skeleton-preparation"
+        },
+        "circuit_priors": {
+          "enum": ["required", "not_required"],
+          "x-definition": "../../definitions/decoder/0.1.md#circuit-prior-preparation"
+        }
+      },
+      "required": ["circuit_skeleton", "circuit_priors"]
+    },
+    "provides_failure_probability": {
+      "type": "boolean",
+      "x-definition": "../../definitions/decoder/0.1.md#failure-probability-capability"
+    },
+    "algorithm_tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        "maxLength": 100
+      },
+      "description": "Stable slugs from the custom-and-official algorithm tag registry."
+    },
+    "hyperparameter_definitions": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 20000,
+      "description": "Optional free-text explanation of the decoder version's tunable parameters."
+    },
+    "hyperparameter_schema": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "byte_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32768
+            }
+          },
+          "required": ["url", "sha256", "byte_size"]
+        }
+      ],
+      "description": "Optional uploaded JSON Schema Draft 2020-12 document for result hyperparameter values."
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": ["paper", "source", "documentation", "artifact", "other"]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "label": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": ["kind", "url", "label"]
+      }
+    },
+    "previous_version_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "state": {
+      "enum": ["draft", "pending_review", "published", "withdrawn"]
+    },
+    "submitted_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "withdrawn_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "decoder_id",
+    "slug",
+    "name",
+    "version",
+    "credits",
+    "description",
+    "revision_description",
+    "preparation_requirements",
+    "provides_failure_probability",
+    "algorithm_tags",
+    "hyperparameter_definitions",
+    "hyperparameter_schema",
+    "links",
+    "previous_version_id",
+    "state",
+    "submitted_by",
+    "created_at",
+    "published_at",
+    "withdrawn_at"
+  ]
+}
