@@ -277,8 +277,10 @@ set of fieldset panels. Every ordinary cell has exactly two visible lines: a
 bold parameter name and its current value. Fine rules make the grid explicit,
 selected values use the central green filter token, and the small summary
 legend says “selected values shown in green”; no separate “active” label is
-painted over a cell. Each related grid is natively collapsible. Apply/reset
-actions remain small and visibly part of the same continuous surface.
+painted over a cell. Every occupied cell supplies its own lower and right rule;
+unoccupied tracks show a light diagonal hatch rather than becoming ambiguous
+white space. Each related grid is natively collapsible. Apply/reset actions
+remain small and visibly part of the same continuous surface.
 
 - Tags are the exception to the otherwise-visible filter rule: each namespace
   displays its selected coloured tag cards and an `Add tags…` button. The tag
@@ -286,17 +288,18 @@ actions remain small and visibly part of the same continuous surface.
   row, allowing later controls to flow onto a new row. Matching `any of` or
   `all of` is chosen only when the shared modal picker is applied.
 - Opening an enum or Boolean cell telescopes a temporary run of dotted option
-  cells outward through the same grid, with a short stagger. The labelled
-  “Choose filter” cell is one end of the run; the run goes forward when there
-  is room, backward otherwise, and may relocate to the nearest clear run. The
-  measured base grid is frozen while these cells paint over it, so underlying
-  controls do not disappear or reflow. Choosing an option retracts and commits;
-  clicking elsewhere or pressing Escape retracts without changing the value.
+  cells through the same grid, with a short stagger. Placement first minimises
+  extra rows, then distance from the source cell; options may occupy cells on
+  both sides of the labelled “Choose filter” anchor when that preserves the
+  existing row count. The measured base grid is frozen while these cells paint
+  over it, so underlying controls do not disappear or reflow. Choosing an
+  option retracts and commits; clicking elsewhere or pressing Escape retracts
+  without changing the value.
 - Opening a numeric cell replaces its grid row with minimum and maximum number
   fields followed by a histogram of the public database distribution. Both
   labelled limits have draggable handles; excluded regions are muted. `Reset
   limits` restores the canonical `0–∞` state, with infinity shown rather than
-  the current observed maximum.
+  the current observed maximum, and closes the numeric editor immediately.
 - Boolean scientific properties use `Any / Yes / No`, not a single checkbox,
   because filtering for false is meaningful.
 - Enum fields use compact select controls or short radio groups.
@@ -362,6 +365,28 @@ exact pattern is found. References: [HTML dialog
 semantics](https://html.spec.whatwg.org/multipage/interactive-elements.html?elementdef-dialog=),
 [GOV.UK accessible autocomplete](https://alphagov.github.io/accessible-autocomplete/),
 [Choices.js](https://choices-js.github.io/Choices/), and [Tom Select usage](https://tom-select.js.org/docs/).
+
+#### 6.5.2 Related-record picker
+
+A separate reusable picker handles filters whose options are rows in another
+public table and may eventually number in the thousands. Its first application
+is the circuit noise-model filter. The compact grid cell reads `Any`, the first
+selected record name, or the first name followed by `+N`; it never grows to
+display the entire subset.
+
+Opening the cell presents a native dialog with a selected-record tray and a
+server-searched, paginated result list. Each result gives the human name,
+stable slug, short description and curation status. Official records precede
+community records. Applying the picker writes repeated stable URL parameters,
+for example `noise_model=fixed&noise_model=randomised`. Because a circuit has
+one noise model, multiple values mean scalar membership (`IN`); there is no
+misleading any/all control.
+
+The endpoint is allow-listed per record type rather than exposing arbitrary
+table search. Each definition fixes its public queryset, searchable fields,
+ordering, labels, URL parameter and record serializer. The picker only builds
+URL state; the ordinary circuit/result query services interpret that state, so
+the same request works without browser JavaScript.
 
 ### 6.6 Table toolbar
 
@@ -529,6 +554,8 @@ responsibilities:
   capabilities, shared by decoder discovery and result leaderboards;
 - `CircuitFilterGrid`: code/experiment tags, noise model, circuit properties
   and size bounds, shared by circuit discovery and result leaderboards;
+- `RelatedRecordPicker`: allow-listed, remotely searched selection of public
+  related records such as noise models, with repeated URL parameters;
 - `MachineFilterGrid`: machine class, shared by circuit, decoder, benchmark
   and general result leaderboards as those pages are implemented;
 - `ExplorerToolbar`: count, sort summary, view options and formats;

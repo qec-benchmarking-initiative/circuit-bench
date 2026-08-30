@@ -20,6 +20,7 @@ from registry.filter_grids import (
     machine_grid as build_machine_grid,
 )
 from registry.models import DecoderVersion, Machine
+from registry.record_pickers import record_picker_context
 from registry.result_tables import result_cell_map
 from registry.services.decoders import (
     catalogue_algorithm_tags,
@@ -328,7 +329,13 @@ class DecoderDetailView(DetailView):
         experiment_tags = self._selected("experiment_tag")
         code_tag_match = self._match("code_tag_match")
         experiment_tag_match = self._match("experiment_tag_match")
-        noise_model = request.GET.get("noise_model", "").strip()
+        noise_model_picker = record_picker_context(
+            "noise-models", self._selected("noise_model")
+        )
+        noise_models = tuple(
+            record["identifier"]
+            for record in noise_model_picker["selected_records"]
+        )
         randomises_priors = request.GET.get("priors", "").strip()
         is_css = request.GET.get("css", "").strip()
         machine_class = request.GET.get("machine_class", "").strip()
@@ -366,7 +373,7 @@ class DecoderDetailView(DetailView):
                     code_tag_match=code_tag_match,
                     experiment_tag_slugs=experiment_tags,
                     experiment_tag_match=experiment_tag_match,
-                    noise_model_slug=noise_model,
+                    noise_model_slugs=noise_models,
                     randomises_priors=randomises_priors,
                     is_css=is_css,
                     code_distance_min=parsed_ranges["code_d_min"],
@@ -398,7 +405,7 @@ class DecoderDetailView(DetailView):
         filters_active = bool(
             code_tags
             or experiment_tags
-            or noise_model
+            or noise_models
             or randomises_priors
             or is_css
             or machine_class
@@ -413,8 +420,7 @@ class DecoderDetailView(DetailView):
                 experiment_tags=options["experiment_tags"],
                 selected_experiment_tags=experiment_tags,
                 experiment_tag_match=experiment_tag_match,
-                noise_models=options["noise_models"],
-                noise_model_slug=noise_model,
+                noise_model_picker=noise_model_picker,
                 randomises_priors=randomises_priors,
                 is_css=is_css,
                 raw_values=raw_ranges,

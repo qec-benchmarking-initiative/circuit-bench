@@ -199,6 +199,17 @@ on the implemented `/results/` explorer. All pages call the same published
 result query service, and combined result URLs distinguish decoder preparation
 (`decoder_priors`) from randomised circuit priors (`circuit_priors`).
 
+The grid now retains explicit lower rules on every occupied cell and diagonal
+hatching in unoccupied tracks. Choice placement minimises new rows and may
+split options around its anchor; numeric reset immediately restores `0–∞` and
+closes. The circuit grid's noise-model cell is the first use of a distinct
+allow-listed related-record picker: it searches and paginates on the server,
+orders official records first, displays a compact first-name-plus-count
+summary, and serialises scalar `IN` selection as repeated `noise_model` URL
+parameters. The same circuit grid therefore behaves identically on Circuits,
+Results, and decoder record pages without loading the complete noise-model
+table into their HTML.
+
 This work deliberately does not define the scripted query language, JSON/CSV
 formats, public null ordering or API field registry. The serial comparison
 query-contract task below remains the prerequisite for those promises and for
@@ -233,6 +244,12 @@ as a reusable native-disclosure `Algorithm filters` strip shared with decoder
 discovery; execution hardware is a parallel reusable `Machine filters` strip.
 The scoped table uses the ordinary shared sorting and URL-backed column
 controls, and all strip predicates are applied on the server.
+
+Machine slugs in result tables now link to an exact machine record page. That
+page renders the immutable machine metadata and a reverse shared result table;
+all public evaluator-score displays use a single significant-precision
+formatter and switch to compact scientific notation for suitably small or
+large values.
 
 ## Parallel wave B: remaining read views and contract coverage
 

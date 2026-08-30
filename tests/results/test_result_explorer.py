@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 
 from registry.demo import seed_demo_data
+from registry.models import Machine
 
 pytestmark = pytest.mark.django_db
 
@@ -24,6 +25,10 @@ def test_result_explorer_uses_all_three_reusable_filter_grids(client):
     assert 'name="decoder_priors"' in content
     assert 'name="circuit_priors"' in content
     assert 'aria-current="page"' in content
+    machine = Machine.objects.get(slug="demo-eight-core-cpu")
+    assert reverse("machines:detail", args=[machine.slug]) in content
+    assert "2.3e-2 probability" in content
+    assert "02300000000000000000" not in content
 
 
 def test_result_explorer_combines_algorithm_circuit_and_machine_filters(client):
@@ -46,6 +51,27 @@ def test_result_explorer_combines_algorithm_circuit_and_machine_filters(client):
     assert wrong_decoder.context["result_count"] == 0
     assert wrong_circuit.context["result_count"] == 0
     assert wrong_machine.context["result_count"] == 0
+
+
+def test_result_explorer_accepts_multiple_noise_models_as_scalar_in_filter(client):
+    url = reverse("results:list")
+    both = client.get(
+        url,
+        {
+            "noise_model": [
+                "randomised-phenomenological",
+                "fixed-phenomenological",
+            ]
+        },
+    )
+    randomised_only = client.get(
+        url,
+        {"noise_model": "randomised-phenomenological"},
+    )
+
+    assert both.context["result_count"] == 1
+    assert randomised_only.context["result_count"] == 0
+    assert "Randomised phenomenological noise +1" in both.content.decode()
 
 
 def test_result_explorer_table_sort_and_columns_are_url_backed(client):

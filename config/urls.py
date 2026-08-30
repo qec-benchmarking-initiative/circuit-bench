@@ -8,7 +8,9 @@ urlpatterns = [
     path("artifacts/", include("registry.urls_artifacts")),
     path("circuits/", include("registry.urls_circuits")),
     path("decoders/", include("registry.urls_decoders")),
+    path("machines/", include("registry.urls_machines")),
     path("noise-models/", include("registry.urls_noise_models")),
+    path("pickers/", include("registry.urls_pickers")),
     path("results/", include("registry.urls_results")),
     path("", include("pages.urls")),
 ]

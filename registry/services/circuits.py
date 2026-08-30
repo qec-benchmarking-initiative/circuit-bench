@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from django.db.models import (
     Count,
     Prefetch,
@@ -19,7 +21,7 @@ def circuit_catalogue(
     experiment_tag_slugs: tuple[str, ...] = (),
     code_tag_match: str = "all",
     experiment_tag_match: str = "all",
-    noise_model_slug: str = "",
+    noise_model_slugs: Sequence[str] = (),
     randomises_priors: str = "",
     is_css: str = "",
     code_distance_min: int | None = None,
@@ -86,8 +88,8 @@ def circuit_catalogue(
                 experiment_tags__namespace="experiment",
                 experiment_tags__slug=slug,
             )
-    if noise_model_slug:
-        circuits = circuits.filter(noise_model__slug=noise_model_slug)
+    if noise_model_slugs:
+        circuits = circuits.filter(noise_model__slug__in=noise_model_slugs)
     if randomises_priors in {"yes", "no"}:
         circuits = circuits.filter(
             noise_model__randomises_priors=randomises_priors == "yes"

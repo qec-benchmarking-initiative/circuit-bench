@@ -21,7 +21,9 @@ from registry.filter_grids import (
 from registry.filter_grids import (
     machine_grid as build_machine_grid,
 )
+from registry.formatting import format_scientific_value
 from registry.models import Machine
+from registry.record_pickers import record_picker_context
 from registry.services.circuits import (
     circuit_catalogue,
     circuit_detail_queryset,
@@ -94,9 +96,22 @@ def circuit_list(request):
     experiment_tag_match = request.GET.get("experiment_tag_match", "all").strip()
     if experiment_tag_match not in {"all", "any"}:
         experiment_tag_match = "all"
+    requested_noise_models = tuple(
+        dict.fromkeys(
+            value.strip()
+            for value in request.GET.getlist("noise_model")
+            if value.strip()
+        )
+    )
+    noise_model_picker = record_picker_context(
+        "noise-models", requested_noise_models
+    )
+    noise_models = tuple(
+        record["identifier"] for record in noise_model_picker["selected_records"]
+    )
 
     filters = {
-        "noise_model_slug": request.GET.get("noise_model", "").strip(),
+        "noise_model_slugs": noise_models,
         "randomises_priors": request.GET.get("priors", "").strip(),
         "is_css": request.GET.get("css", "").strip(),
         "code_distance_min": parse_nonnegative_int(request.GET.get("code_d_min", "")),
@@ -162,7 +177,6 @@ def circuit_list(request):
     filter_options = public_circuit_filter_options()
     code_filter_tags = filter_options["code_tags"]
     experiment_filter_tags = filter_options["experiment_tags"]
-    noise_models = filter_options["noise_models"]
     raw_values = {
         key: request.GET.get(key, "")
         for key in (
@@ -262,7 +276,6 @@ def circuit_list(request):
             "circuits": circuits,
             "code_filter_tags": code_filter_tags,
             "experiment_filter_tags": experiment_filter_tags,
-            "noise_models": noise_models,
             "circuit_filter_grid": build_circuit_grid(
                 grid_id="circuit-filters",
                 code_tags=code_filter_tags,
@@ -271,8 +284,7 @@ def circuit_list(request):
                 experiment_tags=experiment_filter_tags,
                 selected_experiment_tags=experiment_tags,
                 experiment_tag_match=experiment_tag_match,
-                noise_models=noise_models,
-                noise_model_slug=filters["noise_model_slug"],
+                noise_model_picker=noise_model_picker,
                 randomises_priors=filters["randomises_priors"],
                 is_css=filters["is_css"],
                 raw_values=raw_values,
@@ -282,6 +294,7 @@ def circuit_list(request):
             "selected_tag": legacy_tag,
             "selected_code_tags": code_tags,
             "selected_experiment_tags": experiment_tags,
+            "selected_noise_models": noise_models,
             "code_tag_match": code_tag_match,
             "experiment_tag_match": experiment_tag_match,
             "filters": filters,
@@ -347,7 +360,8 @@ def circuit_detail(request, slug):
     for result in results:
         scores = "; ".join(
             (
-                f"{score.score_definition.name}: {score.value} "
+                f"{score.score_definition.name}: "
+                f"{format_scientific_value(score.value)} "
                 f"{score.score_definition.unit}"
             ).rstrip()
             for score in sorted(
@@ -395,6 +409,11 @@ def circuit_detail(request, slug):
             "machine": {
                 "key": "machine",
                 "value": result.machine.slug if result.machine else None,
+                "url": (
+                    reverse("machines:detail", args=[result.machine.slug])
+                    if result.machine
+                    else None
+                ),
             },
             "shots": {"key": "shots", "value": result.shots_total, "numeric": True},
             "scores": {"key": "scores", "value": scores},

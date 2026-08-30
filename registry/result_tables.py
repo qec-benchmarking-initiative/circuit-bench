@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 
 from django.urls import reverse
 
+from registry.formatting import format_scientific_value
 from registry.models import Result
 
 
@@ -17,7 +18,7 @@ def result_cell_map(
     circuit = result.circuit_revision
     scores = "; ".join(
         (
-            f"{score.score_definition.name}: {score.value} "
+            f"{score.score_definition.name}: {format_scientific_value(score.value)} "
             f"{score.score_definition.unit}"
         ).rstrip()
         for score in sorted(
@@ -87,6 +88,11 @@ def result_cell_map(
         "machine": {
             "key": "machine",
             "value": result.machine.slug if result.machine else None,
+            "url": (
+                reverse("machines:detail", args=[result.machine.slug])
+                if result.machine
+                else None
+            ),
         },
         "shots": {"key": "shots", "value": result.shots_total, "numeric": True},
         "scores": {"key": "scores", "value": scores},

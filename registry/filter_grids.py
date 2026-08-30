@@ -97,6 +97,39 @@ def tag_cell(
     }
 
 
+def related_records_cell(
+    *,
+    key: str,
+    label: str,
+    picker_id: str,
+    picker: dict[str, Any],
+) -> dict[str, Any]:
+    selected_records = list(picker["selected_records"])
+    if selected_records:
+        display_value = selected_records[0]["label"]
+        if len(selected_records) > 1:
+            display_value = f"{display_value} +{len(selected_records) - 1}"
+    else:
+        display_value = "Any"
+    return {
+        "type": "related_records",
+        "key": key,
+        "label": label,
+        "picker_id": picker_id,
+        "input_name": picker["input_name"],
+        "search_url": picker["search_url"],
+        "singular_label": picker["singular_label"],
+        "plural_label": picker["plural_label"],
+        "selected_records": selected_records,
+        "display_value": display_value,
+        "selection_label": ", ".join(
+            record["label"] for record in selected_records
+        )
+        or "Any",
+        "filtered": bool(selected_records),
+    }
+
+
 def filter_grid(
     *,
     grid_id: str,
@@ -219,18 +252,13 @@ def circuit_grid(
     experiment_tags: Iterable[Any],
     selected_experiment_tags: Sequence[str],
     experiment_tag_match: str,
-    noise_models: Iterable[Any],
-    noise_model_slug: str,
+    noise_model_picker: dict[str, Any],
     randomises_priors: str,
     is_css: str,
     raw_values: dict[str, str],
     distributions: dict[str, Iterable[int | None]],
     priors_name: str = "priors",
 ) -> dict[str, Any]:
-    noise_model_choices = [
-        ("", "Any"),
-        *[(item.slug, item.name) for item in noise_models],
-    ]
     cells = [
         tag_cell(
             key="code_tags",
@@ -252,12 +280,11 @@ def circuit_grid(
             match_name="experiment_tag_match",
             match_value=experiment_tag_match,
         ),
-        choice_cell(
+        related_records_cell(
             key="noise_model",
             label="Noise model",
-            name="noise_model",
-            value=noise_model_slug,
-            choices=noise_model_choices,
+            picker_id=f"{grid_id}-noise-models",
+            picker=noise_model_picker,
         ),
         choice_cell(
             key="randomised_priors",

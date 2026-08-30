@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from django.db.models import Case, IntegerField, Prefetch, Q, QuerySet, Value, When
 from django.db.models.functions import Lower
 
-from registry.models import CircuitRevision, DecoderVersion, Result, Tag
+from registry.models import CircuitRevision, DecoderVersion, Machine, Result, Tag
 
 
 def public_result_catalogue(
@@ -13,6 +13,7 @@ def public_result_catalogue(
     query: str = "",
     circuit: CircuitRevision | None = None,
     decoder: DecoderVersion | None = None,
+    machine: Machine | None = None,
     algorithm_tag_slugs: Sequence[str] = (),
     algorithm_tag_match: str = "all",
     skeleton_preparation: str = "",
@@ -22,7 +23,7 @@ def public_result_catalogue(
     code_tag_match: str = "all",
     experiment_tag_slugs: Sequence[str] = (),
     experiment_tag_match: str = "all",
-    noise_model_slug: str = "",
+    noise_model_slugs: Sequence[str] = (),
     randomises_priors: str = "",
     is_css: str = "",
     code_distance_min: int | None = None,
@@ -69,6 +70,8 @@ def public_result_catalogue(
         results = results.filter(circuit_revision=circuit)
     if decoder is not None:
         results = results.filter(decoder_version=decoder)
+    if machine is not None:
+        results = results.filter(machine=machine)
     if query:
         results = results.filter(
             Q(decoder_version__name__icontains=query)
@@ -115,8 +118,10 @@ def public_result_catalogue(
         results = results.filter(
             decoder_version__provides_failure_probability=probability_output == "yes"
         )
-    if noise_model_slug:
-        results = results.filter(circuit_revision__noise_model__slug=noise_model_slug)
+    if noise_model_slugs:
+        results = results.filter(
+            circuit_revision__noise_model__slug__in=noise_model_slugs
+        )
     if randomises_priors in {"yes", "no"}:
         results = results.filter(
             circuit_revision__noise_model__randomises_priors=(

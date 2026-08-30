@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 
 from registry.demo import seed_demo_data
-from registry.models import CircuitRevision, NoiseModel
+from registry.models import CircuitRevision, Machine, NoiseModel
 
 
 @pytest.fixture
@@ -79,6 +79,33 @@ def test_circuit_explorer_combines_scientific_filters_and_column_state(
     assert 'data-filter-range-cell data-filter-key="detectors"' in content
 
 
+def test_circuit_noise_model_picker_uses_repeated_in_filter_parameters(
+    client, demo_registry
+):
+    url = reverse("circuits:list")
+    both = client.get(
+        url,
+        {
+            "noise_model": [
+                "fixed-phenomenological",
+                "randomised-phenomenological",
+            ]
+        },
+    )
+    randomised_only = client.get(
+        url,
+        {"noise_model": "randomised-phenomenological"},
+    )
+
+    content = both.content.decode()
+    assert len(both.context["circuits"]) == 1
+    assert len(randomised_only.context["circuits"]) == 0
+    assert content.count('<input type="hidden" name="noise_model"') == 2
+    assert "Fixed phenomenological noise +1" in content
+    assert 'data-filter-related-record-cell data-filter-key="noise_model"' in content
+    assert reverse("pickers:records", args=["noise-models"]) in content
+
+
 def test_noise_model_explorer_filters_derived_priors_and_circuit_count(
     client, demo_registry
 ):
@@ -128,6 +155,9 @@ def test_circuit_leaderboard_uses_reusable_algorithm_and_machine_grids(
     assert ">active<" not in content
     assert "Table view options (9/12)" in content
     assert response.context["result_count"] == 1
+    machine = Machine.objects.get(slug="demo-eight-core-cpu")
+    assert reverse("machines:detail", args=[machine.slug]) in content
+    assert "2.3e-2 probability" in content
 
 
 def test_circuit_leaderboard_filters_results_by_algorithm_and_machine(

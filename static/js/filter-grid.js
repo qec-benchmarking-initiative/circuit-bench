@@ -69,48 +69,32 @@
   const choicePlacement = (layout, sourceSlot, optionCount) => {
     const blockLength = optionCount + 1;
     const capacity = layout.rowCount * layout.columns;
-    if (
-      sourceSlot + blockLength <= capacity
-      && blockIsClear(sourceSlot, blockLength, layout.blocked)
-    ) {
-      return { anchorSlot: sourceSlot, optionSlots: Array.from(
-        { length: optionCount },
-        (_value, index) => sourceSlot + index + 1
-      ) };
-    }
-    const backwardStart = sourceSlot - (blockLength - 1);
-    if (blockIsClear(backwardStart, blockLength, layout.blocked)) {
-      return {
-        anchorSlot: sourceSlot,
-        optionSlots: Array.from(
-          { length: optionCount },
-          (_value, index) => backwardStart + index
-        ),
-      };
-    }
-
     const candidates = [];
     const searchCapacity = capacity + Math.ceil(blockLength / layout.columns)
       * layout.columns;
     for (let start = 0; start <= searchCapacity - blockLength; start += 1) {
       if (!blockIsClear(start, blockLength, layout.blocked)) continue;
       const end = start + blockLength - 1;
-      const useStart = Math.abs(start - sourceSlot) <= Math.abs(end - sourceSlot);
+      const anchorSlot = Math.max(start, Math.min(sourceSlot, end));
+      const rowsUsed = Math.ceil((end + 1) / layout.columns);
       candidates.push({
-        anchorSlot: useStart ? start : end,
-        distance: Math.min(Math.abs(start - sourceSlot), Math.abs(end - sourceSlot)),
-        optionSlots: useStart
-          ? Array.from(
-            { length: optionCount },
-            (_value, index) => start + index + 1
-          )
-          : Array.from(
-            { length: optionCount },
-            (_value, index) => start + index
-          ),
+        anchorSlot,
+        anchorDistance: Math.abs(anchorSlot - sourceSlot),
+        blockDistance: Math.abs(((start + end) / 2) - sourceSlot),
+        optionSlots: Array.from(
+          { length: blockLength },
+          (_value, index) => start + index
+        ).filter((slot) => slot !== anchorSlot),
+        rowsAdded: Math.max(0, rowsUsed - layout.rowCount),
+        splitPenalty: anchorSlot === start || anchorSlot === end ? 0 : 1,
       });
     }
-    candidates.sort((left, right) => left.distance - right.distance);
+    candidates.sort((left, right) => (
+      left.rowsAdded - right.rowsAdded
+      || left.anchorDistance - right.anchorDistance
+      || left.splitPenalty - right.splitPenalty
+      || left.blockDistance - right.blockDistance
+    ));
     return candidates[0];
   };
 
@@ -540,6 +524,7 @@
         activeOverlay.minimumEditor.value = "0";
         activeOverlay.maximumEditor.value = "";
         updateRangeOverlay(activeOverlay);
+        closeOverlay({ immediate: true, restoreFocus: true });
         return;
       }
       const choiceTrigger = event.target.closest("[data-filter-choice-trigger]");

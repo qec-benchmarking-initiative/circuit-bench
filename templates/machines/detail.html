@@ -1,0 +1,43 @@
+{% extends "layouts/entity_detail.html" %}
+{% load static %}
+
+{% block title %}{{ machine.slug }} · Circuit Bench{% endblock %}
+
+{% block entity_heading %}
+  {% include "components/entity_header.html" with entity=entity only %}
+{% endblock %}
+
+{% block entity_main %}
+  <div class="record-sections">
+    <section class="record-section">
+      <h2>Description</h2>
+      <p>{{ machine.description|linebreaksbr }}</p>
+    </section>
+    <section class="record-section">
+      <h2>Classification</h2>
+      <p>
+        <strong>{{ machine.get_machine_class_display }}</strong> ·
+        <span>{{ machine.get_status_display }} evidence</span>
+      </p>
+    </section>
+  </div>
+{% endblock %}
+
+{% block entity_aside %}
+  <h2>Exact machine record</h2>
+  {% include "components/metadata_list.html" with items=metadata only %}
+  <p><a href="{{ machine.schema_release.permanent_url }}">Schema contract {{ machine.schema_release.version }}</a></p>
+{% endblock %}
+
+{% block entity_related %}
+  <h2>Published results using this machine</h2>
+  <p class="muted">Every result below refers to this exact machine record.</p>
+  <div class="collection-results" aria-live="polite">
+    {% include "components/explorer_toolbar.html" with explorer_id="machine-results" %}
+    {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No published results use this machine yet." only %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/explorer.js' %}" defer></script>
+{% endblock %}

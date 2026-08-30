@@ -2,7 +2,7 @@
 
 from django.db.models import Case, IntegerField, Q, Value, When
 
-from registry.models import NoiseModel, Tag
+from registry.models import Tag
 from registry.services.circuits import circuit_catalogue
 
 
@@ -40,9 +40,6 @@ def public_circuit_filter_options() -> dict[str, object]:
         "experiment_tags": [
             tag for tag in tags if tag.namespace == Tag.Namespace.EXPERIMENT
         ],
-        "noise_models": list(
-            NoiseModel.objects.filter(state="published").order_by("name")
-        ),
         "distributions": {
             "code_distance": [
                 row["code_distance_upper_bound"] for row in distribution_rows
