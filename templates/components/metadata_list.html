@@ -1,0 +1,5 @@
+<dl class="metadata-list">
+  {% for item in items %}
+    <div><dt>{{ item.label }}</dt><dd>{{ item.value|default:"—" }}</dd></div>
+  {% endfor %}
+</dl>

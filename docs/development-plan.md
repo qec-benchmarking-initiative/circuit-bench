@@ -1,8 +1,8 @@
 # DecoderBench development plan
 
-Status: proposed execution plan following the `0.1` relational model. The
-foundation is intentionally serial; later work is split into bounded tasks with
-visible outputs and non-overlapping file ownership.
+Status: serial foundation complete; parallel wave A is ready to assign. The
+later work is split into bounded tasks with visible outputs and non-overlapping
+file ownership.
 
 ## Working rules
 
@@ -36,7 +36,7 @@ docker compose exec -T database psql -U decoderbench -d decoderbench \
   -c 'select current_database(), current_user, version();'
 ```
 
-### F1. Physical-model mapping audit
+### F1. Physical-model mapping audit — complete
 
 Before generating migrations, write a short mapping note resolving:
 
@@ -53,10 +53,10 @@ Recommended boundary: a small `accounts` app and one `registry` app for the
 highly interconnected scientific records. The registry's models can be split
 into topic modules without splitting the migration graph.
 
-User verification: read one concise mapping document containing no unresolved
-implementation choices.
+User verification: read `docs/physical-model-mapping.md`, which contains the
+resolved implementation choices.
 
-### F2. Reproducible Django scaffold
+### F2. Reproducible Django scaffold — complete
 
 Create and pin the Python/Django environment, settings for development/tests/
 production, PostgreSQL connection, a health endpoint, pytest, formatting and
@@ -74,7 +74,7 @@ uv run python manage.py runserver
 The browser should show a plain project page, and `/health/` should confirm the
 application can query PostgreSQL.
 
-### F3. Executable `0.1` relational schema
+### F3. Executable `0.1` relational schema — complete
 
 Implement the complete model as Django models and initial migrations. Keep the
 scientific models in topic files under `registry/models/`, but generate and
@@ -97,7 +97,7 @@ uv run pytest tests/schema
 The schema tests should inspect PostgreSQL constraints as well as Django model
 metadata.
 
-### F4. Deterministic demonstration data
+### F4. Deterministic demonstration data — complete
 
 Add factories and an idempotent `seed_demo` management command containing a
 small but relationally complete example: linked accounts, official/custom tags,
@@ -114,7 +114,7 @@ uv run python manage.py seed_demo --reset
 Both runs should succeed and leave the documented row counts. The Django admin
 should make the relationships inspectable.
 
-### F5. Page and component foundation
+### F5. Page and component foundation — complete
 
 Create the global navigation, `base`, collection and entity-detail layouts,
 CSS tokens, and a development-only component gallery. Use representative
@@ -125,6 +125,10 @@ not edit the base layouts.
 User verification: inspect the component gallery at desktop and mobile widths
 and approve the basic information hierarchy. This is structural, not the final
 visual design workshop.
+
+The development-only gallery is at `http://127.0.0.1:8000/dev/components/`.
+Automated checks cover its production-only 404 guard; browser verification at
+390 px and desktop width found no page-level overflow or console errors.
 
 ## Parallel wave A: independent vertical slices
 

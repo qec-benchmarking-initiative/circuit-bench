@@ -1,0 +1,32 @@
+[project]
+name = "decoderbench"
+version = "0.1.0"
+description = "An open registry for quantum error-correction circuits, decoders, and benchmark results"
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+dependencies = [
+    "Django>=5.2,<5.3",
+    "dj-database-url>=3,<4",
+    "django-allauth[socialaccount]>=65.11,<66",
+    "psycopg[binary]>=3.2,<4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<10",
+    "pytest-django>=4.10,<5",
+    "ruff>=0.12,<1",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = ["*/migrations/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

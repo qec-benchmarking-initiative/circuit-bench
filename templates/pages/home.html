@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}DecoderBench — QEC evidence{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <p class="eyebrow">Open QEC evidence</p>
+    <h1>Quantum error-correction evidence, with its meaning attached.</h1>
+    <p>Find circuits, decoders, benchmarks and exact result records.</p>
+    <form class="site-search" role="search" action="/search/" method="get">
+      <label for="site-search">Search the registry</label>
+      <div class="input-row">
+        <input id="site-search" name="q" type="search" placeholder="Decoder, circuit, benchmark…">
+        <button type="submit">Search</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

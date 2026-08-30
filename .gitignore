@@ -7,6 +7,7 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+.python-version.local
 
 # Django / local runtime
 *.log
@@ -26,4 +27,3 @@ staticfiles/
 
 # Local object-storage data
 .minio/
-

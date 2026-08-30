@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="page-shell collection-layout">
+    <header class="page-heading">{% block page_heading %}{% endblock %}</header>
+    <section class="collection-tools" aria-label="Search and filters">
+      {% block collection_tools %}{% endblock %}
+    </section>
+    <section class="collection-results" aria-live="polite">
+      {% block collection_results %}{% endblock %}
+    </section>
+  </div>
+{% endblock %}

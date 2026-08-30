@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Component gallery — DecoderBench{% endblock %}
+
+{% block content %}
+  <div class="page-shell gallery">
+    <header class="page-heading">
+      <p class="eyebrow">Development reference</p>
+      <h1>Component gallery</h1>
+      <p>Structural components and difficult states for review before entity pages are built.</p>
+    </header>
+    <section class="gallery-section"><h2>Entity heading</h2>{% include "components/entity_header.html" with entity=entity only %}</section>
+    <section class="gallery-section"><h2>Metadata</h2>{% include "components/metadata_list.html" with items=metadata only %}</section>
+    <section class="gallery-section"><h2>Discovery controls</h2>{% include "components/filter_bar.html" with action="#" id_prefix="gallery" query="" placeholder="Decoder name or tag" filter_tags=filter_tags only %}</section>
+    <section class="gallery-section">
+      <h2>Scientific comparison</h2>
+      {% include "components/query_box.html" with id_prefix="gallery" query_text=query_text query_status=query_status only %}
+      {% include "components/data_table.html" with columns=columns rows=rows only %}
+    </section>
+    <section class="gallery-grid">
+      <div class="gallery-section"><h2>Plot region</h2>{% include "components/plot_placeholder.html" with caption="Logical error rate with 95% upper bounds (structural placeholder)" only %}</div>
+      <div class="gallery-section"><h2>Empty state</h2>{% include "components/empty_state.html" with title="No matching results" message="Try removing a filter or checking the exact circuit revision." only %}</div>
+    </section>
+  </div>
+{% endblock %}
