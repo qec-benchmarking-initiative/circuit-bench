@@ -84,8 +84,7 @@
         {% include "components/filters/grid.html" with grid=algorithm_filter_grid only %}
         {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
         <div class="leaderboard-filter-actions">
-          <button class="button-compact" type="submit">Apply filters</button>
-          {% if leaderboard_filters_active %}<a href="{{ circuit_reset_url }}">Reset</a>{% endif %}
+          {% include "components/filters/query_actions.html" with show_reset=leaderboard_filters_active reset_url=circuit_reset_url only %}
         </div>
       </form>
       <div class="collection-results" aria-live="polite">
@@ -98,5 +97,6 @@
 
 {% block extra_scripts %}
   <script src="{% static 'js/filter-grid.js' %}" defer></script>
+  <script src="{% static 'js/filter-query.js' %}" defer></script>
   <script src="{% static 'js/explorer.js' %}" defer></script>
 {% endblock %}

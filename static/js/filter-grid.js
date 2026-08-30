@@ -8,6 +8,10 @@
   let activeOverlay = null;
   let resizeFrame = null;
 
+  const notifyFilterChange = (element) => {
+    element.closest("form")?.dispatchEvent(new CustomEvent("filterquery:change"));
+  };
+
   const directCells = (gridCells) => [...gridCells.children]
     .filter((element) => element.matches("[data-filter-grid-cell]"));
 
@@ -509,10 +513,13 @@
     grid.addEventListener("click", (event) => {
       const option = event.target.closest("[data-filter-overlay-option]");
       if (option && activeOverlay?.type === "choice") {
+        const changed = activeOverlay.select.value !== option.dataset.filterOverlayOption;
         activeOverlay.select.value = option.dataset.filterOverlayOption;
         activeOverlay.select.dispatchEvent(new Event("change", { bubbles: true }));
         updateChoiceCell(activeOverlay.source);
+        const source = activeOverlay.source;
         closeOverlay({ restoreFocus: true });
+        if (changed) notifyFilterChange(source);
         return;
       }
       if (event.target.closest("[data-filter-overlay-cancel]")) {
@@ -524,7 +531,9 @@
         activeOverlay.minimumEditor.value = "0";
         activeOverlay.maximumEditor.value = "";
         updateRangeOverlay(activeOverlay);
+        const source = activeOverlay.source;
         closeOverlay({ immediate: true, restoreFocus: true });
+        notifyFilterChange(source);
         return;
       }
       const choiceTrigger = event.target.closest("[data-filter-choice-trigger]");
@@ -546,6 +555,17 @@
         )
       ) {
         updateRangeOverlay(activeOverlay);
+      }
+    });
+
+    grid.addEventListener("change", (event) => {
+      if (
+        activeOverlay?.type === "range"
+        && event.target.matches(
+          "[data-filter-range-minimum-editor], [data-filter-range-maximum-editor]"
+        )
+      ) {
+        notifyFilterChange(activeOverlay.source);
       }
     });
 
@@ -572,7 +592,10 @@
   });
 
   document.addEventListener("pointerup", () => {
-    if (activeOverlay?.type === "range") activeOverlay.dragging = null;
+    if (activeOverlay?.type !== "range") return;
+    const changedByDrag = Boolean(activeOverlay.dragging);
+    activeOverlay.dragging = null;
+    if (changedByDrag) notifyFilterChange(activeOverlay.source);
   });
 
   document.addEventListener("keydown", (event) => {
@@ -584,7 +607,9 @@
     }
     if (activeOverlay.type === "range" && event.key === "Enter") {
       event.preventDefault();
+      const source = activeOverlay.source;
       closeOverlay({ restoreFocus: true });
+      notifyFilterChange(source);
       return;
     }
     const handle = event.target.closest("[data-filter-range-handle]");
@@ -612,6 +637,7 @@
     }
     const kind = handle.dataset.filterRangeHandle;
     updateRangeOverlay(activeOverlay);
+    notifyFilterChange(activeOverlay.source);
     requestAnimationFrame(() => activeOverlay?.editor
       .querySelector(`[data-filter-range-handle="${kind}"]`)
       ?.focus({ preventScroll: true }));

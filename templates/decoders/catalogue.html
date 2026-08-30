@@ -18,7 +18,7 @@
 {% block explorer_filters %}
   {% url 'decoders:list' as decoder_reset_url %}
   {% include "components/filters/grid.html" with grid=algorithm_filter_grid only %}
-  <div class="filter-actions"><button class="button-compact" type="submit">Apply filters</button>{% if filters_active %}<a href="{{ decoder_reset_url }}">Reset</a>{% endif %}</div>
+  <div class="filter-actions">{% include "components/filters/query_actions.html" with show_reset=filters_active reset_url=decoder_reset_url only %}</div>
 {% endblock %}
 
 {% block collection_results %}

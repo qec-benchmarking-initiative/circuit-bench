@@ -210,6 +210,13 @@ parameters. The same circuit grid therefore behaves identically on Circuits,
 Results, and decoder record pages without loading the complete noise-model
 table into their HTML.
 
+All implemented filter forms share an Autoquery controller. Autoquery is on by
+default, turns every committed filter edit into the same canonical GET that the
+manual Apply button would send, and can be disabled when a user wants to batch
+several edits. Its preference persists locally. Query navigation also restores
+the page's scroll coordinate and per-grid disclosure state, so live filtering
+does not jump to the document top or expand strips the user had collapsed.
+
 This work deliberately does not define the scripted query language, JSON/CSV
 formats, public null ordering or API field registry. The serial comparison
 query-contract task below remains the prerequisite for those promises and for

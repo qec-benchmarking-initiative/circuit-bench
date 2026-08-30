@@ -1,0 +1,6 @@
+<label class="autoquery-toggle">
+  <input type="checkbox" data-autoquery-toggle>
+  <span>Autoquery</span>
+</label>
+<button class="button-compact" type="submit" data-filter-apply data-manual-label="Apply filters">Apply filters</button>
+{% if show_reset %}<a href="{{ reset_url }}" data-filter-reset>{{ reset_label|default:"Reset" }}</a>{% endif %}

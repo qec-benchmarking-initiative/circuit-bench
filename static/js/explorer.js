@@ -176,6 +176,11 @@
         );
         if (checkbox) checkbox.checked = false;
         updateTagPicker(picker);
+        if (!dialog.open) {
+          picker.dispatchEvent(new CustomEvent("filterquery:change", {
+            bubbles: true,
+          }));
+        }
       }
     });
     search.addEventListener("input", () => updateTagPicker(picker));
@@ -192,7 +197,9 @@
         search.value = "";
         updateTagPicker(picker);
         dialog.close();
-        picker.closest("form").requestSubmit();
+        picker.dispatchEvent(new CustomEvent("filterquery:change", {
+          bubbles: true,
+        }));
       });
     });
     dialog.addEventListener("cancel", (event) => {

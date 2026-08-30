@@ -1753,6 +1753,27 @@ code {
   font-size: 0.73rem;
 }
 
+.autoquery-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.autoquery-toggle input {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+[data-filter-apply]:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
 .collection-results {
   min-width: 0;
 }

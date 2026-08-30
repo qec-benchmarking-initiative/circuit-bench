@@ -16,8 +16,9 @@
 {% block explorer_status %}Plain-text mode · {{ result_count }} exact published circuit revision{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
 
 {% block explorer_filters %}
+  {% url 'circuits:list' as circuit_reset_url %}
   {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
-  <div class="filter-actions"><button class="button-compact" type="submit">Apply filters</button>{% if filters_active %}<a href="{% url 'circuits:list' %}">Reset</a>{% endif %}</div>
+  <div class="filter-actions">{% include "components/filters/query_actions.html" with show_reset=filters_active reset_url=circuit_reset_url only %}</div>
 {% endblock %}
 
 {% block collection_results %}

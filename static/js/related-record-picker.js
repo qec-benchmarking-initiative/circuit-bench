@@ -254,7 +254,9 @@
       renderSummary();
       dialog.close();
       opener.setAttribute("aria-expanded", "false");
-      picker.closest("form")?.requestSubmit();
+      picker.dispatchEvent(new CustomEvent("filterquery:change", {
+        bubbles: true,
+      }));
     });
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();

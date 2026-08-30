@@ -303,7 +303,16 @@ remain small and visibly part of the same continuous surface.
 - Boolean scientific properties use `Any / Yes / No`, not a single checkbox,
   because filtering for false is meaningful.
 - Enum fields use compact select controls or short radio groups.
-- “Apply filters” and “Reset” are explicit.
+- `Autoquery` is enabled by default and persisted as a browser preference. A
+  committed choice, range, tag or related-record change immediately reruns the
+  canonical server query. While enabled, the adjacent Apply button is disabled
+  and reads `Autoquery enabled`; turning it off restores the ordinary `Apply
+  filters` batching workflow. `Reset` remains explicit.
+- Before a filter query navigation, the controller records the exact scroll
+  position and each filter grid's open/closed state. The new response restores
+  them, clamping only when the shorter result page cannot physically reach the
+  old scroll coordinate. Full-page GET requests therefore retain reproducible
+  URLs without throwing the user back to the top or reopening collapsed grids.
 - All predicates are combined with the query into one canonical server-side
   query state; controls must never filter only the rows currently loaded in
   the browser.
