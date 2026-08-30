@@ -1,8 +1,9 @@
 # DecoderBench development plan
 
 Status: serial foundation and parallel wave A complete; parallel wave B is
-ready to assign. The later work is split into bounded tasks with visible
-outputs and non-overlapping file ownership.
+ready to assign. The shared explorer-interface foundation is also complete,
+without pre-empting the later public query contract. The later work is split
+into bounded tasks with visible outputs and non-overlapping file ownership.
 
 ## Working rules
 
@@ -174,6 +175,38 @@ distance upper bounds, DEM facts, and the derived randomised-priors property.
 User verification: find a seeded circuit by code or experiment tag, download
 its frozen artifacts, and follow its noise-model link to the reverse circuit
 list.
+
+## Serial explorer-interface foundation — complete
+
+The design workshop is recorded in `docs/interface-design-plan.md`. Decoders,
+Circuits and Noise models now share a desktop-first scientific explorer shell:
+active persistent-navigation identity, compact query/status/filter rows, dense
+full-width tables, sticky headers/first column, ordinary and Shift-click
+multi-sort, and URL-backed column choices. Endpoint filters run on the server.
+
+Algorithm, code and experiment tags use one modal picker. It searches the
+official vocabulary plus custom tags used by public records, distinguishes
+official/custom tags visually, and commits either AND or OR matching through
+explicit action buttons. The same component boundary is reserved for later
+data-entry mode and custom-tag creation.
+
+This work deliberately does not define the scripted query language, JSON/CSV
+formats, public null ordering or API field registry. The serial comparison
+query-contract task below remains the prerequisite for those promises and for
+the final comparison interface.
+
+Verification:
+
+```sh
+uv run ruff check .
+uv run python manage.py check
+uv run python manage.py makemigrations --check --dry-run
+uv run pytest
+```
+
+Browser review covered all three explorers at the primary desktop width, the
+tag-picker no-match/selection paths, AND/OR URL state, column selection and
+ordinary/Shift-click sorting.
 
 ## Parallel wave B: remaining read views and contract coverage
 

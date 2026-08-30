@@ -51,6 +51,45 @@ def test_noise_model_filters_are_strict_and_searchable(client, demo_registry):
     assert len(response.context["noise_models"]) == 2
 
 
+def test_circuit_explorer_combines_scientific_filters_and_column_state(
+    client, demo_registry
+):
+    response = client.get(
+        reverse("circuits:list"),
+        {
+            "experiment_tag": "memory",
+            "css": "yes",
+            "detector_min": "1",
+            "columns": "name,detectors,errors",
+            "sort": "-detectors,name",
+        },
+    )
+
+    assert response.status_code == 200
+    assert len(response.context["circuits"]) == 1
+    assert [column["key"] for column in response.context["table_columns"]] == [
+        "name",
+        "detectors",
+        "errors",
+    ]
+    assert "Table view options (3/14)" in response.content.decode()
+
+
+def test_noise_model_explorer_filters_derived_priors_and_circuit_count(
+    client, demo_registry
+):
+    response = client.get(
+        reverse("noise-models:list"),
+        {"priors": "yes", "circuit_min": "0", "sort": "-circuits"},
+    )
+
+    assert response.status_code == 200
+    assert [item.slug for item in response.context["noise_models"]] == [
+        "randomised-phenomenological"
+    ]
+    assert response.context["sort_summary"] == "Circuits descending"
+
+
 def test_circuit_detail_exposes_only_published_results(client, demo_registry):
     circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
     result = circuit.results.get()
@@ -69,7 +108,9 @@ def test_circuit_tag_filter_keeps_namespace(client, demo_registry):
     circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
     Tag = circuit.code_tags.model
     Tag.objects.create(
-        schema_release=circuit.code_tags.get(slug="rotated-surface-code").schema_release,
+        schema_release=circuit.code_tags.get(
+            slug="rotated-surface-code"
+        ).schema_release,
         namespace="code",
         slug="memory",
         label="Memory code",
@@ -78,9 +119,7 @@ def test_circuit_tag_filter_keeps_namespace(client, demo_registry):
         submitted_by=circuit.submitted_by,
     )
 
-    experiment = client.get(
-        reverse("circuits:list"), {"tag": "experiment:memory"}
-    )
+    experiment = client.get(reverse("circuits:list"), {"tag": "experiment:memory"})
     code = client.get(reverse("circuits:list"), {"tag": "code:memory"})
 
     assert len(experiment.context["circuits"]) == 1
@@ -105,9 +144,7 @@ def test_withdrawn_noise_model_retains_exact_historical_url(client, demo_registr
 
 def test_randomised_priors_are_derived_from_noise_model(client, demo_registry):
     circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
-    circuit.noise_model = NoiseModel.objects.get(
-        slug="randomised-phenomenological"
-    )
+    circuit.noise_model = NoiseModel.objects.get(slug="randomised-phenomenological")
     circuit.save(update_fields=["noise_model"])
 
     response = client.get(reverse("circuits:detail", args=[circuit.slug]))

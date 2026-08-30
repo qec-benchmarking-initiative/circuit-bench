@@ -1,47 +1,51 @@
 {% extends "layouts/collection.html" %}
 
 {% block title %}Decoders · DecoderBench{% endblock %}
+{% block explorer_name %}Decoders{% endblock %}
 
-{% block page_heading %}
-  <p class="eyebrow">Discovery catalogue</p>
-  <h1>Decoders</h1>
-  <p>Find an exact decoder version by name, version, stable slug, or algorithm tag.</p>
+{% block explorer_query %}
+  <label class="visually-hidden" for="decoder-search">Search decoders</label>
+  <input id="decoder-search" type="search" name="q" value="{{ query }}" placeholder="Search decoder name, version, slug, or algorithm tag" autofocus>
+  {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+  {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+  <button class="button-compact" type="submit">Run</button>
+  <a class="button-link" href="{% url 'decoders:list' %}">Clear</a>
+  <span class="query-mode">Plain-text search · scripted query syntax is not enabled yet</span>
 {% endblock %}
 
-{% block collection_tools %}
-  <form class="filter-bar" action="{% url 'decoders:list' %}" method="get">
-    <div>
-      <label for="decoder-search">Search</label>
-      <input id="decoder-search" type="search" name="q" value="{{ query }}" placeholder="Name, version, slug, or tag" autofocus>
-    </div>
-    <div>
-      <label for="decoder-tag">Algorithm tag</label>
-      <select id="decoder-tag" name="tag">
-        <option value="">All algorithm tags</option>
-        {% for tag in filter_tags %}
-          <option value="{{ tag.slug }}"{% if selected_tag == tag.slug %} selected{% endif %}>{{ tag.label }}{% if tag.status == "custom" %} (custom){% endif %}</option>
-        {% endfor %}
+{% block explorer_status %}Plain-text mode · {{ result_count }} exact published version{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
+
+{% block explorer_filters %}
+  <fieldset class="filter-group filter-group-tags">
+    <legend>Algorithm tags</legend>
+    {% include "components/tag_picker.html" with picker_id="decoder-algorithm-tags" label="Algorithm tags" input_name="tag" tags=filter_tags selected_keys=selected_tags match_name="tag_match" match_value=tag_match mode="filter" only %}
+  </fieldset>
+  <fieldset class="filter-group">
+    <legend>Preparation</legend>
+    <label>Skeleton
+      <select name="skeleton">
+        <option value="">Any</option><option value="not_required"{% if selected_skeleton == "not_required" %} selected{% endif %}>Not required</option><option value="required"{% if selected_skeleton == "required" %} selected{% endif %}>Required</option>
       </select>
-    </div>
-    <button type="submit">Search</button>
-    {% if query or selected_tag %}<a href="{% url 'decoders:list' %}">Clear filters</a>{% endif %}
-  </form>
+    </label>
+    <label>Priors
+      <select name="priors">
+        <option value="">Any</option><option value="not_required"{% if selected_priors == "not_required" %} selected{% endif %}>Not required</option><option value="required"{% if selected_priors == "required" %} selected{% endif %}>Required</option>
+      </select>
+    </label>
+  </fieldset>
+  <fieldset class="filter-group">
+    <legend>Capabilities and evidence</legend>
+    <label>Failure probability
+      <select name="probability">
+        <option value="">Any</option><option value="yes"{% if selected_probability == "yes" %} selected{% endif %}>Yes</option><option value="no"{% if selected_probability == "no" %} selected{% endif %}>No</option>
+      </select>
+    </label>
+    <span class="range-control"><span>Published results</span><label>min <input name="result_min" type="number" min="0" inputmode="numeric" value="{{ result_min }}"></label><label>max <input name="result_max" type="number" min="0" inputmode="numeric" value="{{ result_max }}"></label></span>
+  </fieldset>
+  <div class="filter-actions"><button class="button-compact" type="submit">Apply filters</button>{% if filters_active %}<a href="{% url 'decoders:list' %}">Reset</a>{% endif %}</div>
 {% endblock %}
 
 {% block collection_results %}
-  <p class="eyebrow">{{ result_count }} exact version{{ result_count|pluralize }}</p>
-  {% if decoders %}
-    <div class="gallery">
-      {% for decoder in decoders %}
-        <article class="gallery-section">
-          <p class="eyebrow">Decoder version {{ decoder.version }}</p>
-          <h2><a href="{% url 'decoders:detail' slug=decoder.slug %}">{{ decoder.name }}</a></h2>
-          {% if decoder.description %}<p>{{ decoder.description|truncatewords:36 }}</p>{% endif %}
-          {% include "components/tag_list.html" with tags=decoder.display_algorithm_tags label="Algorithm tags" only %}
-        </article>
-      {% endfor %}
-    </div>
-  {% else %}
-    {% include "components/empty_state.html" with title="No matching decoder versions" message="Try a decoder name, contributor version, stable slug, or a different algorithm tag." only %}
-  {% endif %}
+  {% include "components/explorer_toolbar.html" with explorer_id="decoders" %}
+  {% include "components/data_table.html" with columns=table_columns rows=table_rows empty_message="No matching decoder versions. Try removing a filter or shortening the search phrase." only %}
 {% endblock %}

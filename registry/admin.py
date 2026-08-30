@@ -117,4 +117,3 @@ admin.site.register(
         ResultAuthorApprovalEvent,
     ]
 )
-

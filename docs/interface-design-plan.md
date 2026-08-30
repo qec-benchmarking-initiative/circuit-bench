@@ -189,8 +189,7 @@ The default desktop composition is:
 ```text
 ┌──────────────────────────────── persistent site header ────────────────────────────────┐
 │ DecoderBench   Decoders  Benchmarks  Circuits  Noise models  Results        account   │
-├──────────────────────────────── contextual page bar ───────────────────────────────────┤
-│ Decoders   Exact decoder versions, capabilities and submitted evidence                 │
+│                ────────                                                               │
 ├──────────────────────────────── query row ──────────────────────────────────────────────┤
 │ Search by name or enter a query __________________________________  Run  Clear  Syntax │
 ├──────────────────────────────── query status ───────────────────────────────────────────┤
@@ -219,13 +218,15 @@ individual floating boxes.
 - No large logo lock-up, slogan or decorative banner.
 - Remains visually subordinate to the data.
 
-### 6.2 Contextual page bar
+### 6.2 Active section identity
 
-- Comparable in height to the persistent header.
-- Contains the page title, such as “Decoders”, at 19–22 px.
-- May contain one short descriptive sentence on the same line or immediately
-  beneath it.
-- Does not repeat an eyebrow, marketing label or large block of introduction.
+- Explorer pages do not add a second visible page-title or contextual bar.
+- The current section in the persistent navigation is bold and underlined and
+  carries `aria-current="page"`; this is the visible page identity.
+- The document retains a descriptive `<title>` and a visually hidden `<h1>` so
+  page structure does not depend on visual styling.
+- Short endpoint help belongs beside the relevant query or filter control, not
+  in a repeated introductory strip.
 
 ### 6.3 Query row
 
@@ -267,9 +268,9 @@ not replace the data with an error page or silently fall back to name search.
 Principal filters are present on the page, not hidden in a generic “advanced
 filters” dialog.
 
-- Tags use compact checkboxes, grouped by namespace and ordered official first.
-- A large tag group may have its own small tag-name search, but selected tags
-  and the full official set remain visible.
+- Tags are the exception to the otherwise-visible filter rule: each namespace
+  uses the shared, explicitly labelled tag-picker button and a substantial
+  modal selection surface rather than a strip of inline checkboxes.
 - Numeric values use paired minimum/maximum fields with the unit in the label.
 - Boolean scientific properties use `Any / Yes / No`, not a single checkbox,
   because filtering for false is meaningful.
@@ -291,6 +292,48 @@ The initial filter groups should be endpoint-specific:
 
 This list describes interface groups, not final query fields or scientific
 definitions.
+
+#### 6.5.1 Tag picker
+
+One reusable tag picker has two modes:
+
+- filter mode selects only existing tags and is used by explorers;
+- data-entry mode will additionally offer creation of a custom tag when the
+  search text has no exact existing match.
+
+The modal has three ordered regions: a tag-name search input, the currently
+selected tags, and the available tags. Available tags wrap left-to-right as
+button-like choices. Official tags come first and use the restrained accent
+treatment; custom tags remain neutral/white. Selecting an available tag moves
+it into the selected region, and its remove button returns it to the available
+region. A search with no matches says so explicitly. In filter mode, the
+candidate population is:
+
+```text
+all official tags ∪ non-official tags attached to at least one searchable record
+```
+
+Unused custom tags therefore do not clutter discovery, while the complete
+official vocabulary remains discoverable.
+
+Once at least one tag is selected, the modal offers two explicit commit
+actions: `Filter for records with all selected tags` (AND) and `Filter for
+records with any selected tag` (OR). The former is visually primary. The
+buttons replace a separate All/Any mode control and apply the explorer form
+immediately. With no selected tags both actions are disabled.
+
+The implemented component uses the platform modal `<dialog>`, search input,
+checkboxes and buttons. This delegates modal focus containment and option
+keyboard semantics to native controls. Existing dependency-free multi-select
+libraries such as Choices.js and Tom Select implement an inline dropdown, not
+this selected/available modal. GOV.UK's accessibility-focused autocomplete is
+single-select. Adding one of them would therefore leave the modal composition
+and most state coordination custom while adding a mismatched interaction and
+dependency. Revisit that decision if a maintained component matching this
+exact pattern is found. References: [HTML dialog
+semantics](https://html.spec.whatwg.org/multipage/interactive-elements.html?elementdef-dialog=),
+[GOV.UK accessible autocomplete](https://alphagov.github.io/accessible-autocomplete/),
+[Choices.js](https://choices-js.github.io/Choices/), and [Tom Select usage](https://tom-select.js.org/docs/).
 
 ### 6.6 Table toolbar
 
@@ -450,7 +493,6 @@ The eventual implementation should compose one explorer from the following
 responsibilities:
 
 - `ExplorerPage`: page-level composition and endpoint identity;
-- `ContextHeader`: small page title and single-sentence description;
 - `QueryBar`: name/query input and explicit actions;
 - `QueryStatus`: validation and execution result;
 - `FilterMatrix`: endpoint-provided visible structured controls;
@@ -474,8 +516,8 @@ remain useful at 1024 px.
 
 Below that:
 
-- the site and contextual headers may wrap rather than transform into a
-  prominent mobile navigation system;
+- the site header may wrap rather than transform into a prominent mobile
+  navigation system;
 - filter groups may stack;
 - the scientific table remains a horizontally scrollable table rather than
   converting rows into cards;
@@ -495,7 +537,8 @@ explorer states:
 
 Review them at 1440 px first. The proposal is accepted only when:
 
-- persistent and contextual headers together consume little vertical space;
+- the persistent header consumes little vertical space and clearly identifies
+  the active explorer;
 - the page contains no row cards, shadows or dashboard islands;
 - the table visually dominates the explorer;
 - filters are visible without opening a dialog;
@@ -514,7 +557,6 @@ The current proposal deliberately leaves these choices open:
 - pure white versus the proposed warm-white canvas;
 - the final blue/accent hue and amount of colour in table selection;
 - 28 px versus 32 px default table-row height;
-- whether the contextual description sits beside or below the page title;
 - how many official tags can be shown before a tag-group search is introduced;
 - whether the first column is sticky by default;
 - whether structured changes rewrite the query input itself or show a separate

@@ -1,13 +1,22 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
-  <div class="page-shell collection-layout">
-    <header class="page-heading">{% block page_heading %}{% endblock %}</header>
-    <section class="collection-tools" aria-label="Search and filters">
-      {% block collection_tools %}{% endblock %}
-    </section>
-    <section class="collection-results" aria-live="polite">
+  <div class="page-shell explorer-layout" data-explorer>
+    <h1 class="visually-hidden">{% block explorer_name %}{% endblock %}</h1>
+    <form class="explorer-form" method="get">
+      <section class="explorer-query" aria-label="Search">
+        {% block explorer_query %}{% endblock %}
+      </section>
+      <p class="explorer-query-status" role="status">{% block explorer_status %}{% endblock %}</p>
+      <section class="explorer-filters" aria-label="Filters">
+        {% block explorer_filters %}{% endblock %}
+      </section>
+    </form>
+    <section class="collection-results" aria-live="polite" aria-label="Matching records">
       {% block collection_results %}{% endblock %}
     </section>
   </div>
 {% endblock %}
+
+{% block extra_scripts %}<script src="{% static 'js/explorer.js' %}" defer></script>{% endblock %}

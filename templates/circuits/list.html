@@ -1,56 +1,52 @@
 {% extends "layouts/collection.html" %}
 
-{% block title %}Circuits — DecoderBench{% endblock %}
+{% block title %}Circuits · DecoderBench{% endblock %}
+{% block explorer_name %}Circuits{% endblock %}
 
-{% block page_heading %}
-  <p class="eyebrow">Circuit registry</p>
-  <h1>Circuits</h1>
-  <p>Find an exact frozen circuit revision by name, code family, or experiment.</p>
+{% block explorer_query %}
+  <label class="visually-hidden" for="circuit-search">Search circuits</label>
+  <input id="circuit-search" name="q" type="search" value="{{ query }}" placeholder="Search circuit name, slug, code, or experiment">
+  {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+  {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+  <button class="button-compact" type="submit">Run</button>
+  <a class="button-link" href="{% url 'circuits:list' %}">Clear</a>
+  <span class="query-mode">Plain-text search · scripted query syntax is not enabled yet</span>
 {% endblock %}
 
-{% block collection_tools %}
-  <form class="filter-bar" method="get">
-    <div>
-      <label for="circuit-search">Search</label>
-      <input id="circuit-search" name="q" type="search" value="{{ query }}" placeholder="Circuit name, code, experiment…">
-    </div>
-    <div>
-      <label for="circuit-tag">Code or experiment</label>
-      <select id="circuit-tag" name="tag">
-        <option value="">All tags</option>
-        {% for tag in filter_tags %}
-          {% with tag_key=tag.namespace|add:":"|add:tag.slug %}<option value="{{ tag_key }}"{% if selected_tag == tag_key %} selected{% endif %}>{{ tag.label }} · {{ tag.get_namespace_display }}</option>{% endwith %}
-        {% endfor %}
-      </select>
-    </div>
-    <button type="submit">Apply</button>
-    {% if query or selected_tag %}<a href="{% url 'circuits:list' %}">Clear filters</a>{% endif %}
-  </form>
+{% block explorer_status %}Plain-text mode · {{ result_count }} exact published circuit revision{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
+
+{% block explorer_filters %}
+  <fieldset class="filter-group filter-group-tags">
+    <legend>Code tags</legend>
+    {% include "components/tag_picker.html" with picker_id="circuit-code-tags" label="Code tags" input_name="code_tag" tags=code_filter_tags selected_keys=selected_code_tags match_name="code_tag_match" match_value=code_tag_match mode="filter" only %}
+  </fieldset>
+  <fieldset class="filter-group filter-group-tags">
+    <legend>Experiment tags</legend>
+    {% include "components/tag_picker.html" with picker_id="circuit-experiment-tags" label="Experiment tags" input_name="experiment_tag" tags=experiment_filter_tags selected_keys=selected_experiment_tags match_name="experiment_tag_match" match_value=experiment_tag_match mode="filter" only %}
+  </fieldset>
+  <fieldset class="filter-group">
+    <legend>Scientific properties</legend>
+    <label>Noise model
+      <select name="noise_model"><option value="">Any</option>{% for noise_model in noise_models %}<option value="{{ noise_model.slug }}"{% if filters.noise_model_slug == noise_model.slug %} selected{% endif %}>{{ noise_model.name }}</option>{% endfor %}</select>
+    </label>
+    <label>Randomised priors
+      <select name="priors"><option value="">Any</option><option value="yes"{% if filters.randomises_priors == "yes" %} selected{% endif %}>Yes</option><option value="no"{% if filters.randomises_priors == "no" %} selected{% endif %}>No</option></select>
+    </label>
+    <label>CSS
+      <select name="css"><option value="">Any</option><option value="yes"{% if filters.is_css == "yes" %} selected{% endif %}>Yes</option><option value="no"{% if filters.is_css == "no" %} selected{% endif %}>No</option></select>
+    </label>
+  </fieldset>
+  <fieldset class="filter-group filter-ranges">
+    <legend>Ranges <span>inclusive</span></legend>
+    <span class="range-control"><span>Code distance upper bound</span><label>min <input name="code_d_min" type="number" min="0" value="{{ raw_values.code_d_min }}"></label><label>max <input name="code_d_max" type="number" min="0" value="{{ raw_values.code_d_max }}"></label></span>
+    <span class="range-control"><span>Circuit distance upper bound</span><label>min <input name="circuit_d_min" type="number" min="0" value="{{ raw_values.circuit_d_min }}"></label><label>max <input name="circuit_d_max" type="number" min="0" value="{{ raw_values.circuit_d_max }}"></label></span>
+    <span class="range-control"><span>Detectors</span><label>min <input name="detector_min" type="number" min="0" value="{{ raw_values.detector_min }}"></label><label>max <input name="detector_max" type="number" min="0" value="{{ raw_values.detector_max }}"></label></span>
+    <span class="range-control"><span>Errors</span><label>min <input name="error_min" type="number" min="0" value="{{ raw_values.error_min }}"></label><label>max <input name="error_max" type="number" min="0" value="{{ raw_values.error_max }}"></label></span>
+  </fieldset>
+  <div class="filter-actions"><button class="button-compact" type="submit">Apply filters</button>{% if filters_active %}<a href="{% url 'circuits:list' %}">Reset</a>{% endif %}</div>
 {% endblock %}
 
 {% block collection_results %}
-  <div class="results-summary">{{ circuits|length }} matching circuit{{ circuits|length|pluralize }}</div>
-  <ol class="record-list">
-    {% for circuit in circuits %}
-      <li>
-        <div>
-          <a class="record-title" href="{% url 'circuits:detail' circuit.slug %}">{{ circuit.name }}</a>
-          <p>{{ circuit.display_description|default:"No description supplied." }}</p>
-          <ul class="tag-list" aria-label="Code tags">
-            {% for tag in circuit.code_tags.all %}<li><a class="tag tag-{{ tag.status }}" href="?tag=code%3A{{ tag.slug|urlencode }}">{{ tag.label }}</a></li>{% endfor %}
-          </ul>
-          <ul class="tag-list" aria-label="Experiment tags">
-            {% for tag in circuit.experiment_tags.all %}<li><a class="tag tag-{{ tag.status }}" href="?tag=experiment%3A{{ tag.slug|urlencode }}">{{ tag.label }}</a></li>{% endfor %}
-          </ul>
-        </div>
-        <dl class="record-facts">
-          <div><dt>Noise model</dt><dd>{{ circuit.noise_model.name }}</dd></div>
-          <div><dt>Detectors</dt><dd>{{ circuit.num_detectors }}</dd></div>
-          <div><dt>Errors</dt><dd>{{ circuit.num_errors }}</dd></div>
-        </dl>
-      </li>
-    {% empty %}
-      <li>{% include "components/empty_state.html" with title="No matching circuits" message="Try removing a tag or using a shorter search phrase." only %}</li>
-    {% endfor %}
-  </ol>
+  {% include "components/explorer_toolbar.html" with explorer_id="circuits" %}
+  {% include "components/data_table.html" with columns=table_columns rows=table_rows empty_message="No matching circuits. Try removing a filter or shortening the search phrase." only %}
 {% endblock %}

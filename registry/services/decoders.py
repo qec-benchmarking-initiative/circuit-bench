@@ -1,6 +1,15 @@
 """Read-only queries and lineage rules for public decoder pages."""
 
-from django.db.models import Case, IntegerField, Prefetch, Q, QuerySet, Value, When
+from django.db.models import (
+    Case,
+    Count,
+    IntegerField,
+    Prefetch,
+    Q,
+    QuerySet,
+    Value,
+    When,
+)
 from django.db.models.functions import Lower
 
 from accounts.models import ExternalIdentity
@@ -17,12 +26,28 @@ PUBLIC_DETAIL_STATES = ("published", "withdrawn")
 
 
 def public_decoder_catalogue(
-    *, query: str = "", tag_slug: str = ""
+    *,
+    query: str = "",
+    tag_slug: str = "",
+    tag_slugs: tuple[str, ...] = (),
+    tag_match: str = "all",
+    skeleton_preparation: str = "",
+    priors_preparation: str = "",
+    probability_output: str = "",
+    result_min: int | None = None,
+    result_max: int | None = None,
 ) -> QuerySet[DecoderVersion]:
     """Return published decoder versions matching the simple catalogue filters."""
 
     decoders = (
         DecoderVersion.objects.filter(state="published")
+        .annotate(
+            published_result_count=Count(
+                "results",
+                filter=Q(results__state="published"),
+                distinct=True,
+            )
+        )
         .select_related("schema_release")
         .prefetch_related(
             Prefetch(
@@ -43,14 +68,35 @@ def public_decoder_catalogue(
             | Q(algorithm_tags__slug__icontains=query)
         )
 
-    tag_slug = tag_slug.strip()
-    if tag_slug:
+    selected_tags = tuple(tag for tag in tag_slugs if tag)
+    if tag_slug.strip() and tag_slug.strip() not in selected_tags:
+        selected_tags = (*selected_tags, tag_slug.strip())
+    if tag_match == "any" and selected_tags:
         decoders = decoders.filter(
             algorithm_tags__namespace="algorithm",
-            algorithm_tags__slug=tag_slug,
+            algorithm_tags__slug__in=selected_tags,
         )
+    else:
+        for selected_tag in selected_tags:
+            decoders = decoders.filter(
+                algorithm_tags__namespace="algorithm",
+                algorithm_tags__slug=selected_tag,
+            )
 
-    return decoders.distinct().order_by(Lower("name"), "version", "id")
+    if skeleton_preparation in {"required", "not_required"}:
+        decoders = decoders.filter(circuit_skeleton_preparation=skeleton_preparation)
+    if priors_preparation in {"required", "not_required"}:
+        decoders = decoders.filter(circuit_priors_preparation=priors_preparation)
+    if probability_output in {"yes", "no"}:
+        decoders = decoders.filter(
+            provides_failure_probability=probability_output == "yes"
+        )
+    if result_min is not None:
+        decoders = decoders.filter(published_result_count__gte=result_min)
+    if result_max is not None:
+        decoders = decoders.filter(published_result_count__lte=result_max)
+
+    return decoders.distinct()
 
 
 def catalogue_algorithm_tags() -> QuerySet[Tag]:
@@ -58,7 +104,7 @@ def catalogue_algorithm_tags() -> QuerySet[Tag]:
 
     return (
         _ordered_algorithm_tags()
-        .filter(decoder_versions__state="published")
+        .filter(Q(status=Tag.Status.OFFICIAL) | Q(decoder_versions__state="published"))
         .distinct()
     )
 

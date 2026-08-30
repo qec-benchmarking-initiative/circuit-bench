@@ -1,17 +1,17 @@
-<div class="table-scroll">
-  <table class="data-table">
+<div class="table-scroll" tabindex="0" aria-label="Scrollable table">
+  <table class="data-table" data-scientific-table>
     <thead><tr>
       {% for column in columns %}
-        <th scope="col"{% if column.numeric %} class="numeric"{% endif %}>
-          {% if column.sortable %}<button type="button">{{ column.label }}{% if column.sort_index %} <span class="sort-mark">{{ column.sort_index }} {{ column.sort_direction }}</span>{% endif %}</button>{% else %}{{ column.label }}{% endif %}
+        <th scope="col" data-column="{{ column.key }}"{% if column.numeric %} class="numeric"{% endif %}{% if column.aria_sort %} aria-sort="{{ column.aria_sort }}"{% endif %}>
+          {% if column.sortable %}<a class="table-sort" href="{{ column.sort_url }}" data-sort-key="{{ column.key }}"{% if column.sort_index %} data-sort-index="{{ column.sort_index }}" data-sort-direction="{{ column.sort_order }}"{% endif %}{% if column.help_text %} title="{{ column.help_text }}"{% endif %}>{{ column.label }}{% if column.sort_index %} <span class="sort-mark" aria-label="sort priority {{ column.sort_index }}, {{ column.aria_sort|default:'secondary' }}">{{ column.sort_index }}{{ column.sort_direction }}</span>{% endif %}</a>{% else %}{{ column.label }}{% endif %}
         </th>
       {% endfor %}
     </tr></thead>
     <tbody>
       {% for row in rows %}
-        <tr>{% for cell in row.cells %}<td{% if cell.numeric %} class="numeric"{% endif %}>{% if cell.url %}<a href="{{ cell.url }}">{{ cell.value }}</a>{% else %}{{ cell.value|default:"—" }}{% endif %}</td>{% endfor %}</tr>
+        <tr>{% for cell in row.cells %}<td{% if cell.numeric %} class="numeric"{% endif %}{% if cell.key %} data-column="{{ cell.key }}"{% endif %}>{% if cell.tags %}<ul class="table-tags">{% for tag in cell.tags %}<li>{% if tag.url %}<a href="{{ tag.url }}">{{ tag.label }}</a>{% else %}{{ tag.label }}{% endif %}</li>{% empty %}<li class="null-value">—</li>{% endfor %}</ul>{% elif cell.url %}<a href="{{ cell.url }}">{{ cell.value }}</a>{% elif cell.value != None %}{{ cell.value }}{% else %}<span class="null-value">—</span>{% endif %}</td>{% endfor %}</tr>
       {% empty %}
-        <tr><td colspan="{{ columns|length }}">No matching records.</td></tr>
+        <tr><td class="table-empty" colspan="{{ columns|length }}">{{ empty_message|default:"No matching records." }}</td></tr>
       {% endfor %}
     </tbody>
   </table>

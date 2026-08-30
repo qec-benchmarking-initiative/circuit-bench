@@ -5,11 +5,37 @@ from registry.models import CircuitRevision, NoiseModel, Result
 PUBLIC_DETAIL_STATES = ("published", "withdrawn")
 
 
-def circuit_catalogue(*, query: str = "", tag: str = "") -> QuerySet:
+def circuit_catalogue(
+    *,
+    query: str = "",
+    tag: str = "",
+    code_tag_slugs: tuple[str, ...] = (),
+    experiment_tag_slugs: tuple[str, ...] = (),
+    code_tag_match: str = "all",
+    experiment_tag_match: str = "all",
+    noise_model_slug: str = "",
+    randomises_priors: str = "",
+    is_css: str = "",
+    code_distance_min: int | None = None,
+    code_distance_max: int | None = None,
+    circuit_distance_min: int | None = None,
+    circuit_distance_max: int | None = None,
+    detector_min: int | None = None,
+    detector_max: int | None = None,
+    error_min: int | None = None,
+    error_max: int | None = None,
+) -> QuerySet:
     circuits = (
         CircuitRevision.objects.filter(
             state="published",
             noise_model__state__in=PUBLIC_DETAIL_STATES,
+        )
+        .annotate(
+            published_result_count=Count(
+                "results",
+                filter=Q(results__state="published"),
+                distinct=True,
+            )
         )
         .select_related("noise_model")
         .prefetch_related("code_tags", "experiment_tags")
@@ -34,7 +60,45 @@ def circuit_catalogue(*, query: str = "", tag: str = "") -> QuerySet:
                 f"{relation}__slug": slug,
             }
         )
-    return circuits.distinct().order_by("name", "slug")
+    if code_tag_match == "any" and code_tag_slugs:
+        circuits = circuits.filter(
+            code_tags__namespace="code", code_tags__slug__in=code_tag_slugs
+        )
+    else:
+        for slug in code_tag_slugs:
+            circuits = circuits.filter(
+                code_tags__namespace="code", code_tags__slug=slug
+            )
+    if experiment_tag_match == "any" and experiment_tag_slugs:
+        circuits = circuits.filter(
+            experiment_tags__namespace="experiment",
+            experiment_tags__slug__in=experiment_tag_slugs,
+        )
+    else:
+        for slug in experiment_tag_slugs:
+            circuits = circuits.filter(
+                experiment_tags__namespace="experiment",
+                experiment_tags__slug=slug,
+            )
+    if noise_model_slug:
+        circuits = circuits.filter(noise_model__slug=noise_model_slug)
+    if randomises_priors in {"yes", "no"}:
+        circuits = circuits.filter(
+            noise_model__randomises_priors=randomises_priors == "yes"
+        )
+    if is_css in {"yes", "no"}:
+        circuits = circuits.filter(is_css=is_css == "yes")
+    for field, minimum, maximum in (
+        ("code_distance_upper_bound", code_distance_min, code_distance_max),
+        ("circuit_distance_upper_bound", circuit_distance_min, circuit_distance_max),
+        ("num_detectors", detector_min, detector_max),
+        ("num_errors", error_min, error_max),
+    ):
+        if minimum is not None:
+            circuits = circuits.filter(**{f"{field}__gte": minimum})
+        if maximum is not None:
+            circuits = circuits.filter(**{f"{field}__lte": maximum})
+    return circuits.distinct()
 
 
 def circuit_detail_queryset() -> QuerySet:
@@ -80,7 +144,14 @@ def inherited_circuit_description(circuit: CircuitRevision) -> str | None:
     return None
 
 
-def noise_model_catalogue(*, query: str = "", status: str = "") -> QuerySet:
+def noise_model_catalogue(
+    *,
+    query: str = "",
+    status: str = "",
+    randomises_priors: str = "",
+    circuit_min: int | None = None,
+    circuit_max: int | None = None,
+) -> QuerySet:
     noise_models = NoiseModel.objects.filter(state="published").annotate(
         circuit_count=Count(
             "circuit_revisions",
@@ -96,13 +167,19 @@ def noise_model_catalogue(*, query: str = "", status: str = "") -> QuerySet:
         )
     if status:
         noise_models = noise_models.filter(curation_status=status)
-    return noise_models.order_by("name", "slug")
+    if randomises_priors in {"yes", "no"}:
+        noise_models = noise_models.filter(randomises_priors=randomises_priors == "yes")
+    if circuit_min is not None:
+        noise_models = noise_models.filter(circuit_count__gte=circuit_min)
+    if circuit_max is not None:
+        noise_models = noise_models.filter(circuit_count__lte=circuit_max)
+    return noise_models
 
 
 def noise_model_detail_queryset() -> QuerySet:
-    published_circuits = CircuitRevision.objects.filter(
-        state="published"
-    ).order_by("name", "slug")
+    published_circuits = CircuitRevision.objects.filter(state="published").order_by(
+        "name", "slug"
+    )
     return (
         NoiseModel.objects.filter(state__in=PUBLIC_DETAIL_STATES)
         .select_related(

@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 
 from registry.demo import seed_demo_data
-from registry.models import Artifact, DecoderVersion
+from registry.models import Artifact, DecoderVersion, Tag
 
 pytestmark = pytest.mark.django_db
 
@@ -16,8 +16,7 @@ def decoder_url_configuration(settings):
 def demo_decoders():
     seed_demo_data()
     return {
-        decoder.slug: decoder
-        for decoder in DecoderVersion.objects.order_by("version")
+        decoder.slug: decoder for decoder in DecoderVersion.objects.order_by("version")
     }
 
 
@@ -37,8 +36,86 @@ def test_catalogue_searches_exact_name_and_algorithm_tag(client, demo_decoders):
     ]
     assert response.context["selected_tag"] == "belief-propagation"
     content = response.content.decode()
-    assert '<option value="belief-propagation" selected>' in content
-    assert content.index("Matching") < content.index("Belief propagation")
+    assert 'data-selected-tag="belief-propagation"' in content
+    assert "Filter for records with all selected tags" in content
+    assert "Filter for records with any selected tag" in content
+    assert [tag.label for tag in response.context["filter_tags"]] == [
+        "Matching",
+        "Belief propagation",
+    ]
+
+
+def test_catalogue_tag_picker_supports_all_and_any_matching(client, demo_decoders):
+    selected = ["matching", "belief-propagation"]
+
+    match_all = client.get(
+        reverse("decoders:list"), {"tag": selected, "tag_match": "all"}
+    )
+    match_any = client.get(
+        reverse("decoders:list"), {"tag": selected, "tag_match": "any"}
+    )
+
+    assert [decoder.slug for decoder in match_all.context["decoders"]] == [
+        "clear-matcher-0-2"
+    ]
+    assert [decoder.slug for decoder in match_any.context["decoders"]] == [
+        "clear-matcher-0-1",
+        "clear-matcher-0-2",
+    ]
+
+
+def test_tag_picker_includes_unused_official_but_not_unused_custom_tags(
+    client, demo_decoders
+):
+    source = Tag.objects.get(slug="matching")
+    shared = {
+        "schema_release": source.schema_release,
+        "namespace": "algorithm",
+        "description": "Unused tag for picker visibility coverage.",
+        "submitted_by": source.submitted_by,
+    }
+    Tag.objects.create(
+        **shared,
+        slug="unused-official",
+        label="Unused official",
+        status="official",
+    )
+    Tag.objects.create(
+        **shared,
+        slug="unused-custom",
+        label="Unused custom",
+        status="custom",
+    )
+
+    content = client.get(reverse("decoders:list")).content.decode()
+
+    assert "Unused official" in content
+    assert "Unused custom" not in content
+
+
+def test_catalogue_table_state_is_reproducible_in_the_url(client, demo_decoders):
+    response = client.get(
+        reverse("decoders:list"),
+        {
+            "probability": "yes",
+            "sort": "-results,name",
+            "columns": "name,results",
+        },
+    )
+
+    assert response.status_code == 200
+    assert [decoder.slug for decoder in response.context["decoders"]] == [
+        "clear-matcher-0-2",
+        "clear-matcher-0-1",
+    ]
+    assert [column["key"] for column in response.context["table_columns"]] == [
+        "name",
+        "results",
+    ]
+    assert response.context["sort_summary"] == ("Results descending, Decoder ascending")
+    content = response.content.decode()
+    assert "Table view options (2/8)" in content
+    assert 'aria-current="page"' in content
 
 
 def test_catalogue_has_an_explicit_empty_state(client, demo_decoders):

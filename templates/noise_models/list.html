@@ -1,47 +1,41 @@
 {% extends "layouts/collection.html" %}
 
-{% block title %}Noise models — DecoderBench{% endblock %}
+{% block title %}Noise models · DecoderBench{% endblock %}
+{% block explorer_name %}Noise models{% endblock %}
 
-{% block page_heading %}
-  <p class="eyebrow">Scientific definitions</p>
-  <h1>Noise models</h1>
-  <p>Short definitions and paper links for the noise models used by frozen circuits.</p>
+{% block explorer_query %}
+  <label class="visually-hidden" for="noise-search">Search noise models</label>
+  <input id="noise-search" name="q" type="search" value="{{ query }}" placeholder="Search noise-model name, slug, or definition">
+  {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+  {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+  <button class="button-compact" type="submit">Run</button>
+  <a class="button-link" href="{% url 'noise-models:list' %}">Clear</a>
+  <span class="query-mode">Plain-text search · scripted query syntax is not enabled yet</span>
 {% endblock %}
 
-{% block collection_tools %}
-  <form class="filter-bar" method="get">
-    <div><label for="noise-search">Search</label><input id="noise-search" name="q" type="search" value="{{ query }}" placeholder="Noise-model name…"></div>
-    <div>
-      <label for="noise-status">Curation</label>
-      <select id="noise-status" name="status">
-        <option value="">All statuses</option>
-        <option value="official"{% if selected_status == "official" %} selected{% endif %}>Official</option>
-        <option value="community"{% if selected_status == "community" %} selected{% endif %}>Community</option>
-        <option value="deprecated"{% if selected_status == "deprecated" %} selected{% endif %}>Deprecated</option>
-      </select>
+{% block explorer_status %}Plain-text mode · {{ result_count }} published noise model{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
+
+{% block explorer_filters %}
+  <fieldset class="filter-group filter-group-radios">
+    <legend>Curation</legend>
+    <div class="filter-options">
+      <label><input type="radio" name="status" value=""{% if not selected_status %} checked{% endif %}> Any</label>
+      <label><input type="radio" name="status" value="official"{% if selected_status == "official" %} checked{% endif %}> Official</label>
+      <label><input type="radio" name="status" value="community"{% if selected_status == "community" %} checked{% endif %}> Community</label>
+      <label><input type="radio" name="status" value="deprecated"{% if selected_status == "deprecated" %} checked{% endif %}> Deprecated</label>
     </div>
-    <button type="submit">Apply</button>
-    {% if query or selected_status %}<a href="{% url 'noise-models:list' %}">Clear filters</a>{% endif %}
-  </form>
+  </fieldset>
+  <fieldset class="filter-group">
+    <legend>Scientific properties</legend>
+    <label>Randomises priors
+      <select name="priors"><option value="">Any</option><option value="yes"{% if selected_priors == "yes" %} selected{% endif %}>Yes</option><option value="no"{% if selected_priors == "no" %} selected{% endif %}>No</option></select>
+    </label>
+    <span class="range-control"><span>Published circuits</span><label>min <input name="circuit_min" type="number" min="0" value="{{ circuit_min }}"></label><label>max <input name="circuit_max" type="number" min="0" value="{{ circuit_max }}"></label></span>
+  </fieldset>
+  <div class="filter-actions"><button class="button-compact" type="submit">Apply filters</button>{% if filters_active %}<a href="{% url 'noise-models:list' %}">Reset</a>{% endif %}</div>
 {% endblock %}
 
 {% block collection_results %}
-  <div class="results-summary">{{ noise_models|length }} matching noise model{{ noise_models|length|pluralize }}</div>
-  <ol class="record-list">
-    {% for noise_model in noise_models %}
-      <li>
-        <div>
-          <a class="record-title" href="{% url 'noise-models:detail' noise_model.slug %}">{{ noise_model.name }}</a>
-          <p>{{ noise_model.short_description }}</p>
-        </div>
-        <dl class="record-facts">
-          <div><dt>Curation</dt><dd>{{ noise_model.get_curation_status_display }}</dd></div>
-          <div><dt>Randomises priors</dt><dd>{{ noise_model.randomises_priors|yesno:"Yes,No" }}</dd></div>
-          <div><dt>Circuits</dt><dd>{{ noise_model.circuit_count }}</dd></div>
-        </dl>
-      </li>
-    {% empty %}
-      <li>{% include "components/empty_state.html" with title="No matching noise models" message="Try removing the curation filter or using a shorter name." only %}</li>
-    {% endfor %}
-  </ol>
+  {% include "components/explorer_toolbar.html" with explorer_id="noise-models" %}
+  {% include "components/data_table.html" with columns=table_columns rows=table_rows empty_message="No matching noise models. Try removing a filter or shortening the search phrase." only %}
 {% endblock %}
