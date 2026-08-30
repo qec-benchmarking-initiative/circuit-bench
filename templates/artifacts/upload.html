@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Upload development artifact — DecoderBench{% endblock %}
+
+{% block content %}
+  <div class="page-shell">
+    <header class="page-heading">
+      <p class="eyebrow">Development inspection</p>
+      <h1>Upload a small artifact</h1>
+      <p>This diagnostic form stores immutable content-addressed bytes. It is not a scientific submission form.</p>
+    </header>
+    <section class="gallery-section">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Store and verify</button>
+        <a class="button button-secondary" href="{% url 'artifacts:index' %}">Cancel</a>
+      </form>
+    </section>
+  </div>
+{% endblock %}

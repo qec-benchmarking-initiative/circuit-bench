@@ -1,0 +1,123 @@
+import pytest
+from django.urls import reverse
+
+from registry.demo import seed_demo_data
+from registry.models import Artifact, DecoderVersion
+
+pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def decoder_url_configuration(settings):
+    settings.ROOT_URLCONF = "tests.decoders.urls"
+
+
+@pytest.fixture
+def demo_decoders():
+    seed_demo_data()
+    return {
+        decoder.slug: decoder
+        for decoder in DecoderVersion.objects.order_by("version")
+    }
+
+
+def test_catalogue_searches_exact_name_and_algorithm_tag(client, demo_decoders):
+    response = client.get(reverse("decoders:list"), {"q": "Clear Matcher"})
+
+    assert response.status_code == 200
+    assert [decoder.slug for decoder in response.context["decoders"]] == [
+        "clear-matcher-0-1",
+        "clear-matcher-0-2",
+    ]
+
+    response = client.get(reverse("decoders:list"), {"tag": "belief-propagation"})
+
+    assert [decoder.slug for decoder in response.context["decoders"]] == [
+        "clear-matcher-0-2"
+    ]
+    assert response.context["selected_tag"] == "belief-propagation"
+    content = response.content.decode()
+    assert '<option value="belief-propagation" selected>' in content
+    assert content.index("Matching") < content.index("Belief propagation")
+
+
+def test_catalogue_has_an_explicit_empty_state(client, demo_decoders):
+    response = client.get(reverse("decoders:list"), {"q": "not-a-decoder"})
+
+    assert response.status_code == 200
+    assert response.context["result_count"] == 0
+    assert b"No matching decoder versions" in response.content
+
+
+def test_detail_inherits_description_and_shows_exact_revision(client, demo_decoders):
+    decoder = demo_decoders["clear-matcher-0-2"]
+    response = client.get(reverse("decoders:detail", args=[decoder.slug]))
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "A compact matching decoder" in content
+    assert "Inherited from" in content
+    assert "Adds calibrated per-shot failure probabilities." in content
+    assert reverse("decoders:detail", args=["clear-matcher-0-1"]) in content
+    assert "Not required (&lt;10 s on first uncached exposure)" in content
+    assert "Provides per-shot failure probability q in [0, 1]" in content
+    assert "window: positive integer matching window" in content
+    assert str(decoder.id) in content
+
+
+def test_detail_shows_credits_identities_tags_and_results(client, demo_decoders):
+    decoder = demo_decoders["clear-matcher-0-2"]
+    response = client.get(reverse("decoders:detail", args=[decoder.slug]))
+
+    content = response.content.decode()
+    assert "Example Collaborator" in content
+    assert "Ada Decoder" in content
+    assert "https://github.com/ada-decoder" in content
+    assert "https://orcid.org/0000-0002-1825-0097" in content
+    assert "Matching" in content
+    assert "Belief propagation" in content
+    assert "Rotated surface-code memory d=5" in content
+    assert "100000" in content
+    assert "Brier loss upper 95% bound" in content
+    assert "LER upper 95% bound at 5% acceptance" in content
+
+
+def test_root_version_has_no_predecessor_and_an_empty_results_state(
+    client, demo_decoders
+):
+    decoder = demo_decoders["clear-matcher-0-1"]
+    response = client.get(reverse("decoders:detail", args=[decoder.slug]))
+
+    assert response.status_code == 200
+    assert response.context["predecessor"] is None
+    assert response.context["successor"].slug == "clear-matcher-0-2"
+    assert response.context["result_rows"] == []
+    assert b"No published results yet" in response.content
+
+
+def test_optional_hyperparameter_schema_uses_verified_download_route(
+    client, demo_decoders
+):
+    decoder = demo_decoders["clear-matcher-0-1"]
+    artifact = Artifact.objects.order_by("created_at").first()
+    decoder.hyperparameter_schema_artifact = artifact
+    decoder.save(update_fields=["hyperparameter_schema_artifact"])
+
+    response = client.get(reverse("decoders:detail", args=[decoder.slug]))
+
+    expected_url = reverse("artifacts:download", args=[artifact.id])
+    assert expected_url in response.content.decode()
+    assert artifact.original_filename.encode() in response.content
+
+
+def test_draft_decoder_version_is_not_public(client, demo_decoders):
+    decoder = demo_decoders["clear-matcher-0-1"]
+    DecoderVersion.objects.filter(pk=decoder.pk).update(
+        state="draft",
+        published_at=None,
+    )
+
+    catalogue = client.get(reverse("decoders:list"))
+    assert decoder.slug not in [item.slug for item in catalogue.context["decoders"]]
+    detail = client.get(reverse("decoders:detail", args=[decoder.slug]))
+    assert detail.status_code == 404

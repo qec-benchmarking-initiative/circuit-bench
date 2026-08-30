@@ -4,12 +4,14 @@ An open registry and benchmark specification for quantum error-correction
 decoders.
 
 The project has a complete `0.1` relational model and a working local
-development foundation. Scientific submission and discovery features are not
-implemented yet.
+development foundation. Provider-only accounts, immutable local artifacts,
+and read-only decoder/circuit/noise-model discovery are implemented. Scientific
+submission workflows and comparison queries are not implemented yet.
 
 - [Complete relational data model 0.1](docs/data-model-0.1.md)
 - [Development plan](docs/development-plan.md)
 - [Physical Django model mapping](docs/physical-model-mapping.md)
+- [Deferred GitHub/ORCID application setup](docs/oauth-application-setup.md)
 - [Decoder record schema 0.1](schemas/decoder/0.1.schema.json)
 - [Decoder definitions 0.1](definitions/decoder/0.1.md)
 - [Result definitions 0.1 (incomplete working draft)](definitions/result/0.1.md)
@@ -51,6 +53,24 @@ uv run python manage.py runserver
 Open the home page at `http://127.0.0.1:8000/`. The development-only component
 gallery is at `http://127.0.0.1:8000/dev/components/`, the database-backed
 health response is at `/health/`, and the Django admin is at `/admin/`.
+
+The current review surfaces are:
+
+- `/accounts/login/` for the provider-only sign-in controls;
+- `/accounts/` for linked identities after sign-in;
+- `/artifacts/` for development-only artifact/schema inspection;
+- `/decoders/`, `/circuits/`, and `/noise-models/` for public discovery.
+
+Load complete checked-in schema/definition pairs into an otherwise unoccupied
+database as draft releases with:
+
+```sh
+uv run python manage.py load_schema_releases --uploader <ACCOUNT_UUID>
+```
+
+An existing release is never repointed. Change the version when its contract
+changes. Real GitHub/ORCID credentials remain optional until the manual OAuth
+smoke test; follow `docs/oauth-application-setup.md` at that point.
 
 Run the complete verification suite with:
 

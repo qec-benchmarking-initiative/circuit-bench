@@ -18,7 +18,11 @@
         <a href="/noise-models/">Noise models</a>
         <a href="/results/">Results</a>
       </nav>
-      <a class="account-link" href="/accounts/login/">Sign in</a>
+      {% if user.is_authenticated %}
+        <a class="account-link" href="/accounts/">{{ user.display_name }}</a>
+      {% else %}
+        <a class="account-link" href="/accounts/login/">Sign in</a>
+      {% endif %}
     </header>
     {% if messages %}
       <div class="messages" role="status">

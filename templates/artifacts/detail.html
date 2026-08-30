@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}{{ artifact.original_filename }} — DecoderBench{% endblock %}
+
+{% block content %}
+  <div class="page-shell gallery">
+    <header class="page-heading">
+      <p class="eyebrow">Immutable artifact</p>
+      <h1>{{ artifact.original_filename }}</h1>
+      {% if verification %}
+        <span class="status-badge">Integrity verified</span>
+      {% else %}
+        <span class="status-badge status-error">Integrity failed</span>
+        <p>{{ verification_error }}</p>
+      {% endif %}
+    </header>
+    <section class="gallery-section">
+      <h2>Stored metadata</h2>
+      <dl class="metadata-list">
+        <div><dt>Artifact ID</dt><dd>{{ artifact.id }}</dd></div>
+        <div><dt>Bytes</dt><dd>{{ artifact.byte_size }}</dd></div>
+        <div><dt>Media type</dt><dd>{{ artifact.media_type }}</dd></div>
+        <div><dt>Backend</dt><dd>{{ artifact.get_storage_backend_display }}</dd></div>
+        <div><dt>SHA-256</dt><dd><code>{{ artifact.sha256 }}</code></dd></div>
+        <div><dt>Object key</dt><dd><code>{{ artifact.object_key }}</code></dd></div>
+        <div><dt>Uploaded by</dt><dd>{{ artifact.uploaded_by }}</dd></div>
+        <div><dt>Created</dt><dd>{{ artifact.created_at }}</dd></div>
+      </dl>
+      {% if verification %}
+        <p><a class="button" href="{% url 'artifacts:download' artifact_id=artifact.id %}">Download verified bytes</a></p>
+      {% endif %}
+      <p><a href="{% url 'artifacts:index' %}">Back to artifacts</a></p>
+    </section>
+  </div>
+{% endblock %}

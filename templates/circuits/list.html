@@ -1,0 +1,56 @@
+{% extends "layouts/collection.html" %}
+
+{% block title %}Circuits — DecoderBench{% endblock %}
+
+{% block page_heading %}
+  <p class="eyebrow">Circuit registry</p>
+  <h1>Circuits</h1>
+  <p>Find an exact frozen circuit revision by name, code family, or experiment.</p>
+{% endblock %}
+
+{% block collection_tools %}
+  <form class="filter-bar" method="get">
+    <div>
+      <label for="circuit-search">Search</label>
+      <input id="circuit-search" name="q" type="search" value="{{ query }}" placeholder="Circuit name, code, experiment…">
+    </div>
+    <div>
+      <label for="circuit-tag">Code or experiment</label>
+      <select id="circuit-tag" name="tag">
+        <option value="">All tags</option>
+        {% for tag in filter_tags %}
+          {% with tag_key=tag.namespace|add:":"|add:tag.slug %}<option value="{{ tag_key }}"{% if selected_tag == tag_key %} selected{% endif %}>{{ tag.label }} · {{ tag.get_namespace_display }}</option>{% endwith %}
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">Apply</button>
+    {% if query or selected_tag %}<a href="{% url 'circuits:list' %}">Clear filters</a>{% endif %}
+  </form>
+{% endblock %}
+
+{% block collection_results %}
+  <div class="results-summary">{{ circuits|length }} matching circuit{{ circuits|length|pluralize }}</div>
+  <ol class="record-list">
+    {% for circuit in circuits %}
+      <li>
+        <div>
+          <a class="record-title" href="{% url 'circuits:detail' circuit.slug %}">{{ circuit.name }}</a>
+          <p>{{ circuit.display_description|default:"No description supplied." }}</p>
+          <ul class="tag-list" aria-label="Code tags">
+            {% for tag in circuit.code_tags.all %}<li><a class="tag tag-{{ tag.status }}" href="?tag=code%3A{{ tag.slug|urlencode }}">{{ tag.label }}</a></li>{% endfor %}
+          </ul>
+          <ul class="tag-list" aria-label="Experiment tags">
+            {% for tag in circuit.experiment_tags.all %}<li><a class="tag tag-{{ tag.status }}" href="?tag=experiment%3A{{ tag.slug|urlencode }}">{{ tag.label }}</a></li>{% endfor %}
+          </ul>
+        </div>
+        <dl class="record-facts">
+          <div><dt>Noise model</dt><dd>{{ circuit.noise_model.name }}</dd></div>
+          <div><dt>Detectors</dt><dd>{{ circuit.num_detectors }}</dd></div>
+          <div><dt>Errors</dt><dd>{{ circuit.num_errors }}</dd></div>
+        </dl>
+      </li>
+    {% empty %}
+      <li>{% include "components/empty_state.html" with title="No matching circuits" message="Try removing a tag or using a shorter search phrase." only %}</li>
+    {% endfor %}
+  </ol>
+{% endblock %}

@@ -1,8 +1,8 @@
 # DecoderBench development plan
 
-Status: serial foundation complete; parallel wave A is ready to assign. The
-later work is split into bounded tasks with visible outputs and non-overlapping
-file ownership.
+Status: serial foundation and parallel wave A complete; parallel wave B is
+ready to assign. The later work is split into bounded tasks with visible
+outputs and non-overlapping file ownership.
 
 ## Working rules
 
@@ -136,7 +136,7 @@ These tasks may begin after F1–F5. Each owns its page templates, services, URL
 below its assigned prefix, and focused tests. Root integration files remain
 owned by the integrator.
 
-### A1. Provider-only accounts
+### A1. Provider-only accounts — complete
 
 Implement GitHub/ORCID sign-in, linking and unlinking, prevent removal of the
 last identity, and reject silent account merging. Use mocked providers in the
@@ -145,7 +145,7 @@ automated test suite; real credentials are only needed for a final smoke test.
 User verification: `/accounts/login/` has two plain buttons; a test account can
 show one linked provider, link the second, and is prevented from removing both.
 
-### A2. Artifact and schema-release pipeline
+### A2. Artifact and schema-release pipeline — complete
 
 Implement local content-addressed storage, SHA-256/size verification,
 deduplication, immutable bytes, and loading of checked-in schema/definition
@@ -155,7 +155,7 @@ forms yet.
 User verification: upload the same small file twice, observe one artifact,
 download identical bytes, and see a changed-on-disk object fail verification.
 
-### A3. Decoder discovery and detail slice
+### A3. Decoder discovery and detail slice — complete
 
 Implement `/decoders/` as a search-first discovery catalogue and
 `/decoders/<slug>/` with inherited description, exact-version metadata,
@@ -165,7 +165,7 @@ results placeholder. Read-only only.
 User verification: find seeded decoders by exact name and tag, open a version,
 follow its predecessor, and inspect the empty/populated related-results states.
 
-### A4. Circuit and noise-model discovery/detail slice
+### A4. Circuit and noise-model discovery/detail slice — complete
 
 Implement `/circuits/`, `/circuits/<slug>/`, `/noise-models/`, and
 `/noise-models/<slug>/`. Show code/experiment tags, exact artifact hashes,

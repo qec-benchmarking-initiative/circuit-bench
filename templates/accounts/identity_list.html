@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+
+{% block title %}Sign-in identities · DecoderBench{% endblock %}
+
+{% block content %}
+  <section class="page-intro flow">
+    <p class="eyebrow">Account</p>
+    <h1>Sign-in identities</h1>
+    <p class="lede">
+      These public provider identities can be used to sign in as
+      {{ request.user.display_name }}. DecoderBench stores no password.
+    </p>
+  </section>
+
+  <section class="panel flow" aria-labelledby="linked-heading">
+    <h2 id="linked-heading">Linked identities</h2>
+    {% if identities %}
+      <ul class="flow">
+        {% for identity in identities %}
+          <li>
+            <strong>{{ identity.get_provider_display }}</strong>:
+            <a href="{{ identity.profile_url }}">{{ identity.public_identifier }}</a>
+            {% if not identity.oauth_connected %}
+              <span class="supporting-text">(demonstration record; not sign-in enabled)</span>
+            {% endif %}
+            <form
+              method="post"
+              action="{% url 'account-identity-unlink' identity.id %}"
+            >
+              {% csrf_token %}
+              <button type="submit" {% if not identity.can_unlink %}disabled{% endif %}>
+                Unlink {{ identity.get_provider_display }}
+              </button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+      {% if has_unlink_guard %}
+        <p class="supporting-text">
+          Your final public identity cannot be removed, and a working provider
+          connection cannot be removed until another provider is connected.
+        </p>
+      {% endif %}
+    {% else %}
+      <p>No public sign-in identity is recorded. An administrator must repair this account.</p>
+    {% endif %}
+  </section>
+
+  {% if missing_providers %}
+    <section class="panel flow" aria-labelledby="link-heading">
+      <h2 id="link-heading">Link another provider</h2>
+      {% for provider in missing_providers %}
+        <form
+          method="post"
+          action="{% provider_login_url provider.id process='connect' next=request.path %}"
+        >
+          {% csrf_token %}
+          <button type="submit">Link {{ provider.label }}</button>
+        </form>
+      {% endfor %}
+    </section>
+  {% endif %}
+{% endblock %}

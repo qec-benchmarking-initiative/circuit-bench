@@ -1,0 +1,47 @@
+{% extends "layouts/collection.html" %}
+
+{% block title %}Decoders · DecoderBench{% endblock %}
+
+{% block page_heading %}
+  <p class="eyebrow">Discovery catalogue</p>
+  <h1>Decoders</h1>
+  <p>Find an exact decoder version by name, version, stable slug, or algorithm tag.</p>
+{% endblock %}
+
+{% block collection_tools %}
+  <form class="filter-bar" action="{% url 'decoders:list' %}" method="get">
+    <div>
+      <label for="decoder-search">Search</label>
+      <input id="decoder-search" type="search" name="q" value="{{ query }}" placeholder="Name, version, slug, or tag" autofocus>
+    </div>
+    <div>
+      <label for="decoder-tag">Algorithm tag</label>
+      <select id="decoder-tag" name="tag">
+        <option value="">All algorithm tags</option>
+        {% for tag in filter_tags %}
+          <option value="{{ tag.slug }}"{% if selected_tag == tag.slug %} selected{% endif %}>{{ tag.label }}{% if tag.status == "custom" %} (custom){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">Search</button>
+    {% if query or selected_tag %}<a href="{% url 'decoders:list' %}">Clear filters</a>{% endif %}
+  </form>
+{% endblock %}
+
+{% block collection_results %}
+  <p class="eyebrow">{{ result_count }} exact version{{ result_count|pluralize }}</p>
+  {% if decoders %}
+    <div class="gallery">
+      {% for decoder in decoders %}
+        <article class="gallery-section">
+          <p class="eyebrow">Decoder version {{ decoder.version }}</p>
+          <h2><a href="{% url 'decoders:detail' slug=decoder.slug %}">{{ decoder.name }}</a></h2>
+          {% if decoder.description %}<p>{{ decoder.description|truncatewords:36 }}</p>{% endif %}
+          {% include "components/tag_list.html" with tags=decoder.display_algorithm_tags label="Algorithm tags" only %}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    {% include "components/empty_state.html" with title="No matching decoder versions" message="Try a decoder name, contributor version, stable slug, or a different algorithm tag." only %}
+  {% endif %}
+{% endblock %}

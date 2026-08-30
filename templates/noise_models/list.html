@@ -1,0 +1,47 @@
+{% extends "layouts/collection.html" %}
+
+{% block title %}Noise models — DecoderBench{% endblock %}
+
+{% block page_heading %}
+  <p class="eyebrow">Scientific definitions</p>
+  <h1>Noise models</h1>
+  <p>Short definitions and paper links for the noise models used by frozen circuits.</p>
+{% endblock %}
+
+{% block collection_tools %}
+  <form class="filter-bar" method="get">
+    <div><label for="noise-search">Search</label><input id="noise-search" name="q" type="search" value="{{ query }}" placeholder="Noise-model name…"></div>
+    <div>
+      <label for="noise-status">Curation</label>
+      <select id="noise-status" name="status">
+        <option value="">All statuses</option>
+        <option value="official"{% if selected_status == "official" %} selected{% endif %}>Official</option>
+        <option value="community"{% if selected_status == "community" %} selected{% endif %}>Community</option>
+        <option value="deprecated"{% if selected_status == "deprecated" %} selected{% endif %}>Deprecated</option>
+      </select>
+    </div>
+    <button type="submit">Apply</button>
+    {% if query or selected_status %}<a href="{% url 'noise-models:list' %}">Clear filters</a>{% endif %}
+  </form>
+{% endblock %}
+
+{% block collection_results %}
+  <div class="results-summary">{{ noise_models|length }} matching noise model{{ noise_models|length|pluralize }}</div>
+  <ol class="record-list">
+    {% for noise_model in noise_models %}
+      <li>
+        <div>
+          <a class="record-title" href="{% url 'noise-models:detail' noise_model.slug %}">{{ noise_model.name }}</a>
+          <p>{{ noise_model.short_description }}</p>
+        </div>
+        <dl class="record-facts">
+          <div><dt>Curation</dt><dd>{{ noise_model.get_curation_status_display }}</dd></div>
+          <div><dt>Randomises priors</dt><dd>{{ noise_model.randomises_priors|yesno:"Yes,No" }}</dd></div>
+          <div><dt>Circuits</dt><dd>{{ noise_model.circuit_count }}</dd></div>
+        </dl>
+      </li>
+    {% empty %}
+      <li>{% include "components/empty_state.html" with title="No matching noise models" message="Try removing the curation filter or using a shorter name." only %}</li>
+    {% endfor %}
+  </ol>
+{% endblock %}

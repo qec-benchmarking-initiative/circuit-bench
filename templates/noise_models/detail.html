@@ -1,0 +1,41 @@
+{% extends "layouts/entity_detail.html" %}
+
+{% block title %}{{ noise_model.name }} — DecoderBench{% endblock %}
+
+{% block entity_heading %}
+  {% include "components/entity_header.html" with entity=entity only %}
+{% endblock %}
+
+{% block entity_main %}
+  <section class="content-section">
+    <h2>Definition</h2>
+    <p>{{ noise_model.short_description }}</p>
+    <p><a href="{{ noise_model.paper_url }}">Read the defining paper</a></p>
+  </section>
+{% endblock %}
+
+{% block entity_aside %}
+  <h2>Properties</h2>
+  <dl class="stacked-metadata">
+    <div><dt>Schema</dt><dd>{{ noise_model.schema_release.public_name }}</dd></div>
+    <div><dt>Curation</dt><dd>{{ noise_model.get_curation_status_display }}</dd></div>
+    <div><dt>Randomises priors</dt><dd>{{ noise_model.randomises_priors|yesno:"Yes,No" }}</dd></div>
+  </dl>
+  {% if supersedes_noise_model %}<p>Supersedes <a href="{% url 'noise-models:detail' supersedes_noise_model.slug %}">{{ supersedes_noise_model.name }}</a>.</p>{% endif %}
+{% endblock %}
+
+{% block entity_related %}
+  <h2>Circuits using this noise model</h2>
+  <ol class="record-list record-list--compact">
+    {% for circuit in circuits %}
+      <li>
+        <div>
+          <a class="record-title" href="{% url 'circuits:detail' circuit.slug %}">{{ circuit.name }}</a>
+          <p>{{ circuit.num_detectors }} detectors · {{ circuit.num_errors }} errors</p>
+        </div>
+      </li>
+    {% empty %}
+      <li>{% include "components/empty_state.html" with title="No circuits yet" message="No published circuit references this noise model." only %}</li>
+    {% endfor %}
+  </ol>
+{% endblock %}

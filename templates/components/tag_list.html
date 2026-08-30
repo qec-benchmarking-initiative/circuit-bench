@@ -1,7 +1,7 @@
 {% if tags %}
   <ul class="tag-list" aria-label="{{ label|default:'Tags' }}">
     {% for tag in tags %}
-      <li><a class="tag tag-{{ tag.status }}" href="{{ tag.url }}">{{ tag.label }}</a></li>
+      <li><a class="tag tag-{{ tag.status }}" href="{% if tag.url %}{{ tag.url }}{% else %}?tag={{ tag.slug|urlencode }}{% endif %}">{{ tag.label }}</a></li>
     {% endfor %}
   </ul>
 {% else %}

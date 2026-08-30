@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+
+{% block title %}Sign in · DecoderBench{% endblock %}
+
+{% block content %}
+  <section class="page-intro flow">
+    <p class="eyebrow">Account</p>
+    <h1>Sign in</h1>
+    <p class="lede">
+      Use an existing scientific identity. DecoderBench does not create or
+      store a password.
+    </p>
+  </section>
+
+  <section class="panel flow" aria-labelledby="provider-heading">
+    <h2 id="provider-heading">Choose a provider</h2>
+    <form method="post" action="{% provider_login_url 'github' process='login' next=request.GET.next %}">
+      {% csrf_token %}
+      <button type="submit">Continue with GitHub</button>
+    </form>
+    <form method="post" action="{% provider_login_url 'orcid' process='login' next=request.GET.next %}">
+      {% csrf_token %}
+      <button type="submit">Continue with ORCID</button>
+    </form>
+    <p class="supporting-text">
+      The provider confirms who you are. DecoderBench retains the provider
+      identifier and public profile link, but not the OAuth access token.
+    </p>
+  </section>
+{% endblock %}
