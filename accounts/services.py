@@ -44,7 +44,9 @@ def provider_identity(social_account: SocialAccount) -> ProviderIdentity:
             or f"https://orcid.org/{quote(public_identifier)}"
         )
     else:
-        raise IdentityConflict("DecoderBench only accepts GitHub and ORCID identities.")
+        raise IdentityConflict(
+            "Circuit Bench only accepts GitHub and ORCID identities."
+        )
 
     return ProviderIdentity(
         provider=provider,

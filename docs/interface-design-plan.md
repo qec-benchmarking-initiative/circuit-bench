@@ -1,4 +1,4 @@
-# DecoderBench interface design plan
+# Circuit Bench interface design plan
 
 Status: implemented working default, pending further visual critique. This
 document records both the agreed direction and the current reusable explorer
@@ -6,7 +6,7 @@ and record-detail anatomy.
 
 ## 1. Design position
 
-DecoderBench should look like a maintained scientific reference work, not a
+Circuit Bench should look like a maintained scientific reference work, not a
 generic technology-company product.
 
 The desired character is:
@@ -48,7 +48,7 @@ Useful qualities:
 - entry pages divided by small headings and fine horizontal rules;
 - visible relationships between records rather than generic promotional copy.
 
-Do not copy its large blue masthead or use its exact typography. DecoderBench
+Do not copy its large blue masthead or use its exact typography. Circuit Bench
 needs a smaller persistent header and a table-dominated explorer.
 
 References: [home page](https://errorcorrectionzoo.org/) and
@@ -81,7 +81,7 @@ Useful qualities:
   sort keys.
 
 Wikipedia's prose-width limit is appropriate for articles but not for a
-scientific explorer. DecoderBench prose should have a readable measure, while
+scientific explorer. Circuit Bench prose should have a readable measure, while
 explorer tables should use almost the whole desktop viewport. Wide tables need
 their own horizontal overflow region rather than narrowing the whole page.
 
@@ -185,7 +185,7 @@ The default desktop composition is:
 
 ```text
 ┌──────────────────────────────── persistent site header ────────────────────────────────┐
-│ DecoderBench   Decoders  Benchmarks  Circuits  Noise models  Results        account   │
+│ Circuit Bench  Decoders  Benchmarks  Circuits  Noise models  Results        account   │
 │                ────────                                                               │
 ├──────────────────────────────── query row ──────────────────────────────────────────────┤
 │ Search by name or enter a query __________________________________  Run  Clear  Syntax │

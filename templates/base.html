@@ -4,13 +4,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}DecoderBench{% endblock %}</title>
+    <title>{% block title %}Circuit Bench{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
-      <a class="site-name" href="{% url 'pages:home' %}">DecoderBench</a>
+      <a class="site-name" href="{% url 'pages:home' %}">Circuit Bench</a>
       <nav aria-label="Primary navigation">
         <a href="/decoders/"{% if request.resolver_match.namespace == "decoders" %} class="active" aria-current="page"{% endif %}>Decoders</a>
         <a href="/benchmarks/">Benchmarks</a>
@@ -31,7 +31,7 @@
     {% endif %}
     <main id="main-content">{% block content %}{% endblock %}</main>
     <footer class="site-footer">
-      <span>DecoderBench development 0.1</span>
+      <span>Circuit Bench development 0.1</span>
       <a href="/about/">About and methodology</a>
     </footer>
     {% block extra_scripts %}{% endblock %}

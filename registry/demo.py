@@ -45,12 +45,12 @@ def demo_id(name: str) -> uuid.UUID:
 @transaction.atomic
 def seed_demo_data() -> dict[str, int]:
     if Account.objects.filter(id=DEMO_ACCOUNT_ID).exists():
-        _refresh_demo_tag_colours()
+        _refresh_demo_presentation()
         return demo_counts()
 
     Site.objects.update_or_create(
         id=settings.SITE_ID,
-        defaults={"domain": "127.0.0.1:8000", "name": "DecoderBench local"},
+        defaults={"domain": "127.0.0.1:8000", "name": "Circuit Bench local"},
     )
     published_at = timezone.now()
 
@@ -287,7 +287,7 @@ def seed_demo_data() -> dict[str, int]:
     evaluator_bundle = _artifact(
         uploader,
         "evaluator/0.1.tar.gz",
-        "decoderbench-evaluator-0.1.tar.gz",
+        "circuit-bench-evaluator-0.1.tar.gz",
         "application/gzip",
         b"synthetic evaluator bundle 0.1\n",
     )
@@ -295,7 +295,7 @@ def seed_demo_data() -> dict[str, int]:
         id=demo_id("evaluator/0.1"),
         schema_release=releases["evaluator"],
         version="0.1",
-        source_url="https://example.org/decoderbench/evaluator",
+        source_url="https://example.org/circuit-bench/evaluator",
         source_revision="0000000000000000000000000000000000000001",
         source_bundle_artifact=evaluator_bundle,
         input_contract_url="https://example.org/contracts/evaluator-input/0.1",
@@ -506,8 +506,12 @@ def seed_demo_data() -> dict[str, int]:
     return demo_counts()
 
 
-def _refresh_demo_tag_colours() -> None:
+def _refresh_demo_presentation() -> None:
     """Keep presentation-only demo metadata current without rebuilding the data set."""
+    Site.objects.update_or_create(
+        id=settings.SITE_ID,
+        defaults={"domain": "127.0.0.1:8000", "name": "Circuit Bench local"},
+    )
     colours = {
         "tag/algorithm/matching": "#315f7d",
         "tag/code/rotated-surface-code": "#87563d",
@@ -517,6 +521,12 @@ def _refresh_demo_tag_colours() -> None:
         Tag.objects.filter(id=demo_id(key), status=Tag.Status.OFFICIAL).update(
             display_color=display_color
         )
+    Artifact.objects.filter(id=demo_id("artifact/evaluator/0.1.tar.gz")).update(
+        original_filename="circuit-bench-evaluator-0.1.tar.gz"
+    )
+    EvaluatorRelease.objects.filter(id=demo_id("evaluator/0.1")).update(
+        source_url="https://example.org/circuit-bench/evaluator"
+    )
 
 
 def demo_counts() -> dict[str, int]:

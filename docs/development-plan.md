@@ -1,4 +1,4 @@
-# DecoderBench development plan
+# Circuit Bench development plan
 
 Status: serial foundation and parallel wave A complete; parallel wave B is
 ready to assign. The shared explorer-interface foundation is also complete,

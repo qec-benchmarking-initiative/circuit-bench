@@ -1,4 +1,4 @@
-# DecoderBench relational data model
+# Circuit Bench relational data model
 
 Status: superseded by `docs/data-model-0.1.md`; retained as design history.
 Newer entity contracts under `schemas/` and `definitions/` take precedence

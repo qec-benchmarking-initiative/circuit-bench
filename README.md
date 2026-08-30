@@ -1,4 +1,4 @@
-# DecoderBench
+# Circuit Bench
 
 An open registry and benchmark specification for quantum error-correction
 decoders.

@@ -4,7 +4,7 @@ from django.urls import reverse
 def test_home_page_uses_shared_shell(client):
     response = client.get(reverse("pages:home"))
     assert response.status_code == 200
-    assert b"DecoderBench" in response.content
+    assert b"Circuit Bench" in response.content
     assert b"Search the registry" in response.content
 
 

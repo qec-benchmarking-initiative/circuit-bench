@@ -1,4 +1,4 @@
-# DecoderBench data model 0.1
+# Circuit Bench data model 0.1
 
 ```mermaid
 flowchart LR

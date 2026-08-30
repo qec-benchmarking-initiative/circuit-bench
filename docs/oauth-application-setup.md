@@ -4,7 +4,7 @@ Status: defer this setup until the mocked account tests pass and a developer is
 ready to run the first real provider smoke test. Normal development and the
 automated test suite do not require OAuth credentials.
 
-DecoderBench uses provider-only login through `django-allauth`. Provider
+Circuit Bench uses provider-only login through `django-allauth`. Provider
 credentials are supplied through environment variables. Do not also create
 `SocialApp` rows in Django admin: configuring the same provider in both places
 is ambiguous, and the credentials do not belong in the development database.
@@ -14,7 +14,7 @@ is ambiguous, and the credentials do not belong in the development database.
 Create a dedicated development **OAuth app** at
 <https://github.com/settings/applications/new>. Use:
 
-- Application name: `DecoderBench local` (or another clearly local name)
+- Application name: `Circuit Bench local` (or another clearly local name)
 - Homepage URL: `http://127.0.0.1:8000/`
 - Authorization callback URL:
   `http://127.0.0.1:8000/accounts/github/login/callback/`
@@ -41,7 +41,7 @@ Create or use an ORCID sandbox account at <https://sandbox.orcid.org/signin>.
 Verify its email, open **Developer Tools**, accept the Public API terms, and
 register an application with:
 
-- Name: `DecoderBench local`
+- Name: `Circuit Bench local`
 - Application URL: `http://127.0.0.1:8000/`
 - Redirect URI:
   `http://127.0.0.1:8000/accounts/orcid/login/callback/`

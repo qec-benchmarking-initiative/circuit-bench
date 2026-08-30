@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:decoderbench:schema:decoder:0.1",
   "title": "Decoder record 0.1",
-  "description": "A published or in-review DecoderBench decoder-version record.",
+  "description": "A published or in-review Circuit Bench decoder-version record.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
