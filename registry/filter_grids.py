@@ -136,11 +136,13 @@ def filter_grid(
     title: str,
     cells: Sequence[dict[str, Any]],
 ) -> dict[str, Any]:
+    applied_count = sum(bool(cell["filtered"]) for cell in cells)
     return {
         "id": grid_id,
         "title": title,
         "cells": cells,
-        "filtered": any(cell["filtered"] for cell in cells),
+        "filtered": applied_count > 0,
+        "applied_count": applied_count,
     }
 
 

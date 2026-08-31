@@ -12,6 +12,15 @@
     element.closest("form")?.dispatchEvent(new CustomEvent("filterquery:change"));
   };
 
+  const updateAppliedCount = (grid) => {
+    const output = grid?.querySelector("[data-filter-applied-count]");
+    if (!output) return;
+    const count = grid.querySelectorAll(
+      "[data-filter-grid-cell].is-filtered"
+    ).length;
+    output.textContent = `, ${count} applied`;
+  };
+
   const directCells = (gridCells) => [...gridCells.children]
     .filter((element) => element.matches("[data-filter-grid-cell]"));
 
@@ -130,6 +139,15 @@
     const selected = select.options[select.selectedIndex];
     source.querySelector("[data-filter-cell-value]").textContent = selected.textContent;
     source.classList.toggle("is-filtered", Boolean(select.value));
+    updateAppliedCount(source.closest("[data-filter-grid]"));
+  };
+
+  const clearRangeCell = (source) => {
+    source.querySelector("[data-filter-range-min]").value = "";
+    source.querySelector("[data-filter-range-max]").value = "";
+    source.querySelector("[data-filter-cell-value]").textContent = "0–∞";
+    source.classList.remove("is-filtered");
+    updateAppliedCount(source.closest("[data-filter-grid]"));
   };
 
   const finishOverlayRemoval = (overlay) => {
@@ -315,12 +333,6 @@
         ((maximum - overlay.domainMinimum) / domainSpan) * 100
       ));
 
-    overlay.minimumInput.value = minimum > 0 ? String(minimum) : "";
-    overlay.maximumInput.value = maximum === null ? "" : String(maximum);
-    overlay.source.querySelector("[data-filter-cell-value]").textContent = (
-      `${minimum}–${maximum === null ? "∞" : maximum}`
-    );
-    overlay.source.classList.toggle("is-filtered", minimum > 0 || maximum !== null);
     overlay.leftShade.style.width = `${minimumPercent}%`;
     overlay.rightShade.style.left = `${maximumPercent}%`;
     overlay.rightShade.hidden = maximum === null;
@@ -336,6 +348,30 @@
       `max ${maximum === null ? "∞" : maximum}`,
       maximumPercent > 92 ? "right" : ""
     );
+    const changed = (
+      minimum !== overlay.originalMinimum
+      || maximum !== overlay.originalMaximum
+    );
+    overlay.confirm.hidden = !changed;
+  };
+
+  const commitRangeOverlay = (overlay) => {
+    const { maximum, minimum } = rangeValues(overlay);
+    const changed = (
+      minimum !== overlay.originalMinimum
+      || maximum !== overlay.originalMaximum
+    );
+    if (!changed) return;
+    overlay.minimumInput.value = minimum > 0 ? String(minimum) : "";
+    overlay.maximumInput.value = maximum === null ? "" : String(maximum);
+    overlay.source.querySelector("[data-filter-cell-value]").textContent = (
+      `${minimum}–${maximum === null ? "∞" : maximum}`
+    );
+    overlay.source.classList.toggle("is-filtered", minimum > 0 || maximum !== null);
+    updateAppliedCount(overlay.grid);
+    const source = overlay.source;
+    closeOverlay({ restoreFocus: true });
+    notifyFilterChange(source);
   };
 
   const openRange = (grid, source) => {
@@ -379,7 +415,21 @@
     reset.className = "filter-range-reset";
     reset.dataset.filterRangeReset = "true";
     reset.textContent = "Reset limits";
-    histogramHead.append(histogramLabel, reset);
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "filter-range-cancel";
+    cancel.dataset.filterRangeCancel = "true";
+    cancel.textContent = "Cancel";
+    const confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.className = "filter-range-confirm";
+    confirm.dataset.filterRangeConfirm = "true";
+    confirm.textContent = "OK (Enter)";
+    confirm.hidden = true;
+    const actions = document.createElement("span");
+    actions.className = "filter-range-actions";
+    actions.append(reset, cancel, confirm);
+    histogramHead.append(histogramLabel, actions);
 
     const plot = document.createElement("div");
     plot.className = "filter-range-plot";
@@ -415,6 +465,7 @@
       dragging: null,
       editor,
       elements: [editor],
+      confirm,
       grid,
       gridCells,
       histogram,
@@ -426,6 +477,10 @@
       minimumEditor: minimumEditor.querySelector("input"),
       minimumHandle,
       minimumInput,
+      originalMaximum: maximumInput.value === ""
+        ? null
+        : Math.max(0, Number(maximumInput.value)),
+      originalMinimum: Math.max(0, Number(minimumInput.value || 0)),
       plot,
       rightShade,
       source,
@@ -467,6 +522,7 @@
     panel.querySelector("[data-tag-rule-label]").textContent = (
       match === "any" ? "any of" : "all of"
     );
+    updateAppliedCount(panel.closest("[data-filter-grid]"));
   };
 
   const resizeTagPanel = (panel) => {
@@ -510,7 +566,38 @@
 
   grids.forEach((grid) => {
     grid.dataset.enhanced = "true";
+    updateAppliedCount(grid);
     grid.addEventListener("click", (event) => {
+      const clear = event.target.closest("[data-filter-clear]");
+      if (clear) {
+        event.preventDefault();
+        event.stopPropagation();
+        const source = clear.closest("[data-filter-grid-cell]");
+        if (activeOverlay?.source === source) closeOverlay({ immediate: true });
+        if (source.matches("[data-filter-choice-cell]")) {
+          const select = source.querySelector("[data-filter-choice-input]");
+          select.value = "";
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          updateChoiceCell(source);
+          notifyFilterChange(source);
+        } else if (source.matches("[data-filter-range-cell]")) {
+          clearRangeCell(source);
+          notifyFilterChange(source);
+        } else if (source.matches("[data-filter-tag-cell]")) {
+          const selected = [...source.querySelectorAll(
+            '[data-tag-choice] input[type="checkbox"]:checked'
+          )];
+          selected.forEach((checkbox) => { checkbox.checked = false; });
+          selected[0]?.dispatchEvent(new Event("change", { bubbles: true }));
+          syncTagPanel(source);
+          notifyFilterChange(source);
+        } else if (source.matches("[data-filter-related-record-cell]")) {
+          source.querySelector("[data-related-record-picker]").dispatchEvent(
+            new CustomEvent("filtergrid:clear")
+          );
+        }
+        return;
+      }
       const option = event.target.closest("[data-filter-overlay-option]");
       if (option && activeOverlay?.type === "choice") {
         const changed = activeOverlay.select.value !== option.dataset.filterOverlayOption;
@@ -531,9 +618,21 @@
         activeOverlay.minimumEditor.value = "0";
         activeOverlay.maximumEditor.value = "";
         updateRangeOverlay(activeOverlay);
-        const source = activeOverlay.source;
-        closeOverlay({ immediate: true, restoreFocus: true });
-        notifyFilterChange(source);
+        if (activeOverlay.confirm.hidden) {
+          closeOverlay({ restoreFocus: true });
+        } else {
+          commitRangeOverlay(activeOverlay);
+        }
+        return;
+      }
+      const cancel = event.target.closest("[data-filter-range-cancel]");
+      if (cancel && activeOverlay?.type === "range") {
+        closeOverlay({ restoreFocus: true });
+        return;
+      }
+      const confirm = event.target.closest("[data-filter-range-confirm]");
+      if (confirm && activeOverlay?.type === "range") {
+        commitRangeOverlay(activeOverlay);
         return;
       }
       const choiceTrigger = event.target.closest("[data-filter-choice-trigger]");
@@ -558,17 +657,6 @@
       }
     });
 
-    grid.addEventListener("change", (event) => {
-      if (
-        activeOverlay?.type === "range"
-        && event.target.matches(
-          "[data-filter-range-minimum-editor], [data-filter-range-maximum-editor]"
-        )
-      ) {
-        notifyFilterChange(activeOverlay.source);
-      }
-    });
-
     grid.addEventListener("pointerdown", (event) => {
       const handle = event.target.closest("[data-filter-range-handle]");
       if (!handle || activeOverlay?.type !== "range") return;
@@ -577,6 +665,7 @@
     });
 
     grid.addEventListener("filtergrid:tags-changed", scheduleTagResize);
+    grid.addEventListener("filterquery:change", () => updateAppliedCount(grid));
   });
 
   document.addEventListener("pointerdown", (event) => {
@@ -593,9 +682,7 @@
 
   document.addEventListener("pointerup", () => {
     if (activeOverlay?.type !== "range") return;
-    const changedByDrag = Boolean(activeOverlay.dragging);
     activeOverlay.dragging = null;
-    if (changedByDrag) notifyFilterChange(activeOverlay.source);
   });
 
   document.addEventListener("keydown", (event) => {
@@ -606,10 +693,11 @@
       return;
     }
     if (activeOverlay.type === "range" && event.key === "Enter") {
+      if (event.target.closest("[data-filter-range-reset], [data-filter-range-cancel]")) {
+        return;
+      }
       event.preventDefault();
-      const source = activeOverlay.source;
-      closeOverlay({ restoreFocus: true });
-      notifyFilterChange(source);
+      commitRangeOverlay(activeOverlay);
       return;
     }
     const handle = event.target.closest("[data-filter-range-handle]");
@@ -637,7 +725,6 @@
     }
     const kind = handle.dataset.filterRangeHandle;
     updateRangeOverlay(activeOverlay);
-    notifyFilterChange(activeOverlay.source);
     requestAnimationFrame(() => activeOverlay?.editor
       .querySelector(`[data-filter-range-handle="${kind}"]`)
       ?.focus({ preventScroll: true }));

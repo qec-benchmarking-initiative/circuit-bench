@@ -151,7 +151,7 @@ def test_circuit_leaderboard_uses_reusable_algorithm_and_machine_grids(
     assert content.count('class="filter-grid"') == 2
     assert "Algorithm filters" in content
     assert "Machine filters" in content
-    assert content.count("selected values shown in green") == 2
+    assert content.count("selected values shown in the theme colour") == 2
     assert ">active<" not in content
     assert "Table view options (9/12)" in content
     assert response.context["result_count"] == 1

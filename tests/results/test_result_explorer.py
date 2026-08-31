@@ -24,6 +24,8 @@ def test_result_explorer_uses_all_three_reusable_filter_grids(client):
     assert content.count('class="filter-grid"') == 3
     assert 'name="decoder_priors"' in content
     assert 'name="circuit_priors"' in content
+    assert 'aria-label="Clear Prior preparation filter"' in content
+    assert 'aria-label="Clear Noise model filter"' in content
     assert 'aria-current="page"' in content
     machine = Machine.objects.get(slug="demo-eight-core-cpu")
     assert reverse("machines:detail", args=[machine.slug]) in content
@@ -51,6 +53,12 @@ def test_result_explorer_combines_algorithm_circuit_and_machine_filters(client):
     assert wrong_decoder.context["result_count"] == 0
     assert wrong_circuit.context["result_count"] == 0
     assert wrong_machine.context["result_count"] == 0
+    assert matching.context["algorithm_filter_grid"]["applied_count"] == 2
+    assert matching.context["circuit_filter_grid"]["applied_count"] == 2
+    assert matching.context["machine_filter_grid"]["applied_count"] == 1
+    matching_content = matching.content.decode()
+    assert matching_content.count(", 2 applied") == 2
+    assert matching_content.count(", 1 applied") == 1
 
 
 def test_result_explorer_accepts_multiple_noise_models_as_scalar_in_filter(client):

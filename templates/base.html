@@ -5,24 +5,29 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Circuit Bench{% endblock %}</title>
+    <script src="{% static 'js/theme-switcher.js' %}"></script>
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
+    <link rel="stylesheet" href="{% static 'css/themes.css' %}">
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
       <a class="site-name" href="{% url 'pages:home' %}">Circuit Bench</a>
       <nav aria-label="Primary navigation">
+        <a href="/circuits/"{% if request.resolver_match.namespace == "circuits" %} class="active" aria-current="page"{% endif %}>Circuits</a>
         <a href="/decoders/"{% if request.resolver_match.namespace == "decoders" %} class="active" aria-current="page"{% endif %}>Decoders</a>
         <a href="/benchmarks/">Benchmarks</a>
-        <a href="/circuits/"{% if request.resolver_match.namespace == "circuits" %} class="active" aria-current="page"{% endif %}>Circuits</a>
-        <a href="/noise-models/"{% if request.resolver_match.namespace == "noise-models" %} class="active" aria-current="page"{% endif %}>Noise models</a>
-        <a href="/results/"{% if request.resolver_match.namespace == "results" %} class="active" aria-current="page"{% endif %}>Results</a>
+        <a class="nav-secondary{% if request.resolver_match.namespace == 'noise-models' %} active{% endif %}" href="/noise-models/"{% if request.resolver_match.namespace == "noise-models" %} aria-current="page"{% endif %}>Noise models</a>
+        <a class="nav-secondary{% if request.resolver_match.namespace == 'results' %} active{% endif %}" href="/results/"{% if request.resolver_match.namespace == "results" %} aria-current="page"{% endif %}>All results</a>
       </nav>
-      {% if user.is_authenticated %}
-        <a class="account-link" href="/accounts/">{{ user.display_name }}</a>
-      {% else %}
-        <a class="account-link" href="/accounts/login/">Sign in</a>
-      {% endif %}
+      <div class="site-actions">
+        {% if user.is_authenticated %}
+          <a class="account-link" href="/accounts/">{{ user.display_name }}</a>
+        {% else %}
+          <a class="account-link" href="/accounts/login/">Sign in</a>
+        {% endif %}
+        {% include "components/theme_switcher.html" %}
+      </div>
     </header>
     {% if messages %}
       <div class="messages" role="status">

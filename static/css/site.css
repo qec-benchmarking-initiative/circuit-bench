@@ -15,9 +15,11 @@
   --accent: #1f527d;
   --accent-hover: #133a5b;
   --accent-soft: #e3edf4;
-  --filter-active: #e1eee5;
-  --filter-active-ink: #285d49;
-  --filter-option: #eef5f0;
+  --on-accent: #fff;
+  --on-ink: #fff;
+  --filter-active: #dbeaf5;
+  --filter-active-ink: #1f527d;
+  --filter-option: #edf4f8;
   --filter-hatch-line: #d2cfc5;
   --warning: #775412;
   --warning-soft: #f4ead0;
@@ -67,7 +69,7 @@ button,
   padding: 0.28rem 0.62rem;
   border: 1px solid var(--accent);
   border-radius: var(--radius);
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   font-weight: 700;
   cursor: pointer;
@@ -75,7 +77,7 @@ button,
 
 button:hover,
 .button:hover {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent-hover);
 }
 
@@ -114,7 +116,7 @@ textarea {
   left: 0.5rem;
   padding: 0.5rem 0.75rem;
   transform: translateY(-160%);
-  color: #fff;
+  color: var(--on-ink);
   background: var(--ink);
 }
 
@@ -160,6 +162,10 @@ textarea {
   padding-block: 0.2rem 0.14rem;
   border-bottom: 2px solid transparent;
   color: var(--ink);
+}
+
+.site-header nav a.nav-secondary {
+  color: var(--muted);
 }
 
 .site-header nav a.active,
@@ -813,6 +819,11 @@ code {
   content: "▾";
 }
 
+.filter-grid-applied {
+  color: var(--filter-active-ink);
+  font-weight: 400;
+}
+
 .filter-grid-legend {
   margin-left: auto;
   color: var(--filter-active-ink);
@@ -851,6 +862,39 @@ code {
 
 .filter-grid-cell.is-filtered {
   background: var(--filter-active);
+}
+
+.filter-grid-clear {
+  position: absolute;
+  z-index: 6;
+  top: 0.2rem;
+  right: 0.22rem;
+  display: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  color: var(--filter-active-ink);
+  background: transparent;
+  font: 700 0.9rem/1 var(--font-interface);
+}
+
+.filter-grid[data-enhanced="true"] .filter-grid-cell.is-filtered > .filter-grid-clear {
+  display: inline-grid;
+  place-items: center;
+}
+
+.filter-grid-clear:hover {
+  border-color: var(--filter-active-ink);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--filter-active) 72%, var(--surface));
+}
+
+.filter-grid-cell.is-filtered .filter-grid-trigger,
+.filter-grid-cell.is-filtered .filter-grid-tag-heading {
+  padding-right: 1.3rem;
 }
 
 .filter-grid-trigger {
@@ -1089,20 +1133,50 @@ code {
   white-space: nowrap;
 }
 
-.filter-range-reset {
+.filter-range-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.filter-range-reset,
+.filter-range-cancel,
+.filter-range-confirm {
   flex: none;
   min-height: 1.45rem;
   padding: 0.08rem 0.35rem;
-  border: 1px solid var(--line-strong);
   border-radius: 0;
-  color: var(--ink);
-  background: var(--surface);
   font: 400 0.68rem/1.2 var(--font-interface);
 }
 
-.filter-range-reset:hover {
+.filter-range-reset,
+.filter-range-cancel {
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.filter-range-reset:hover,
+.filter-range-cancel:hover {
   color: var(--ink);
   background: var(--surface-muted);
+}
+
+.filter-range-confirm {
+  border: 1px solid var(--accent);
+  color: var(--on-accent);
+  background: var(--accent);
+  font-weight: 700;
+}
+
+.filter-range-confirm:hover {
+  color: var(--on-accent);
+  background: var(--accent-hover);
+}
+
+.filter-range-confirm[hidden] {
+  display: none;
 }
 
 .filter-range-plot {

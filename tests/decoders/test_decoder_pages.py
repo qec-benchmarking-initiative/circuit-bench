@@ -118,7 +118,7 @@ def test_catalogue_table_state_is_reproducible_in_the_url(client, demo_decoders)
     assert 'aria-current="page"' in content
     assert 'id="decoder-algorithm-filters"' in content
     assert 'class="filter-grid"' in content
-    assert "selected values shown in green" in content
+    assert "selected values shown in the theme colour" in content
     assert 'data-filter-range-cell data-filter-key="result_count"' in content
     assert ">active<" not in content
 

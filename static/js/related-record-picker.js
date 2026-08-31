@@ -258,6 +258,16 @@
         bubbles: true,
       }));
     });
+    picker.addEventListener("filtergrid:clear", () => {
+      committed = [];
+      working = [];
+      renderSummary();
+      renderSelected();
+      renderResults();
+      picker.dispatchEvent(new CustomEvent("filterquery:change", {
+        bubbles: true,
+      }));
+    });
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();
       cancel();
