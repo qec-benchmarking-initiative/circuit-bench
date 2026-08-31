@@ -2,10 +2,47 @@
 
 from urllib.parse import urlencode
 
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 
+from registry.explorer import ColumnSpec
 from registry.formatting import format_scientific_value
 from registry.models import Result
+from registry.result_query import FIELD_BY_NAME, annotate_result_metrics
+
+RESULT_METRIC_COLUMNS = (
+    ColumnSpec(
+        "score_ler_upper_95_at_5pct_acceptance_v0_1",
+        "LER upper 95% @ 5%",
+        numeric=True,
+        default_direction="asc",
+        help_text="Evaluator 0.1 score definition; probability, lower is better",
+    ),
+    ColumnSpec(
+        "t_1000_ns",
+        "t₁₀₀₀ (ns)",
+        numeric=True,
+        default_direction="asc",
+        help_text="Finite-burst time until the 1,000th correction; lower is better",
+    ),
+    ColumnSpec(
+        "score_brier_loss_upper_95_v0_1",
+        "Brier upper 95%",
+        numeric=True,
+        default_visible=False,
+        default_direction="asc",
+        help_text="Evaluator 0.1 Brier-loss upper bound; lower is better",
+    ),
+)
+
+RESULT_METRIC_SORT_FIELDS = {
+    column.key: FIELD_BY_NAME[column.key].orm_name for column in RESULT_METRIC_COLUMNS
+}
+
+
+def with_result_metrics(queryset):
+    """Annotate the stable public comparison metrics onto a result queryset."""
+
+    return annotate_result_metrics(queryset)
 
 
 def result_cell_map(
@@ -26,8 +63,19 @@ def result_cell_map(
             key=lambda score: score.score_definition.display_order,
         )
     )
+    ler = _metric_value(result, "score_ler_upper_95_at_5pct_acceptance_v0_1")
+    brier = _metric_value(result, "score_brier_loss_upper_95_v0_1")
+    try:
+        result_url = reverse("results:detail", args=[result.id])
+    except NoReverseMatch:
+        result_url = None
     return {
-        "result": {"key": "result", "value": str(result.id)},
+        "result": {
+            "key": "result",
+            "value": f"{str(result.id)[:8]}…",
+            "title": str(result.id),
+            "url": result_url,
+        },
         "decoder": {
             "key": "decoder",
             "value": decoder.name,
@@ -95,6 +143,21 @@ def result_cell_map(
             ),
         },
         "shots": {"key": "shots", "value": result.shots_total, "numeric": True},
+        "score_ler_upper_95_at_5pct_acceptance_v0_1": {
+            "key": "score_ler_upper_95_at_5pct_acceptance_v0_1",
+            "value": _format_metric(ler, "probability"),
+            "numeric": True,
+        },
+        "t_1000_ns": {
+            "key": "t_1000_ns",
+            "value": _format_metric(result.t_1000_ns, "ns"),
+            "numeric": True,
+        },
+        "score_brier_loss_upper_95_v0_1": {
+            "key": "score_brier_loss_upper_95_v0_1",
+            "value": _format_metric(brier, "probability"),
+            "numeric": True,
+        },
         "scores": {"key": "scores", "value": scores},
         "reproduction": {
             "key": "reproduction",
@@ -102,3 +165,24 @@ def result_cell_map(
         },
         "published": {"key": "published", "value": result.published_at},
     }
+
+
+def _metric_value(result, public_field_name):
+    field = FIELD_BY_NAME[public_field_name]
+    if hasattr(result, field.orm_name):
+        return getattr(result, field.orm_name)
+    for score in result.scores.all():
+        definition = score.score_definition
+        if (
+            definition.key == field.score_key
+            and definition.version == field.score_version
+            and score.evaluator_version.version == field.evaluator_version
+        ):
+            return score.value
+    return None
+
+
+def _format_metric(value, unit):
+    if value is None:
+        return None
+    return f"{format_scientific_value(value)} {unit}"

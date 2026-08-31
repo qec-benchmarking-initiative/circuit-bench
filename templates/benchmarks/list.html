@@ -1,0 +1,26 @@
+{% extends "layouts/collection.html" %}
+
+{% block title %}Benchmarks · Circuit Bench{% endblock %}
+{% block explorer_name %}Benchmarks{% endblock %}
+
+{% block explorer_query %}
+  <label class="visually-hidden" for="benchmark-search">Search benchmarks</label>
+  <input id="benchmark-search" name="q" type="search" value="{{ query }}" placeholder="Search benchmark name, version, slug, or description">
+  <label for="benchmark-recognition">Recognition</label>
+  <select id="benchmark-recognition" name="recognition">
+    <option value="">Any status</option>
+    {% for value, label in recognition_choices %}<option value="{{ value }}"{% if selected_recognition == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+  {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+  <button class="button-compact" type="submit">Run</button>
+  <a class="button-link" href="{% url 'benchmarks:list' %}">Clear</a>
+  <span class="query-mode">Published exact revisions only</span>
+{% endblock %}
+
+{% block explorer_status %}{{ result_count }} exact published benchmark revision{{ result_count|pluralize }} · membership, columns, and sort are reproducible from this URL{% endblock %}
+
+{% block collection_results %}
+  {% include "components/explorer_toolbar.html" with explorer_id="benchmarks" %}
+  {% include "components/data_table.html" with columns=table_columns rows=table_rows empty_message="No matching benchmark revisions. Try removing the recognition filter or shortening the search phrase." only %}
+{% endblock %}

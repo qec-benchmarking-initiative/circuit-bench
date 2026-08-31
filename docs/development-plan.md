@@ -1,9 +1,9 @@
 # Circuit Bench development plan
 
-Status: serial foundation and parallel wave A complete; parallel wave B is
-ready to assign. The shared explorer-interface foundation is also complete,
-without pre-empting the later public query contract. The later work is split
-into bounded tasks with visible outputs and non-overlapping file ownership.
+Status: foundation, parallel waves A and B, the ResultRecord query integration,
+and comparison-interface wave C are complete for the 0.1 prototype. Submission
+and governance workflows remain deliberately deferred and were not part of
+this implementation pass.
 
 ## Working rules
 
@@ -258,7 +258,7 @@ all public evaluator-score displays use a single significant-precision
 formatter and switch to compact scientific notation for suitably small or
 large values.
 
-## Parallel wave B: remaining read views and contract coverage
+## Parallel wave B: remaining read views and contract coverage — complete
 
 ### B1. Result detail
 
@@ -294,7 +294,7 @@ contract task, not a database-migration task.
 User verification: one command validates every JSON Schema and checks that each
 required record type has both schema and definition files.
 
-## Serial integration: comparison query contract
+## Serial integration: comparison query contract — complete
 
 Before parallel table/API/plot work, define one stable public `ResultRecord`
 query model and the supported OData subset. Specify field names, types, units,
@@ -308,7 +308,7 @@ Verification: contract tests show that equivalent manual filter state and raw
 OData text produce the same ordered result IDs; invalid/expensive queries fail
 with stable errors.
 
-## Parallel wave C: comparison interfaces
+## Parallel wave C: comparison interfaces — complete
 
 ### C1. Machine-readable results API
 

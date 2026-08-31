@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Blog · Circuit Bench{% endblock %}
+
+{% block content %}
+  <section class="page-shell static-page">
+    <header class="page-heading">
+      <p class="eyebrow">Development notes</p>
+      <h1>Blog</h1>
+      <p>Short, version-controlled notes about the registry's scientific and technical decisions.</p>
+    </header>
+    <ol class="record-list blog-list">
+      {% for post in posts %}
+        <li>
+          <time datetime="{{ post.published|date:'Y-m-d' }}">{{ post.published|date:"j F Y" }}</time>
+          <h2><a href="{% url 'pages:blog-detail' post.slug %}">{{ post.title }}</a></h2>
+          {% if post.summary %}<p>{{ post.summary }}</p>{% endif %}
+        </li>
+      {% empty %}
+        <li class="null-value">No posts have been published.</li>
+      {% endfor %}
+    </ol>
+  </section>
+{% endblock %}

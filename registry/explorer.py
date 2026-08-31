@@ -75,6 +75,8 @@ def table_context(
     request: HttpRequest,
     columns: Sequence[ColumnSpec],
     sort_keys: Sequence[SortKey],
+    *,
+    clear_on_sort: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Build table headers, ordinary-click fallbacks and column-choice state."""
 
@@ -103,6 +105,8 @@ def table_context(
             else column.default_direction
         )
         params = _copy_without_page(request.GET)
+        for name in clear_on_sort:
+            params.pop(name, None)
         params["sort"] = (
             f"-{column.key}" if ordinary_direction == "desc" else column.key
         )

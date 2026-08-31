@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:decoderbench:schema:evaluator:0.1",
+  "title": "Evaluator-release record 0.1",
+  "description": "An immutable evaluator release and its ordered score definitions.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "byte_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["id", "url", "sha256", "byte_size", "media_type"]
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["paper", "source", "documentation", "artifact", "other"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": ["kind", "url", "label"]
+    },
+    "scoreDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "maxLength": 200
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "definition_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "direction": {
+          "enum": ["lower_is_better", "higher_is_better", "not_ranked"]
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "primary_value_kind": {
+          "enum": ["estimate", "lower_bound", "upper_bound"]
+        },
+        "required_inputs": {
+          "type": "object"
+        },
+        "parameters": {
+          "type": "object"
+        },
+        "is_provisional": {
+          "type": "boolean"
+        },
+        "display_order": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "version",
+        "name",
+        "description",
+        "definition_url",
+        "direction",
+        "unit",
+        "primary_value_kind",
+        "required_inputs",
+        "parameters",
+        "is_provisional",
+        "display_order"
+      ]
+    },
+    "nullableDateTime": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "evaluator/0.1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 1,
+      "x-definition": "../../definitions/evaluator/0.1.md#source-and-conformance"
+    },
+    "source_bundle_artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "input_contract_url": {
+      "type": "string",
+      "format": "uri",
+      "x-definition": "../../definitions/evaluator/0.1.md#local-input-and-summary-contracts"
+    },
+    "summary_contract_url": {
+      "type": "string",
+      "format": "uri",
+      "x-definition": "../../definitions/evaluator/0.1.md#local-input-and-summary-contracts"
+    },
+    "score_definitions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scoreDefinition"
+      },
+      "x-definition": "../../definitions/evaluator/0.1.md#score-definitions"
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/link"
+      }
+    },
+    "state": {
+      "enum": ["draft", "published", "withdrawn"]
+    },
+    "submitted_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    },
+    "withdrawn_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "version",
+    "source_url",
+    "source_revision",
+    "source_bundle_artifact",
+    "input_contract_url",
+    "summary_contract_url",
+    "score_definitions",
+    "links",
+    "state",
+    "submitted_by",
+    "created_at",
+    "published_at",
+    "withdrawn_at"
+  ]
+}

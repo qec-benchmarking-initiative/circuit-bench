@@ -153,7 +153,9 @@ def test_circuit_leaderboard_uses_reusable_algorithm_and_machine_grids(
     assert "Machine filters" in content
     assert content.count("selected values shown in the theme colour") == 2
     assert ">active<" not in content
-    assert "Table view options (9/12)" in content
+    assert "Table view options (11/15)" in content
+    assert "LER upper 95% @ 5%" in content
+    assert "t₁₀₀₀ (ns)" in content
     assert response.context["result_count"] == 1
     machine = Machine.objects.get(slug="demo-eight-core-cpu")
     assert reverse("machines:detail", args=[machine.slug]) in content

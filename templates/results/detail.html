@@ -1,0 +1,156 @@
+{% extends "layouts/entity_detail.html" %}
+
+{% block title %}Result {{ result.id }} · Circuit Bench{% endblock %}
+
+{% block entity_heading %}
+  {% include "components/entity_header.html" with entity=entity only %}
+  {% if result.state == "withdrawn" %}
+    <p class="record-warning"><strong>Withdrawn record.</strong> This exact page remains available as immutable scientific history and is excluded from public leaderboards.</p>
+  {% endif %}
+{% endblock %}
+
+{% block entity_main %}
+  <div class="record-sections">
+    {% if result.description %}
+      <section class="record-section">
+        <h2>Result description</h2>
+        <p>{{ result.description|linebreaksbr }}</p>
+      </section>
+    {% endif %}
+
+    <section class="record-section">
+      <h2>Outcome accounting</h2>
+      {% include "components/metadata_list.html" with items=outcomes only %}
+      <p>
+        <strong>Arithmetic check:</strong>
+        {{ result.successful_shots }} successful +
+        {{ result.logical_failure_shots }} logical failure +
+        {{ result.timeout_shots }} timeout +
+        {{ result.decoder_error_shots }} decoder error =
+        {{ outcome_sum }} = {{ result.shots_total }} total shots.
+      </p>
+    </section>
+
+    <section class="record-section">
+      <h2>Score eligibility</h2>
+      <p class="muted">These denominators say which completed logical-outcome shots were eligible for each evaluator input.</p>
+      {% include "components/metadata_list.html" with items=eligibility only %}
+    </section>
+
+    <section class="record-section">
+      <h2>Evaluator scores</h2>
+      {% for score in score_rows %}
+        <article class="record-section score-record" id="score-{{ score.key }}">
+          <h3>{{ score.name }}</h3>
+          <p>{{ score.description }}</p>
+          <dl class="stacked-metadata compact-technical-metadata">
+            <div><dt>Definition key</dt><dd><code>{{ score.key }}</code></dd></div>
+            <div><dt>Definition version</dt><dd>{{ score.version }}</dd></div>
+            <div><dt>Immutable definition</dt><dd><a href="{{ score.definition_url }}">{{ score.definition_url }}</a></dd></div>
+            <div><dt>Unit</dt><dd>{{ score.unit|default:"Dimensionless" }}</dd></div>
+            <div><dt>Ranking direction</dt><dd>{{ score.direction }}</dd></div>
+            <div><dt>Primary value kind</dt><dd>{{ score.primary_value_kind }}</dd></div>
+            <div><dt>Provisional definition</dt><dd>{{ score.provisional|yesno:"Yes,No" }}</dd></div>
+            <div><dt>Primary value</dt><dd class="numeric">{{ score.value }}</dd></div>
+            <div><dt>Point estimate</dt><dd class="numeric">{{ score.point_estimate|default:"Not stored" }}</dd></div>
+            <div><dt>Lower bound</dt><dd class="numeric">{{ score.lower_bound|default:"Not stored" }}</dd></div>
+            <div><dt>Upper bound</dt><dd class="numeric">{{ score.upper_bound|default:"Not stored" }}</dd></div>
+            <div><dt>Confidence level</dt><dd class="numeric">{{ score.confidence_level|default:"Not stored" }}</dd></div>
+            <div><dt>Sample count</dt><dd class="numeric">{{ score.sample_count|default:"Not stored" }}</dd></div>
+            <div><dt>Event count</dt><dd class="numeric">{{ score.event_count|default:"Not stored" }}</dd></div>
+          </dl>
+          <details class="record-disclosure">
+            <summary><span>Definition inputs, parameters, and stored score details</span></summary>
+            <h4>Required inputs</h4>
+            <pre><code>{{ score.required_inputs }}</code></pre>
+            <h4>Definition parameters</h4>
+            <pre><code>{{ score.parameters }}</code></pre>
+            <h4>Result-score details</h4>
+            <pre><code>{{ score.details }}</code></pre>
+          </details>
+        </article>
+      {% empty %}
+        <p class="null-value">This result has no stored evaluator scores.</p>
+      {% endfor %}
+    </section>
+
+    <section class="record-section">
+      <h2>Execution and timing</h2>
+      {% include "components/metadata_list.html" with items=execution only %}
+      <p><strong>Training or preparation workload:</strong> {{ result.training_workload_description|default:"Not reported"|linebreaksbr }}</p>
+      <p><strong>Software environment:</strong> {{ result.software_environment|default:"Not reported"|linebreaksbr }}</p>
+    </section>
+
+    <section class="record-section">
+      <h2>Hyperparameter values</h2>
+      {% if result.hyperparameter_values %}
+        <pre><code>{{ result.hyperparameter_values }}</code></pre>
+      {% else %}
+        <p class="null-value">No inline hyperparameter values were supplied.</p>
+      {% endif %}
+      {% if result.hyperparameter_values_artifact %}
+        <p>
+          Machine-readable values:
+          {% if hyperparameter_artifact_url %}<a href="{{ hyperparameter_artifact_url }}">{% endif %}{{ result.hyperparameter_values_artifact.original_filename }}{% if hyperparameter_artifact_url %}</a>{% endif %}
+          · {{ result.hyperparameter_values_artifact.byte_size }} bytes
+          · SHA-256 <code>{{ result.hyperparameter_values_artifact.sha256 }}</code>
+        </p>
+      {% endif %}
+    </section>
+
+    {% if result.display_external_links or result.display_artifact_attachments %}
+      <section class="record-section">
+        <h2>Links and supporting artifacts</h2>
+        <ul>
+          {% for link in result.display_external_links %}
+            <li><a href="{{ link.url }}">{{ link.label|default:link.get_kind_display }}</a> — {{ link.get_kind_display }}</li>
+          {% endfor %}
+          {% for attachment in result.display_artifact_attachments %}
+            <li>
+              <a href="{% url 'artifacts:download' attachment.artifact.id %}">{{ attachment.artifact.original_filename }}</a>
+              — {{ attachment.role }} · {{ attachment.artifact.byte_size }} bytes · SHA-256 <code>{{ attachment.artifact.sha256 }}</code>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block entity_aside %}
+  <h2>Exact provenance</h2>
+  <dl class="metadata-list">
+    {% for item in provenance %}
+      <div>
+        <dt>{{ item.label }}</dt>
+        <dd>{% if item.url %}<a href="{{ item.url }}">{% endif %}{{ item.value|default:"—" }}{% if item.url %}</a>{% endif %}</dd>
+      </div>
+    {% endfor %}
+  </dl>
+
+  <h2>Evaluator release</h2>
+  <dl class="metadata-list">
+    {% for item in evaluator %}
+      <div>
+        <dt>{{ item.label }}</dt>
+        <dd>{% if item.url %}<a href="{{ item.url }}">{% endif %}{{ item.value|default:"—" }}{% if item.url %}</a>{% endif %}</dd>
+      </div>
+    {% endfor %}
+  </dl>
+  <p>
+    Frozen source bundle:
+    {% if evaluator_bundle_url %}<a href="{{ evaluator_bundle_url }}">{% endif %}{{ result.evaluator_version.source_bundle_artifact.original_filename }}{% if evaluator_bundle_url %}</a>{% endif %}
+    · SHA-256 <code>{{ result.evaluator_version.source_bundle_artifact.sha256 }}</code>
+  </p>
+
+  <h2>Record metadata</h2>
+  <dl class="stacked-metadata compact-technical-metadata">
+    <div><dt>Result UUID</dt><dd><code>{{ result.id }}</code></dd></div>
+    <div><dt>Schema</dt><dd><a href="{{ result.schema_release.permanent_url }}">{{ result.schema_release.public_name }}</a></dd></div>
+    <div><dt>Submitted by</dt><dd>{{ result.submitted_by.display_name }}</dd></div>
+    <div><dt>Created</dt><dd>{{ result.created_at }}</dd></div>
+    <div><dt>Published</dt><dd>{{ result.published_at }}</dd></div>
+    {% if result.withdrawn_at %}<div><dt>Withdrawn</dt><dd>{{ result.withdrawn_at }}</dd></div>{% endif %}
+    {% if result.supersedes_result %}<div><dt>Supersedes result</dt><dd><code>{{ result.supersedes_result_id }}</code></dd></div>{% endif %}
+  </dl>
+{% endblock %}

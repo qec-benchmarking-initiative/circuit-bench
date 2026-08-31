@@ -1,11 +1,13 @@
+from urllib.parse import urlencode
+
+from django.http import QueryDict
 from django.shortcuts import render
 from django.urls import reverse
 
 from registry.explorer import (
     ColumnSpec,
-    apply_sort,
+    SortKey,
     cells_for_visible_columns,
-    parse_nonnegative_int,
     parse_sort,
     table_context,
     url_without,
@@ -21,13 +23,26 @@ from registry.filter_grids import (
 )
 from registry.models import Machine
 from registry.record_pickers import record_picker_context
-from registry.result_tables import result_cell_map
+from registry.result_plots import build_result_scatter_plot
+from registry.result_query import (
+    ResultQueryError,
+    execute_result_query,
+    page_result_query,
+    parse_result_query,
+)
+from registry.result_request import result_filter_state
+from registry.result_tables import (
+    RESULT_METRIC_COLUMNS,
+    RESULT_METRIC_SORT_FIELDS,
+    result_cell_map,
+    with_result_metrics,
+)
 from registry.services.decoders import catalogue_algorithm_tags
 from registry.services.filter_options import public_circuit_filter_options
 from registry.services.results import public_result_catalogue
 
 RESULT_COLUMNS = (
-    ColumnSpec("result", "Result UUID", default_visible=False),
+    ColumnSpec("result", "Result", help_text="Exact result UUID"),
     ColumnSpec("decoder", "Decoder"),
     ColumnSpec("version", "Version"),
     ColumnSpec("algorithm_tags", "Algorithm tags", sortable=False),
@@ -40,7 +55,10 @@ RESULT_COLUMNS = (
     ColumnSpec("machine_class", "Machine type"),
     ColumnSpec("machine", "Machine"),
     ColumnSpec("shots", "Shots", numeric=True, default_direction="desc"),
-    ColumnSpec("scores", "Evaluator scores", sortable=False),
+    *RESULT_METRIC_COLUMNS,
+    ColumnSpec(
+        "scores", "Evaluator scores", sortable=False, default_visible=False
+    ),
     ColumnSpec("reproduction", "Reproduction"),
     ColumnSpec("published", "Published", default_direction="desc"),
 )
@@ -54,84 +72,107 @@ RESULT_SORT_FIELDS = {
     "machine_class": "machine__machine_class",
     "machine": "machine__slug",
     "shots": "shots_total",
+    **RESULT_METRIC_SORT_FIELDS,
     "reproduction": "reproduction_status",
     "published": "published_at",
 }
 
+TABLE_TO_PUBLIC_FIELD = {
+    "result": "id",
+    "decoder": "decoder_name",
+    "version": "decoder_version",
+    "circuit": "circuit_name",
+    "noise_model": "noise_model",
+    "machine_class": "machine_class",
+    "machine": "machine_slug",
+    "shots": "shots_total",
+    "score_ler_upper_95_at_5pct_acceptance_v0_1": (
+        "score_ler_upper_95_at_5pct_acceptance_v0_1"
+    ),
+    "t_1000_ns": "t_1000_ns",
+    "score_brier_loss_upper_95_v0_1": "score_brier_loss_upper_95_v0_1",
+    "reproduction": "reproduction_status",
+    "published": "published_at",
+}
+PUBLIC_TO_TABLE_FIELD = {
+    public: table for table, public in TABLE_TO_PUBLIC_FIELD.items()
+}
+ODATA_OPTIONS = (
+    "$filter",
+    "$orderby",
+    "$select",
+    "$top",
+    "$skip",
+    "$count",
+)
+
 
 def result_list(request):
-    query = request.GET.get("q", "").strip()
-    algorithm_tags = _selected(request, "algorithm_tag")
-    algorithm_tag_match = _match(request, "algorithm_tag_match")
-    skeleton = request.GET.get("skeleton", "").strip()
-    decoder_priors = request.GET.get("decoder_priors", "").strip()
-    probability = request.GET.get("probability", "").strip()
-    code_tags = _selected(request, "code_tag")
-    code_tag_match = _match(request, "code_tag_match")
-    experiment_tags = _selected(request, "experiment_tag")
-    experiment_tag_match = _match(request, "experiment_tag_match")
+    filter_state = result_filter_state(request.GET)
+    filters = filter_state.service_arguments
+    query = filters["query"]
+    algorithm_tags = filters["algorithm_tag_slugs"]
+    algorithm_tag_match = filters["algorithm_tag_match"]
+    skeleton = filters["skeleton_preparation"]
+    decoder_priors = filters["decoder_priors_preparation"]
+    probability = filters["probability_output"]
+    code_tags = filters["code_tag_slugs"]
+    code_tag_match = filters["code_tag_match"]
+    experiment_tags = filters["experiment_tag_slugs"]
+    experiment_tag_match = filters["experiment_tag_match"]
     noise_model_picker = record_picker_context(
-        "noise-models", _selected(request, "noise_model")
+        "noise-models", filters["noise_model_slugs"]
     )
     noise_models = tuple(
         record["identifier"] for record in noise_model_picker["selected_records"]
     )
-    circuit_priors = request.GET.get("circuit_priors", "").strip()
-    is_css = request.GET.get("css", "").strip()
-    machine_class = request.GET.get("machine_class", "").strip()
-    valid_machine_classes = {value for value, _label in Machine.MachineClass.choices}
-    if machine_class not in {*valid_machine_classes, "unreported"}:
-        machine_class = ""
-    raw_ranges = {
-        name: request.GET.get(name, "")
-        for name in (
-            "code_d_min",
-            "code_d_max",
-            "circuit_d_min",
-            "circuit_d_max",
-            "detector_min",
-            "detector_max",
-            "error_min",
-            "error_max",
-        )
-    }
-    parsed_ranges = {
-        name: parse_nonnegative_int(value) for name, value in raw_ranges.items()
-    }
+    filters["noise_model_slugs"] = noise_models
+    circuit_priors = filters["randomises_priors"]
+    is_css = filters["is_css"]
+    machine_class = filters["machine_class"]
+    raw_ranges = filter_state.raw_ranges
+    parsed_ranges = filter_state.parsed_ranges
     sort_keys = parse_sort(
         request.GET.get("sort", ""), RESULT_COLUMNS, (("published", "desc"),)
     )
-    results = list(
-        apply_sort(
-            public_result_catalogue(
-                query=query,
-                algorithm_tag_slugs=algorithm_tags,
-                algorithm_tag_match=algorithm_tag_match,
-                skeleton_preparation=skeleton,
-                decoder_priors_preparation=decoder_priors,
-                probability_output=probability,
-                code_tag_slugs=code_tags,
-                code_tag_match=code_tag_match,
-                experiment_tag_slugs=experiment_tags,
-                experiment_tag_match=experiment_tag_match,
-                noise_model_slugs=noise_models,
-                randomises_priors=circuit_priors,
-                is_css=is_css,
-                code_distance_min=parsed_ranges["code_d_min"],
-                code_distance_max=parsed_ranges["code_d_max"],
-                circuit_distance_min=parsed_ranges["circuit_d_min"],
-                circuit_distance_max=parsed_ranges["circuit_d_max"],
-                detector_min=parsed_ranges["detector_min"],
-                detector_max=parsed_ranges["detector_max"],
-                error_min=parsed_ranges["error_min"],
-                error_max=parsed_ranges["error_max"],
-                machine_class=machine_class,
-            ),
-            sort_keys,
-            RESULT_SORT_FIELDS,
-        )
+    scripted_text = request.GET.get("odata", "").strip()
+    last_scripted_text = request.GET.get("last_odata", "").strip()
+    query_error = None
+    scripted_query = None
+    scripted_source = _scripted_source(request.GET, scripted_text)
+    if scripted_source is not None:
+        try:
+            scripted_query = parse_result_query(scripted_source)
+        except ResultQueryError as error:
+            query_error = error
+            if last_scripted_text:
+                try:
+                    scripted_query = parse_result_query(
+                        QueryDict(last_scripted_text.removeprefix("?"))
+                    )
+                except ResultQueryError:
+                    scripted_query = None
+
+    if scripted_query is None:
+        scripted_query = parse_result_query(_query_from_table_sort(sort_keys))
+
+    base_results = with_result_metrics(public_result_catalogue(**filters))
+    result_queryset = execute_result_query(scripted_query, queryset=base_results)
+    result_count = result_queryset.count()
+    results = page_result_query(result_queryset, scripted_query)
+    result_plot = build_result_scatter_plot(results)
+
+    if query_error is None and scripted_source is not None:
+        visible_script_sorts = _table_sort_keys(scripted_query.order_by)
+        if visible_script_sorts:
+            sort_keys = visible_script_sorts
+
+    table = table_context(
+        request,
+        RESULT_COLUMNS,
+        sort_keys,
+        clear_on_sort=("odata", "last_odata", *ODATA_OPTIONS),
     )
-    table = table_context(request, RESULT_COLUMNS, sort_keys)
     list_url = reverse("results:list")
     rows = [
         {
@@ -182,11 +223,26 @@ def result_list(request):
                 machine_classes=Machine.MachineClass.choices,
                 selected_machine_class=machine_class,
             ),
-            "result_count": len(results),
+            "result_count": result_count,
+            "ordered_result_ids": [str(result.id) for result in results],
+            "result_plot": result_plot,
             "table_rows": rows,
             "reset_sort_url": url_without(request, "sort"),
             "raw_sort": request.GET.get("sort", ""),
             "raw_columns": request.GET.get("columns", ""),
+            "scripted_query_text": scripted_text,
+            "last_valid_scripted_query": (
+                scripted_text
+                if scripted_source is not None and query_error is None
+                else last_scripted_text
+            ),
+            "scripted_query_status": _query_status(
+                query_error,
+                scripted_source is not None,
+                result_count,
+            ),
+            "json_url": _api_url(request, "results:api-json", scripted_query.canonical),
+            "csv_url": _api_url(request, "results:api-csv", scripted_query.canonical),
             "filters_active": bool(
                 query
                 or algorithm_tags
@@ -200,20 +256,71 @@ def result_list(request):
                 or is_css
                 or machine_class
                 or any(value is not None for value in parsed_ranges.values())
+                or scripted_source is not None
             ),
             **table,
         },
     )
 
 
-def _selected(request, name: str) -> tuple[str, ...]:
+def _scripted_source(parameters, scripted_text):
+    if scripted_text:
+        return QueryDict(scripted_text.removeprefix("?"))
+    if any(name in parameters for name in ODATA_OPTIONS):
+        return parameters
+    return None
+
+
+def _query_from_table_sort(sort_keys):
+    query = QueryDict("", mutable=True)
+    query["$orderby"] = ",".join(
+        f"{TABLE_TO_PUBLIC_FIELD[item.key]} {item.direction}" for item in sort_keys
+    )
+    query["$top"] = "1000"
+    return query
+
+
+def _table_sort_keys(order_by):
     return tuple(
-        dict.fromkeys(
-            value.strip() for value in request.GET.getlist(name) if value.strip()
-        )
+        SortKey(PUBLIC_TO_TABLE_FIELD[name], direction)
+        for name, direction in order_by
+        if name in PUBLIC_TO_TABLE_FIELD
     )
 
 
-def _match(request, name: str) -> str:
-    value = request.GET.get(name, "all").strip()
-    return value if value in {"all", "any"} else "all"
+def _query_status(error, scripted, result_count):
+    if error is not None:
+        position = (
+            f" at character {error.position}" if error.position is not None else ""
+        )
+        return {
+            "kind": "error",
+            "message": f"{error.message}{position} Last valid results remain visible.",
+        }
+    if scripted:
+        return {
+            "kind": "success",
+            "message": (
+                f"Valid ResultRecord 0.1 query · {result_count} matching results."
+            ),
+        }
+    plural = "s" if result_count != 1 else ""
+    return {
+        "kind": "plain",
+        "message": (
+            f"{result_count} exact published result{plural} · "
+            "filters, columns, and sort are URL-backed."
+        ),
+    }
+
+
+def _api_url(request, route_name, canonical):
+    parameters = [
+        (key, value)
+        for key in request.GET
+        if not key.startswith("$")
+        and key not in {"odata", "last_odata", "sort", "columns", "page"}
+        for value in request.GET.getlist(key)
+    ]
+    parameters.extend(tuple(part.split("=", 1)) for part in canonical.split("&"))
+    return f"{reverse(route_name)}?{urlencode(parameters)}"

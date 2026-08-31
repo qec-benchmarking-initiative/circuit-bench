@@ -1,6 +1,14 @@
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
+from registry.curation import (
+    CatalogueKind,
+    CatalogueOrderingMode,
+    apply_featured_ordering,
+    apply_search_relevance,
+    ordering_metadata,
+    select_catalogue_ordering,
+)
 from registry.explorer import (
     ColumnSpec,
     apply_sort,
@@ -36,16 +44,22 @@ def noise_model_list(request):
             "published", "Published", default_direction="desc", default_visible=False
         ),
     )
-    sort_keys = parse_sort(request.GET.get("sort", ""), columns, (("name", "asc"),))
-    noise_models = list(
-        apply_sort(
-            noise_model_catalogue(
-                query=query,
-                status=status,
-                randomises_priors=randomises_priors,
-                circuit_min=circuit_min,
-                circuit_max=circuit_max,
-            ),
+    raw_sort = request.GET.get("sort", "")
+    ordering_selection = select_catalogue_ordering(
+        search_query=query,
+        raw_sort=raw_sort,
+    )
+    sort_keys = parse_sort(raw_sort, columns, (("name", "asc"),))
+    noise_model_queryset = noise_model_catalogue(
+        query=query,
+        status=status,
+        randomises_priors=randomises_priors,
+        circuit_min=circuit_min,
+        circuit_max=circuit_max,
+    )
+    if ordering_selection.mode == CatalogueOrderingMode.MANUAL:
+        noise_model_queryset = apply_sort(
+            noise_model_queryset,
             sort_keys,
             {
                 "name": "name",
@@ -55,11 +69,28 @@ def noise_model_list(request):
                 "published": "published_at",
             },
         )
-    )
+    elif ordering_selection.mode == CatalogueOrderingMode.SEARCH_RELEVANCE:
+        sort_keys = ()
+        noise_model_queryset = apply_search_relevance(
+            noise_model_queryset,
+            CatalogueKind.NOISE_MODEL,
+            ordering_selection.search_query,
+        )
+    else:
+        sort_keys = ()
+        noise_model_queryset = apply_featured_ordering(
+            noise_model_queryset, CatalogueKind.NOISE_MODEL
+        )
+    noise_models = list(noise_model_queryset)
     circuit_values = list(
         noise_model_catalogue().values_list("circuit_count", flat=True)
     )
     table = table_context(request, columns, sort_keys)
+    discovery_ordering = ordering_metadata(
+        ordering_selection, CatalogueKind.NOISE_MODEL
+    ).as_context()
+    if ordering_selection.mode != CatalogueOrderingMode.MANUAL:
+        table["sort_summary"] = discovery_ordering["label"]
     rows = []
     for noise_model in noise_models:
         cell_by_key = {
@@ -118,6 +149,7 @@ def noise_model_list(request):
             "reset_sort_url": url_without(request, "sort"),
             "raw_sort": request.GET.get("sort", ""),
             "raw_columns": request.GET.get("columns", ""),
+            "discovery_ordering": discovery_ordering,
             "filters_active": bool(
                 query
                 or status

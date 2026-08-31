@@ -1,0 +1,303 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:decoderbench:schema:circuit:0.1",
+  "title": "Circuit-revision record 0.1",
+  "description": "One immutable sampling circuit, generated detector error model, and exact provenance.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "byte_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["id", "url", "sha256", "byte_size", "media_type"]
+    },
+    "credit": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": ["name"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "account_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": ["account_id"]
+        }
+      ]
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["paper", "source", "documentation", "artifact", "other"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": ["kind", "url", "label"]
+    },
+    "nullablePositiveInteger": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "nullableUuid": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "nullableDateTime": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "tagSlug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 200
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "circuit/0.1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 200
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "previous_revision_id": {
+      "$ref": "#/$defs/nullableUuid"
+    },
+    "description": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "revision_description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "noise_model_id": {
+      "type": "string",
+      "format": "uuid",
+      "x-definition": "../../definitions/circuit/0.1.md#noise-model-and-exact-priors"
+    },
+    "code_tags": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/tagSlug"
+      },
+      "x-definition": "../../definitions/circuit/0.1.md#code-and-experiment-tags"
+    },
+    "experiment_tags": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/tagSlug"
+      },
+      "x-definition": "../../definitions/circuit/0.1.md#code-and-experiment-tags"
+    },
+    "is_css": {
+      "type": "boolean",
+      "x-definition": "../../definitions/circuit/0.1.md#css-and-detector-basis-classification"
+    },
+    "code_distance_upper_bound": {
+      "$ref": "#/$defs/nullablePositiveInteger"
+    },
+    "circuit_distance_upper_bound": {
+      "$ref": "#/$defs/nullablePositiveInteger"
+    },
+    "rounds": {
+      "$ref": "#/$defs/nullablePositiveInteger"
+    },
+    "num_detectors": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "num_errors": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "num_observables": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "dem_x_detectors_only": {
+      "type": "boolean",
+      "x-definition": "../../definitions/circuit/0.1.md#css-and-detector-basis-classification"
+    },
+    "dem_z_detectors_only": {
+      "type": "boolean",
+      "x-definition": "../../definitions/circuit/0.1.md#css-and-detector-basis-classification"
+    },
+    "stim_version": {
+      "type": "string",
+      "minLength": 1,
+      "x-definition": "../../definitions/circuit/0.1.md#detector-error-model-generation"
+    },
+    "dem_generation_method": {
+      "const": "stim.Circuit.detector_error_model"
+    },
+    "dem_decompose_errors": {
+      "type": "boolean"
+    },
+    "dem_flatten_loops": {
+      "type": "boolean"
+    },
+    "dem_allow_gauge_detectors": {
+      "type": "boolean"
+    },
+    "dem_approximate_disjoint_errors": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      ]
+    },
+    "dem_ignore_decomposition_failures": {
+      "type": "boolean"
+    },
+    "dem_block_decomposition_from_introducing_remnant_edges": {
+      "type": "boolean"
+    },
+    "sampling_circuit_artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "detector_error_model_artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "manifest_artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "credits": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/credit"
+      }
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/link"
+      }
+    },
+    "state": {
+      "enum": ["draft", "pending_review", "published", "withdrawn"]
+    },
+    "submitted_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    },
+    "withdrawn_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "slug",
+    "name",
+    "previous_revision_id",
+    "description",
+    "revision_description",
+    "noise_model_id",
+    "code_tags",
+    "experiment_tags",
+    "is_css",
+    "code_distance_upper_bound",
+    "circuit_distance_upper_bound",
+    "rounds",
+    "num_detectors",
+    "num_errors",
+    "num_observables",
+    "dem_x_detectors_only",
+    "dem_z_detectors_only",
+    "stim_version",
+    "dem_generation_method",
+    "dem_decompose_errors",
+    "dem_flatten_loops",
+    "dem_allow_gauge_detectors",
+    "dem_approximate_disjoint_errors",
+    "dem_ignore_decomposition_failures",
+    "dem_block_decomposition_from_introducing_remnant_edges",
+    "sampling_circuit_artifact",
+    "detector_error_model_artifact",
+    "manifest_artifact",
+    "credits",
+    "links",
+    "state",
+    "submitted_by",
+    "created_at",
+    "published_at",
+    "withdrawn_at"
+  ]
+}

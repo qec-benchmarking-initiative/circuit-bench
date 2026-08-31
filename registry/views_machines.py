@@ -10,7 +10,12 @@ from registry.explorer import (
     url_without,
 )
 from registry.models import Machine
-from registry.result_tables import result_cell_map
+from registry.result_tables import (
+    RESULT_METRIC_COLUMNS,
+    RESULT_METRIC_SORT_FIELDS,
+    result_cell_map,
+    with_result_metrics,
+)
 from registry.services.results import public_result_catalogue
 
 MACHINE_RESULT_COLUMNS = (
@@ -21,6 +26,7 @@ MACHINE_RESULT_COLUMNS = (
     ColumnSpec("circuit", "Circuit"),
     ColumnSpec("noise_model", "Noise model"),
     ColumnSpec("shots", "Shots", numeric=True, default_direction="desc"),
+    *RESULT_METRIC_COLUMNS,
     ColumnSpec("scores", "Evaluator scores", sortable=False),
     ColumnSpec("reproduction", "Reproduction"),
     ColumnSpec("published", "Published", default_direction="desc"),
@@ -33,6 +39,7 @@ MACHINE_RESULT_SORT_FIELDS = {
     "circuit": "circuit_revision__name",
     "noise_model": "circuit_revision__noise_model__name",
     "shots": "shots_total",
+    **RESULT_METRIC_SORT_FIELDS,
     "reproduction": "reproduction_status",
     "published": "published_at",
 }
@@ -51,7 +58,7 @@ def machine_detail(request, slug):
     )
     results = list(
         apply_sort(
-            public_result_catalogue(machine=machine),
+            with_result_metrics(public_result_catalogue(machine=machine)),
             sort_keys,
             MACHINE_RESULT_SORT_FIELDS,
         )

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:decoderbench:schema:machine:0.1",
+  "title": "Machine record 0.1",
+  "description": "A reusable Circuit Bench execution-environment record.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "nullableUuid": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "nullableDateTime": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "machine/0.1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 200
+    },
+    "class": {
+      "enum": ["cpu", "gpu", "fpga", "asic", "hybrid"],
+      "x-definition": "../../definitions/machine/0.1.md#machine-class"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "x-definition": "../../definitions/machine/0.1.md#execution-environment-description"
+    },
+    "status": {
+      "enum": ["physical", "simulated", "estimated"],
+      "x-definition": "../../definitions/machine/0.1.md#evidence-status"
+    },
+    "supersedes_machine_id": {
+      "$ref": "#/$defs/nullableUuid"
+    },
+    "state": {
+      "enum": ["draft", "pending_review", "published", "withdrawn"]
+    },
+    "submitted_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    },
+    "withdrawn_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "slug",
+    "class",
+    "description",
+    "status",
+    "supersedes_machine_id",
+    "state",
+    "submitted_by",
+    "created_at",
+    "published_at",
+    "withdrawn_at"
+  ]
+}

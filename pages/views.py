@@ -3,6 +3,14 @@ from django.db import connection
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
 
+from .content import (
+    ContentError,
+    blog_posts,
+    get_blog_post,
+    get_definition,
+    get_page,
+)
+
 
 def home(request):
     return render(request, "pages/home.html")
@@ -13,6 +21,42 @@ def health(request):
         cursor.execute("SELECT 1")
         cursor.fetchone()
     return JsonResponse({"status": "ok", "database": "ok"})
+
+
+def about(request):
+    return _static_page(request, "about")
+
+
+def query_syntax(request):
+    return _static_page(request, "query-syntax")
+
+
+def definition(request, record_type, version):
+    try:
+        document = get_definition(record_type, version)
+    except ContentError as error:
+        raise Http404 from error
+    return render(request, "pages/static_page.html", {"document": document})
+
+
+def blog_index(request):
+    return render(request, "pages/blog_index.html", {"posts": blog_posts()})
+
+
+def blog_detail(request, slug):
+    try:
+        post = get_blog_post(slug)
+    except ContentError as error:
+        raise Http404 from error
+    return render(request, "pages/blog_detail.html", {"post": post})
+
+
+def _static_page(request, slug):
+    try:
+        document = get_page(slug)
+    except ContentError as error:
+        raise Http404 from error
+    return render(request, "pages/static_page.html", {"document": document})
 
 
 def component_gallery(request):

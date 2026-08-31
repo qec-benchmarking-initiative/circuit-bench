@@ -59,8 +59,8 @@ def test_catalogue_tag_picker_supports_all_and_any_matching(client, demo_decoder
         "clear-matcher-0-2"
     ]
     assert [decoder.slug for decoder in match_any.context["decoders"]] == [
-        "clear-matcher-0-1",
         "clear-matcher-0-2",
+        "clear-matcher-0-1",
     ]
 
 

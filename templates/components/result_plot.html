@@ -1,0 +1,102 @@
+<figure
+  class="result-plot"
+  id="{{ plot.id }}"
+  data-result-record-schema="{{ plot.schema_version }}"
+  data-total-results="{{ plot.total_count }}"
+  data-plotted-results="{{ plot.plotted_count }}"
+>
+  <figcaption id="{{ plot.id }}-caption">
+    <strong>{{ plot.title }}</strong>
+    <span>
+      {{ plot.plotted_count }} of {{ plot.total_count }} results plotted;
+      {{ plot.omitted_count }} omitted because at least one axis value is null.
+    </span>
+  </figcaption>
+
+  <svg
+    class="result-plot-svg"
+    viewBox="{{ plot.viewbox }}"
+    role="img"
+    aria-labelledby="{{ plot.id }}-svg-title {{ plot.id }}-svg-description"
+  >
+    <title id="{{ plot.id }}-svg-title">{{ plot.title }}</title>
+    <desc id="{{ plot.id }}-svg-description">{{ plot.description }} {{ plot.plotted_count }} of {{ plot.total_count }} results have both axis values.</desc>
+
+    <line x1="{{ plot.plot_left }}" y1="{{ plot.plot_bottom }}" x2="{{ plot.plot_right }}" y2="{{ plot.plot_bottom }}" class="plot-axis" />
+    <line x1="{{ plot.plot_left }}" y1="{{ plot.plot_top }}" x2="{{ plot.plot_left }}" y2="{{ plot.plot_bottom }}" class="plot-axis" />
+
+    {% for tick in plot.x_axis.ticks %}
+      <line x1="{{ tick.position }}" y1="{{ plot.plot_bottom }}" x2="{{ tick.position }}" y2="{{ plot.plot_top }}" class="plot-grid-line" />
+      <text x="{{ tick.position }}" y="{{ plot.plot_bottom|add:'22' }}" text-anchor="middle">{{ tick.label }}</text>
+    {% endfor %}
+    {% for tick in plot.y_axis.ticks %}
+      <line x1="{{ plot.plot_left }}" y1="{{ tick.position }}" x2="{{ plot.plot_right }}" y2="{{ tick.position }}" class="plot-grid-line" />
+      <text x="{{ plot.plot_left|add:'-10' }}" y="{{ tick.position }}" dy="0.35em" text-anchor="end">{{ tick.label }}</text>
+    {% endfor %}
+
+    <text x="{{ plot.plot_centre_x }}" y="{{ plot.height|add:'-20' }}" text-anchor="middle" class="plot-axis-label">{{ plot.x_axis.label_with_unit }}</text>
+    <text x="20" y="{{ plot.plot_centre_y }}" text-anchor="middle" transform="rotate(-90 20 {{ plot.plot_centre_y }})" class="plot-axis-label">{{ plot.y_axis.label_with_unit }}</text>
+
+    {% for point in plot.points %}
+      <circle
+        id="{{ plot.id }}-point-{{ point.id }}"
+        data-result-id="{{ point.id }}"
+        cx="{{ point.x }}"
+        cy="{{ point.y }}"
+        r="4"
+        tabindex="0"
+        class="result-plot-point"
+      >
+        <title>{{ point.label }}: {{ plot.x_axis.label }} {{ point.x_display }}; {{ plot.y_axis.label }} {{ point.y_display }}</title>
+      </circle>
+    {% empty %}
+      <text x="{{ plot.plot_centre_x }}" y="{{ plot.plot_centre_y }}" text-anchor="middle">No results have both axis values.</text>
+    {% endfor %}
+  </svg>
+
+  <dl class="result-plot-definitions">
+    <div>
+      <dt>x-axis</dt>
+      <dd>
+        <code>{{ plot.x_axis.field }}</code> — {{ plot.x_axis.label_with_unit }},
+        {{ plot.x_axis.scale }} scale{% if plot.x_axis.direction != "not_ranked" %}, {{ plot.x_axis.direction_label }}{% endif %}.
+        {% if plot.x_axis.definition %}<a href="{{ plot.x_axis.definition }}">Definition</a>{% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt>y-axis</dt>
+      <dd>
+        <code>{{ plot.y_axis.field }}</code> — {{ plot.y_axis.label_with_unit }},
+        {{ plot.y_axis.scale }} scale{% if plot.y_axis.direction != "not_ranked" %}, {{ plot.y_axis.direction_label }}{% endif %}.
+        {% if plot.y_axis.definition %}<a href="{{ plot.y_axis.definition }}">Definition</a>{% endif %}
+      </dd>
+    </div>
+  </dl>
+
+  <details class="result-plot-data">
+    <summary>Tabular data for this plot ({{ plot.plotted_count }} rows)</summary>
+    <div class="table-scroll">
+      <table class="data-table">
+        <caption>{{ plot.title }}; points with null axis values are omitted.</caption>
+        <thead>
+          <tr>
+            <th>Result UUID</th>
+            <th class="numeric">{{ plot.x_axis.label_with_unit }}</th>
+            <th class="numeric">{{ plot.y_axis.label_with_unit }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for point in plot.points %}
+            <tr data-result-id="{{ point.id }}">
+              <th scope="row"><code>{{ point.id }}</code></th>
+              <td class="numeric" data-raw-value="{{ point.x_value }}">{{ point.x_display }}</td>
+              <td class="numeric" data-raw-value="{{ point.y_value }}">{{ point.y_display }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3">No results have both axis values.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</figure>

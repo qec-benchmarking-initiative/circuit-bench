@@ -3,6 +3,14 @@ from urllib.parse import urlencode
 from django.urls import NoReverseMatch, reverse
 from django.views.generic import DetailView, ListView
 
+from registry.curation import (
+    CatalogueKind,
+    CatalogueOrderingMode,
+    apply_featured_ordering,
+    apply_search_relevance,
+    ordering_metadata,
+    select_catalogue_ordering,
+)
 from registry.explorer import (
     ColumnSpec,
     apply_sort,
@@ -21,7 +29,12 @@ from registry.filter_grids import (
 )
 from registry.models import DecoderVersion, Machine
 from registry.record_pickers import record_picker_context
-from registry.result_tables import result_cell_map
+from registry.result_tables import (
+    RESULT_METRIC_COLUMNS,
+    RESULT_METRIC_SORT_FIELDS,
+    result_cell_map,
+    with_result_metrics,
+)
 from registry.services.decoders import (
     catalogue_algorithm_tags,
     inherited_description_source,
@@ -44,6 +57,7 @@ DECODER_RESULT_COLUMNS = (
     ColumnSpec("machine_class", "Machine type"),
     ColumnSpec("machine", "Machine"),
     ColumnSpec("shots", "Shots", numeric=True, default_direction="desc"),
+    *RESULT_METRIC_COLUMNS,
     ColumnSpec("scores", "Evaluator scores", sortable=False),
     ColumnSpec("reproduction", "Reproduction"),
     ColumnSpec("published", "Published", default_direction="desc"),
@@ -56,6 +70,7 @@ DECODER_RESULT_SORT_FIELDS = {
     "machine_class": "machine__machine_class",
     "machine": "machine__slug",
     "shots": "shots_total",
+    **RESULT_METRIC_SORT_FIELDS,
     "reproduction": "reproduction_status",
     "published": "published_at",
 }
@@ -87,6 +102,11 @@ class DecoderCatalogueView(ListView):
 
     def get_queryset(self):
         self.query = self.request.GET.get("q", "").strip()
+        raw_sort = self.request.GET.get("sort", "")
+        self.ordering_selection = select_catalogue_ordering(
+            search_query=self.query,
+            raw_sort=raw_sort,
+        )
         self.tag_slugs = tuple(
             dict.fromkeys(
                 tag.strip() for tag in self.request.GET.getlist("tag") if tag.strip()
@@ -100,9 +120,7 @@ class DecoderCatalogueView(ListView):
         self.probability_output = self.request.GET.get("probability", "").strip()
         self.result_min = parse_nonnegative_int(self.request.GET.get("result_min", ""))
         self.result_max = parse_nonnegative_int(self.request.GET.get("result_max", ""))
-        self.sort_keys = parse_sort(
-            self.request.GET.get("sort", ""), self.columns, (("name", "asc"),)
-        )
+        self.sort_keys = parse_sort(raw_sort, self.columns, (("name", "asc"),))
         queryset = public_decoder_catalogue(
             query=self.query,
             tag_slugs=self.tag_slugs,
@@ -113,11 +131,25 @@ class DecoderCatalogueView(ListView):
             result_min=self.result_min,
             result_max=self.result_max,
         )
-        return apply_sort(queryset, self.sort_keys, self.sort_fields)
+        if self.ordering_selection.mode == CatalogueOrderingMode.MANUAL:
+            return apply_sort(queryset, self.sort_keys, self.sort_fields)
+        self.sort_keys = ()
+        if self.ordering_selection.mode == CatalogueOrderingMode.SEARCH_RELEVANCE:
+            return apply_search_relevance(
+                queryset,
+                CatalogueKind.DECODER,
+                self.ordering_selection.search_query,
+            )
+        return apply_featured_ordering(queryset, CatalogueKind.DECODER)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         table = table_context(self.request, self.columns, self.sort_keys)
+        discovery_ordering = ordering_metadata(
+            self.ordering_selection, CatalogueKind.DECODER
+        ).as_context()
+        if self.ordering_selection.mode != CatalogueOrderingMode.MANUAL:
+            table["sort_summary"] = discovery_ordering["label"]
         filter_tags = list(catalogue_algorithm_tags())
         result_values = list(
             public_decoder_catalogue().values_list("published_result_count", flat=True)
@@ -198,6 +230,7 @@ class DecoderCatalogueView(ListView):
                 "reset_sort_url": url_without(self.request, "sort"),
                 "raw_sort": self.request.GET.get("sort", ""),
                 "raw_columns": self.request.GET.get("columns", ""),
+                "discovery_ordering": discovery_ordering,
                 "filters_active": any(
                     (
                         self.query,
@@ -333,8 +366,7 @@ class DecoderDetailView(DetailView):
             "noise-models", self._selected("noise_model")
         )
         noise_models = tuple(
-            record["identifier"]
-            for record in noise_model_picker["selected_records"]
+            record["identifier"] for record in noise_model_picker["selected_records"]
         )
         randomises_priors = request.GET.get("priors", "").strip()
         is_css = request.GET.get("css", "").strip()
@@ -367,24 +399,26 @@ class DecoderDetailView(DetailView):
         )
         results = list(
             apply_sort(
-                public_result_catalogue(
-                    decoder=decoder,
-                    code_tag_slugs=code_tags,
-                    code_tag_match=code_tag_match,
-                    experiment_tag_slugs=experiment_tags,
-                    experiment_tag_match=experiment_tag_match,
-                    noise_model_slugs=noise_models,
-                    randomises_priors=randomises_priors,
-                    is_css=is_css,
-                    code_distance_min=parsed_ranges["code_d_min"],
-                    code_distance_max=parsed_ranges["code_d_max"],
-                    circuit_distance_min=parsed_ranges["circuit_d_min"],
-                    circuit_distance_max=parsed_ranges["circuit_d_max"],
-                    detector_min=parsed_ranges["detector_min"],
-                    detector_max=parsed_ranges["detector_max"],
-                    error_min=parsed_ranges["error_min"],
-                    error_max=parsed_ranges["error_max"],
-                    machine_class=machine_class,
+                with_result_metrics(
+                    public_result_catalogue(
+                        decoder=decoder,
+                        code_tag_slugs=code_tags,
+                        code_tag_match=code_tag_match,
+                        experiment_tag_slugs=experiment_tags,
+                        experiment_tag_match=experiment_tag_match,
+                        noise_model_slugs=noise_models,
+                        randomises_priors=randomises_priors,
+                        is_css=is_css,
+                        code_distance_min=parsed_ranges["code_d_min"],
+                        code_distance_max=parsed_ranges["code_d_max"],
+                        circuit_distance_min=parsed_ranges["circuit_d_min"],
+                        circuit_distance_max=parsed_ranges["circuit_d_max"],
+                        detector_min=parsed_ranges["detector_min"],
+                        detector_max=parsed_ranges["detector_max"],
+                        error_min=parsed_ranges["error_min"],
+                        error_max=parsed_ranges["error_max"],
+                        machine_class=machine_class,
+                    )
                 ),
                 sort_keys,
                 DECODER_RESULT_SORT_FIELDS,

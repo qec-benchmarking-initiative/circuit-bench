@@ -34,6 +34,8 @@
       }
       url.searchParams.set("sort", next.join(","));
       url.searchParams.delete("page");
+      ["odata", "last_odata", "$filter", "$orderby", "$select", "$top", "$skip", "$count"]
+        .forEach((name) => url.searchParams.delete(name));
       window.location.assign(url);
       return;
     }

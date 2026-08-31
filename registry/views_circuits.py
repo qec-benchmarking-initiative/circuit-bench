@@ -3,6 +3,14 @@ from urllib.parse import urlencode
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
+from registry.curation import (
+    CatalogueKind,
+    CatalogueOrderingMode,
+    apply_featured_ordering,
+    apply_search_relevance,
+    ordering_metadata,
+    select_catalogue_ordering,
+)
 from registry.explorer import (
     ColumnSpec,
     apply_sort,
@@ -21,9 +29,14 @@ from registry.filter_grids import (
 from registry.filter_grids import (
     machine_grid as build_machine_grid,
 )
-from registry.formatting import format_scientific_value
 from registry.models import Machine
 from registry.record_pickers import record_picker_context
+from registry.result_tables import (
+    RESULT_METRIC_COLUMNS,
+    RESULT_METRIC_SORT_FIELDS,
+    result_cell_map,
+    with_result_metrics,
+)
 from registry.services.circuits import (
     circuit_catalogue,
     circuit_detail_queryset,
@@ -47,6 +60,7 @@ CIRCUIT_RESULT_COLUMNS = (
     ColumnSpec("machine_class", "Machine type"),
     ColumnSpec("machine", "Machine"),
     ColumnSpec("shots", "Shots", numeric=True, default_direction="desc"),
+    *RESULT_METRIC_COLUMNS,
     ColumnSpec("scores", "Evaluator scores", sortable=False),
     ColumnSpec("reproduction", "Reproduction"),
     ColumnSpec("published", "Published", default_direction="desc"),
@@ -61,6 +75,7 @@ CIRCUIT_RESULT_SORT_FIELDS = {
     "machine_class": "machine__machine_class",
     "machine": "machine__slug",
     "shots": "shots_total",
+    **RESULT_METRIC_SORT_FIELDS,
     "reproduction": "reproduction_status",
     "published": "published_at",
 }
@@ -103,9 +118,7 @@ def circuit_list(request):
             if value.strip()
         )
     )
-    noise_model_picker = record_picker_context(
-        "noise-models", requested_noise_models
-    )
+    noise_model_picker = record_picker_context("noise-models", requested_noise_models)
     noise_models = tuple(
         record["identifier"] for record in noise_model_picker["selected_records"]
     )
@@ -145,18 +158,24 @@ def circuit_list(request):
             "published", "Published", default_direction="desc", default_visible=False
         ),
     )
-    sort_keys = parse_sort(request.GET.get("sort", ""), columns, (("name", "asc"),))
-    circuits = list(
-        apply_sort(
-            circuit_catalogue(
-                query=query,
-                tag=legacy_tag,
-                code_tag_slugs=code_tags,
-                experiment_tag_slugs=experiment_tags,
-                code_tag_match=code_tag_match,
-                experiment_tag_match=experiment_tag_match,
-                **filters,
-            ),
+    raw_sort = request.GET.get("sort", "")
+    ordering_selection = select_catalogue_ordering(
+        search_query=query,
+        raw_sort=raw_sort,
+    )
+    sort_keys = parse_sort(raw_sort, columns, (("name", "asc"),))
+    circuit_queryset = circuit_catalogue(
+        query=query,
+        tag=legacy_tag,
+        code_tag_slugs=code_tags,
+        experiment_tag_slugs=experiment_tags,
+        code_tag_match=code_tag_match,
+        experiment_tag_match=experiment_tag_match,
+        **filters,
+    )
+    if ordering_selection.mode == CatalogueOrderingMode.MANUAL:
+        circuit_queryset = apply_sort(
+            circuit_queryset,
             sort_keys,
             {
                 "name": "name",
@@ -173,7 +192,19 @@ def circuit_list(request):
                 "published": "published_at",
             },
         )
-    )
+    elif ordering_selection.mode == CatalogueOrderingMode.SEARCH_RELEVANCE:
+        sort_keys = ()
+        circuit_queryset = apply_search_relevance(
+            circuit_queryset,
+            CatalogueKind.CIRCUIT,
+            ordering_selection.search_query,
+        )
+    else:
+        sort_keys = ()
+        circuit_queryset = apply_featured_ordering(
+            circuit_queryset, CatalogueKind.CIRCUIT
+        )
+    circuits = list(circuit_queryset)
     filter_options = public_circuit_filter_options()
     code_filter_tags = filter_options["code_tags"]
     experiment_filter_tags = filter_options["experiment_tags"]
@@ -192,6 +223,11 @@ def circuit_list(request):
     }
     distributions = filter_options["distributions"]
     table = table_context(request, columns, sort_keys)
+    discovery_ordering = ordering_metadata(
+        ordering_selection, CatalogueKind.CIRCUIT
+    ).as_context()
+    if ordering_selection.mode != CatalogueOrderingMode.MANUAL:
+        table["sort_summary"] = discovery_ordering["label"]
     list_url = reverse("circuits:list")
     rows = []
     for circuit in circuits:
@@ -304,6 +340,7 @@ def circuit_list(request):
             "reset_sort_url": url_without(request, "sort"),
             "raw_sort": request.GET.get("sort", ""),
             "raw_columns": request.GET.get("columns", ""),
+            "discovery_ordering": discovery_ordering,
             "filters_active": bool(
                 query
                 or legacy_tag
@@ -321,9 +358,7 @@ def circuit_detail(request, slug):
     list_url = reverse("circuits:list")
     detail_url = reverse("circuits:detail", args=[circuit.slug])
     selected_tags = tuple(
-        dict.fromkeys(
-            tag.strip() for tag in request.GET.getlist("tag") if tag.strip()
-        )
+        dict.fromkeys(tag.strip() for tag in request.GET.getlist("tag") if tag.strip())
     )
     tag_match = request.GET.get("tag_match", "all").strip()
     if tag_match not in {"all", "any"}:
@@ -342,14 +377,16 @@ def circuit_detail(request, slug):
     )
     results = list(
         apply_sort(
-            circuit_result_leaderboard(
-                circuit=circuit,
-                tag_slugs=selected_tags,
-                tag_match=tag_match,
-                skeleton_preparation=skeleton_preparation,
-                priors_preparation=priors_preparation,
-                probability_output=probability_output,
-                machine_class=machine_class,
+            with_result_metrics(
+                circuit_result_leaderboard(
+                    circuit=circuit,
+                    tag_slugs=selected_tags,
+                    tag_match=tag_match,
+                    skeleton_preparation=skeleton_preparation,
+                    priors_preparation=priors_preparation,
+                    probability_output=probability_output,
+                    machine_class=machine_class,
+                )
             ),
             sort_keys,
             CIRCUIT_RESULT_SORT_FIELDS,
@@ -358,71 +395,28 @@ def circuit_detail(request, slug):
     table = table_context(request, CIRCUIT_RESULT_COLUMNS, sort_keys)
     result_rows = []
     for result in results:
-        scores = "; ".join(
-            (
-                f"{score.score_definition.name}: "
-                f"{format_scientific_value(score.value)} "
-                f"{score.score_definition.unit}"
-            ).rstrip()
-            for score in sorted(
-                result.scores.all(),
-                key=lambda score: score.score_definition.display_order,
-            )
-        )
         decoder = result.decoder_version
-        cell_by_key = {
-            "decoder": {
-                "key": "decoder",
-                "value": decoder.name,
-                "url": reverse("decoders:detail", args=[decoder.slug]),
-            },
-            "version": {"key": "version", "value": decoder.version},
-            "algorithm_tags": {
-                "key": "algorithm_tags",
-                "tags": [
-                    {
-                        "label": tag.label,
-                        "display_color": tag.display_color,
-                        "url": f"{detail_url}?{urlencode({'tag': tag.slug})}",
-                    }
-                    for tag in decoder.display_algorithm_tags
-                ],
-            },
-            "skeleton": {
-                "key": "skeleton",
-                "value": decoder.get_circuit_skeleton_preparation_display(),
-            },
-            "priors": {
-                "key": "priors",
-                "value": decoder.get_circuit_priors_preparation_display(),
-            },
-            "probability": {
-                "key": "probability",
-                "value": "Yes" if decoder.provides_failure_probability else "No",
-            },
-            "machine_class": {
-                "key": "machine_class",
-                "value": result.machine.get_machine_class_display()
-                if result.machine
-                else "Unreported",
-            },
-            "machine": {
-                "key": "machine",
-                "value": result.machine.slug if result.machine else None,
-                "url": (
-                    reverse("machines:detail", args=[result.machine.slug])
-                    if result.machine
-                    else None
-                ),
-            },
-            "shots": {"key": "shots", "value": result.shots_total, "numeric": True},
-            "scores": {"key": "scores", "value": scores},
-            "reproduction": {
-                "key": "reproduction",
-                "value": result.get_reproduction_status_display(),
-            },
-            "published": {"key": "published", "value": result.published_at},
-        }
+        cell_by_key = result_cell_map(
+            result,
+            filter_url=detail_url,
+            algorithm_tag_name="tag",
+        )
+        cell_by_key.update(
+            {
+                "skeleton": {
+                    "key": "skeleton",
+                    "value": decoder.get_circuit_skeleton_preparation_display(),
+                },
+                "priors": {
+                    "key": "priors",
+                    "value": decoder.get_circuit_priors_preparation_display(),
+                },
+                "probability": {
+                    "key": "probability",
+                    "value": "Yes" if decoder.provides_failure_probability else "No",
+                },
+            }
+        )
         result_rows.append(
             {
                 "cells": cells_for_visible_columns(

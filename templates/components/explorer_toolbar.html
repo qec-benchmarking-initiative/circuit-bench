@@ -2,6 +2,7 @@
   <div class="explorer-toolbar-summary">
     <strong>{{ result_count }}</strong> record{{ result_count|pluralize }}
     <span aria-label="Active sorting">Sort: {{ sort_summary }}</span>
+    {% if discovery_ordering %}<span class="discovery-ordering" title="{{ discovery_ordering.explanation }}"><strong>{{ discovery_ordering.label }}</strong>{% if discovery_ordering.provisional %} · disclosed provisional policy{% endif %}</span>{% endif %}
   </div>
   <div class="explorer-toolbar-actions">
     {% if not sort_is_default %}<a href="{{ reset_sort_url }}">Reset sort</a>{% endif %}

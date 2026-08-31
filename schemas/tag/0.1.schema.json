@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:decoderbench:schema:tag:0.1",
+  "title": "Tag record 0.1",
+  "description": "A Circuit Bench controlled-vocabulary tag record.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "nullableUuid": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "nullableDateTime": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "tag/0.1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "namespace": {
+      "enum": ["algorithm", "experiment", "code"],
+      "x-definition": "../../definitions/tag/0.1.md#namespace"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 200
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000,
+      "x-definition": "../../definitions/tag/0.1.md#scientific-meaning"
+    },
+    "status": {
+      "enum": ["custom", "official", "deprecated"],
+      "x-definition": "../../definitions/tag/0.1.md#curation-status"
+    },
+    "display_color": {
+      "type": ["string", "null"],
+      "pattern": "^#[0-9A-Fa-f]{6}$",
+      "description": "Optional admin-selected presentation colour; not scientific meaning."
+    },
+    "canonical_tag_id": {
+      "$ref": "#/$defs/nullableUuid"
+    },
+    "submitted_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "curated_by": {
+      "$ref": "#/$defs/nullableUuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "curated_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "namespace",
+    "slug",
+    "label",
+    "description",
+    "status",
+    "display_color",
+    "canonical_tag_id",
+    "submitted_by",
+    "curated_by",
+    "created_at",
+    "updated_at",
+    "curated_at"
+  ]
+}

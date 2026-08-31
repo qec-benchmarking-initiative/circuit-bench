@@ -1,0 +1,294 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:decoderbench:schema:benchmark:0.1",
+  "title": "Benchmark-revision record 0.1",
+  "description": "An immutable ordered collection of exact circuit revisions and its attempts.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "byte_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["id", "url", "sha256", "byte_size", "media_type"]
+    },
+    "credit": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": ["name"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "account_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": ["account_id"]
+        }
+      ]
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["paper", "source", "documentation", "artifact", "other"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": ["kind", "url", "label"]
+    },
+    "benchmarkItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "circuit_revision_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "is_required": {
+          "type": "boolean"
+        }
+      },
+      "required": ["circuit_revision_id", "position", "is_required"]
+    },
+    "attemptResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "circuit_revision_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "result_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": ["circuit_revision_id", "result_id"]
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "decoder_version_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 10000
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attemptResult"
+          }
+        },
+        "state": {
+          "enum": ["draft", "pending_review", "published", "withdrawn"]
+        },
+        "submitted_by": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "published_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        },
+        "withdrawn_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        }
+      },
+      "required": [
+        "id",
+        "decoder_version_id",
+        "description",
+        "results",
+        "state",
+        "submitted_by",
+        "created_at",
+        "published_at",
+        "withdrawn_at"
+      ]
+    },
+    "nullableUuid": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "nullableDateTime": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "benchmark/0.1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 200
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "previous_revision_id": {
+      "$ref": "#/$defs/nullableUuid"
+    },
+    "description": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "revision_description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "recognition_status": {
+      "enum": [
+        "community_submitted",
+        "admin_approved",
+        "official",
+        "deprecated"
+      ],
+      "x-definition": "../../definitions/benchmark/0.1.md#approval-and-recognition"
+    },
+    "manifest_artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/benchmarkItem"
+      },
+      "x-definition": "../../definitions/benchmark/0.1.md#ordered-membership"
+    },
+    "attempts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attempt"
+      },
+      "x-definition": "../../definitions/benchmark/0.1.md#benchmark-attempts"
+    },
+    "credits": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/credit"
+      }
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/link"
+      }
+    },
+    "state": {
+      "enum": ["draft", "pending_review", "published", "withdrawn"]
+    },
+    "submitted_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    },
+    "withdrawn_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "slug",
+    "name",
+    "version",
+    "previous_revision_id",
+    "description",
+    "revision_description",
+    "recognition_status",
+    "manifest_artifact",
+    "items",
+    "attempts",
+    "credits",
+    "links",
+    "state",
+    "submitted_by",
+    "created_at",
+    "published_at",
+    "withdrawn_at"
+  ]
+}

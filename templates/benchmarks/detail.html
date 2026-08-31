@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}{{ benchmark.name }} {{ benchmark.version }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <article class="page-shell record-layout benchmark-record-layout">
+    <header class="record-heading">
+      {% include "components/entity_header.html" with entity=entity only %}
+    </header>
+
+    <div class="record-columns">
+      <div class="record-main">
+        <section class="record-section">
+          <h2>Purpose and scope</h2>
+          {% if description_source %}
+            <p>{{ description_source.description }}</p>
+            {% if description_source.id != benchmark.id %}<p>Inherited from <a href="{% url 'benchmarks:detail' description_source.slug %}">{{ description_source.name }} {{ description_source.version }}</a>.</p>{% endif %}
+          {% else %}
+            <p>No public description is available for this revision lineage.</p>
+          {% endif %}
+          <p><strong>Revision note:</strong> {{ benchmark.revision_description }}</p>
+          {% if predecessor or successor %}
+            <p>
+              {% if predecessor %}<a href="{% url 'benchmarks:detail' predecessor.slug %}">Previous revision: {{ predecessor.version }}</a>{% endif %}
+              {% if predecessor and successor %} · {% endif %}
+              {% if successor %}<a href="{% url 'benchmarks:detail' successor.slug %}">Next revision: {{ successor.version }}</a>{% endif %}
+            </p>
+          {% endif %}
+        </section>
+      </div>
+      <aside class="record-aside" aria-label="Benchmark metadata">
+        <h2>Exact revision</h2>
+        <dl class="stacked-metadata compact-technical-metadata">
+          <div><dt>Recognition</dt><dd>{{ benchmark.get_recognition_status_display }}</dd></div>
+          <div><dt>Lifecycle</dt><dd>{{ benchmark.get_state_display }}</dd></div>
+          <div><dt>Submitted by</dt><dd>{{ benchmark.submitted_by.display_name }}</dd></div>
+          <div><dt>Schema</dt><dd><a href="{% url 'artifacts:schema-release-detail' benchmark.schema_release.record_type benchmark.schema_release.version %}">{{ benchmark.schema_release.public_name }}</a></dd></div>
+          <div><dt>Manifest</dt><dd><a href="{% url 'artifacts:download' benchmark.manifest_artifact.id %}">{{ benchmark.manifest_artifact.original_filename }}</a></dd></div>
+          <div><dt>Revision UUID</dt><dd><code>{{ benchmark.id }}</code></dd></div>
+          <div><dt>Published</dt><dd>{{ benchmark.published_at }}</dd></div>
+        </dl>
+      </aside>
+    </div>
+
+    <section class="record-related" aria-labelledby="benchmark-manifest-heading">
+      <h2 id="benchmark-manifest-heading">Ordered circuit manifest</h2>
+      <p>This is the frozen circuit order for this exact revision. Required and optional membership are shown explicitly.</p>
+      {% if manifest_has_hidden_items %}<p role="alert">One or more manifest circuits are not public and have been withheld from this view.</p>{% endif %}
+      {% if public_items %}
+        <div class="table-scroll record-table-scroll">
+          <table class="data-table">
+            <thead><tr><th class="numeric">Position</th><th>Circuit revision</th><th>Requirement</th></tr></thead>
+            <tbody>
+              {% for item in public_items %}
+                <tr>
+                  <td class="numeric">{{ item.position }}</td>
+                  <td><a href="{% url 'circuits:detail' item.circuit_revision.slug %}">{{ item.circuit_revision.name }}</a> <span class="null-value"><code>{{ item.circuit_revision.id }}</code></span></td>
+                  <td>{{ item.is_required|yesno:"Required,Optional" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {% include "components/empty_state.html" with title="No public manifest items" message="This benchmark revision has no publicly resolvable circuit membership." only %}
+      {% endif %}
+    </section>
+
+    <section class="record-related" aria-labelledby="benchmark-attempts-heading">
+      <h2 id="benchmark-attempts-heading">Published attempts</h2>
+      <p>Attempts group existing circuit results. The site does not pool them or calculate an aggregate benchmark score.</p>
+      {% for summary in attempt_summaries %}
+        <article class="record-section benchmark-attempt" id="attempt-{{ summary.attempt.id }}">
+          <h3>{{ summary.attempt.decoder_version.name }} {{ summary.attempt.decoder_version.version }}</h3>
+          <p>
+            {% if summary.is_complete %}<strong>Complete:</strong>{% else %}<strong>Incomplete or inconsistent:</strong>{% endif %}
+            {{ summary.required_result_count }} of {{ summary.required_count }} required circuits have exactly one matching public result.
+            Attempt <code>{{ summary.attempt.id }}</code> · submitted by {{ summary.attempt.submitted_by.display_name }}.
+          </p>
+          {% if summary.attempt.description %}<p>{{ summary.attempt.description }}</p>{% endif %}
+          {% if summary.issues %}<ul>{% for issue in summary.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
+          <div class="table-scroll record-table-scroll">
+            <table class="data-table">
+              <thead><tr><th class="numeric">Position</th><th>Circuit revision</th><th>Requirement</th><th>Exact result</th><th>Evaluator</th><th>Machine</th></tr></thead>
+              <tbody>
+                {% for row in summary.items %}
+                  <tr>
+                    <td class="numeric">{{ row.item.position }}</td>
+                    <td><a href="{% url 'circuits:detail' row.item.circuit_revision.slug %}">{{ row.item.circuit_revision.name }}</a></td>
+                    <td>{{ row.item.is_required|yesno:"Required,Optional" }}</td>
+                    <td>
+                      {% if row.membership %}<a href="{{ result_detail_base_url }}{{ row.membership.result.id }}/"><code>{{ row.membership.result.id }}</code></a>{% else %}<span class="null-value">—</span>{% endif %}
+                      {% if row.issue %}<br><span role="alert">{{ row.issue }}</span>{% endif %}
+                    </td>
+                    <td>{% if row.membership %}{{ row.membership.result.evaluator_version.version }}{% else %}<span class="null-value">—</span>{% endif %}</td>
+                    <td>{% if row.membership and row.membership.result.machine %}<a href="{% url 'machines:detail' row.membership.result.machine.slug %}">{{ row.membership.result.machine.slug }}</a>{% else %}<span class="null-value">—</span>{% endif %}</td>
+                  </tr>
+                {% endfor %}
+                {% for membership in summary.unexpected_memberships %}
+                  <tr><td class="numeric">—</td><td>{{ membership.circuit_revision.name }}</td><td>Outside manifest</td><td><a href="{{ result_detail_base_url }}{{ membership.result.id }}/"><code>{{ membership.result.id }}</code></a></td><td>{{ membership.result.evaluator_version.version }}</td><td>{% if membership.result.machine %}{{ membership.result.machine.slug }}{% else %}<span class="null-value">—</span>{% endif %}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      {% empty %}
+        {% include "components/empty_state.html" with title="No published attempts" message="No published attempt currently resolves against this exact benchmark revision." only %}
+      {% endfor %}
+    </section>
+  </article>
+{% endblock %}

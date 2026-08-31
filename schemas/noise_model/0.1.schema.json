@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:decoderbench:schema:noise_model:0.1",
+  "title": "Noise-model record 0.1",
+  "description": "A compact Circuit Bench noise-model registry entry.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "credit": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": ["name"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "account_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": ["account_id"]
+        }
+      ]
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["paper", "source", "documentation", "artifact", "other"]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": ["kind", "url", "label"]
+    },
+    "nullableUuid": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "nullableDateTime": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "noise_model/0.1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 200
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "short_description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "x-definition": "../../definitions/noise_model/0.1.md#scope-of-the-entry"
+    },
+    "paper_url": {
+      "type": "string",
+      "format": "uri",
+      "x-definition": "../../definitions/noise_model/0.1.md#primary-specification"
+    },
+    "randomises_priors": {
+      "type": "boolean",
+      "x-definition": "../../definitions/noise_model/0.1.md#randomisation-of-priors"
+    },
+    "credits": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/credit"
+      }
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/link"
+      }
+    },
+    "supersedes_noise_model_id": {
+      "$ref": "#/$defs/nullableUuid"
+    },
+    "curation_status": {
+      "enum": ["community", "official", "deprecated"],
+      "x-definition": "../../definitions/noise_model/0.1.md#governance"
+    },
+    "state": {
+      "enum": ["draft", "pending_review", "published", "withdrawn"]
+    },
+    "submitted_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    },
+    "withdrawn_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "slug",
+    "name",
+    "short_description",
+    "paper_url",
+    "randomises_priors",
+    "credits",
+    "links",
+    "supersedes_noise_model_id",
+    "curation_status",
+    "state",
+    "submitted_by",
+    "created_at",
+    "published_at",
+    "withdrawn_at"
+  ]
+}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <article class="page-shell static-page">
+    <header class="page-heading">
+      <p class="eyebrow">Development note</p>
+      <h1>{{ post.title }}</h1>
+      <p>
+        {% if post.published %}<time datetime="{{ post.published|date:'Y-m-d' }}">{{ post.published|date:"j F Y" }}</time>{% endif %}
+        {% if post.author %} · {{ post.author }}{% endif %}
+      </p>
+      {% if post.summary %}<p>{{ post.summary }}</p>{% endif %}
+    </header>
+    <div class="prose-content">
+      {{ post.html }}
+    </div>
+    <p><a href="{% url 'pages:blog-index' %}">← All development notes</a></p>
+  </article>
+{% endblock %}

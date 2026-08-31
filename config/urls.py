@@ -6,6 +6,7 @@ urlpatterns = [
     path("accounts/", include("accounts.urls")),
     path("accounts/", include("allauth.urls")),
     path("artifacts/", include("registry.urls_artifacts")),
+    path("benchmarks/", include("registry.urls_benchmarks")),
     path("circuits/", include("registry.urls_circuits")),
     path("decoders/", include("registry.urls_decoders")),
     path("machines/", include("registry.urls_machines")),
