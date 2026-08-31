@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}About and reference · Circuit Bench{% endblock %}
+
+{% block content %}
+  <article class="page-shell static-page">
+    <header class="page-heading">
+      <p class="eyebrow">About and reference</p>
+      <h1>{{ document.title }}</h1>
+      {% if document.summary %}<p>{{ document.summary }}</p>{% endif %}
+    </header>
+    <div class="prose-content">{{ document.html }}</div>
+    <section class="static-collection" aria-labelledby="static-collection-heading">
+      <h2 id="static-collection-heading">All reference pages</h2>
+      <p>Every version-controlled explanatory page and scientific definition currently published by Circuit Bench.</p>
+      {% include "components/reference_index.html" with reference_groups=reference_groups only %}
+    </section>
+  </article>
+{% endblock %}

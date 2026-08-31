@@ -19,7 +19,20 @@ from registry.explorer import (
     table_context,
     url_without,
 )
-from registry.models import BenchmarkRevision
+from registry.filter_grids import algorithm_grid as build_algorithm_grid
+from registry.filter_grids import circuit_grid as build_circuit_grid
+from registry.filter_grids import machine_grid as build_machine_grid
+from registry.models import BenchmarkRevision, Machine
+from registry.record_pickers import record_picker_context
+from registry.result_comparison import (
+    api_parameters_from_request,
+    result_comparison_context,
+)
+from registry.result_request import result_filter_state
+from registry.result_tables import (
+    RESULT_METRIC_COLUMNS,
+    result_cell_map,
+)
 from registry.services.benchmarks import (
     inherited_benchmark_description,
     public_benchmark_catalogue,
@@ -28,6 +41,9 @@ from registry.services.benchmarks import (
     public_benchmark_successor,
     summarise_attempts,
 )
+from registry.services.decoders import catalogue_algorithm_tags
+from registry.services.filter_options import public_circuit_filter_options
+from registry.services.results import public_result_catalogue
 
 BENCHMARK_COLUMNS = (
     ColumnSpec("name", "Benchmark"),
@@ -50,6 +66,22 @@ BENCHMARK_SORT_FIELDS = {
     "attempts": "published_attempt_count",
     "published": "published_at",
 }
+
+BENCHMARK_RESULT_COLUMNS = (
+    ColumnSpec("result", "Result UUID", default_visible=False),
+    ColumnSpec("decoder", "Decoder"),
+    ColumnSpec("version", "Version"),
+    ColumnSpec("algorithm_tags", "Algorithm tags", sortable=False),
+    ColumnSpec("circuit", "Circuit"),
+    ColumnSpec("noise_model", "Noise model"),
+    ColumnSpec("machine_class", "Machine type"),
+    ColumnSpec("machine", "Machine"),
+    ColumnSpec("shots", "Shots", numeric=True, default_direction="desc"),
+    *RESULT_METRIC_COLUMNS,
+    ColumnSpec("scores", "Evaluator scores", sortable=False),
+    ColumnSpec("reproduction", "Reproduction"),
+    ColumnSpec("published", "Published", default_direction="desc"),
+)
 
 
 def benchmark_list(request):
@@ -164,6 +196,54 @@ def benchmark_detail(request, slug):
     successor = public_benchmark_successor(benchmark)
     attempt_summaries = summarise_attempts(benchmark)
     public_item_count = len(benchmark.public_items)
+    filter_state = result_filter_state(request.GET)
+    filters = filter_state.service_arguments
+    noise_model_picker = record_picker_context(
+        "noise-models", filters["noise_model_slugs"]
+    )
+    filters["noise_model_slugs"] = tuple(
+        record["identifier"] for record in noise_model_picker["selected_records"]
+    )
+    filters["benchmark_slug"] = benchmark.slug
+    comparison = result_comparison_context(
+        request,
+        queryset=public_result_catalogue(**filters),
+        columns=BENCHMARK_RESULT_COLUMNS,
+        default_sort=(("decoder", "asc"), ("circuit", "asc")),
+        plot_id="benchmark-results-scatter",
+        point_context="benchmark",
+        api_parameters=api_parameters_from_request(
+            request.GET,
+            overrides=(("scope_benchmark", benchmark.slug),),
+        ),
+    )
+    detail_url = reverse("benchmarks:detail", args=[benchmark.slug])
+    result_rows = [
+        {
+            "cells": cells_for_visible_columns(
+                comparison["visible_column_keys"],
+                result_cell_map(result, filter_url=detail_url),
+            )
+        }
+        for result in comparison["results"]
+    ]
+    algorithm_tags = list(catalogue_algorithm_tags())
+    circuit_options = public_circuit_filter_options()
+    result_filters_active = bool(
+        filters["query"]
+        or filters["algorithm_tag_slugs"]
+        or filters["skeleton_preparation"]
+        or filters["decoder_priors_preparation"]
+        or filters["probability_output"]
+        or filters["code_tag_slugs"]
+        or filters["experiment_tag_slugs"]
+        or filters["noise_model_slugs"]
+        or filters["randomises_priors"]
+        or filters["is_css"]
+        or filters["machine_class"]
+        or any(value is not None for value in filter_state.parsed_ranges.values())
+        or comparison["scripted_query_active"]
+    )
 
     return render(
         request,
@@ -187,6 +267,43 @@ def benchmark_detail(request, slug):
             ),
             "attempt_summaries": attempt_summaries,
             "result_detail_base_url": _result_detail_base_url(),
+            "algorithm_filter_grid": build_algorithm_grid(
+                grid_id="benchmark-result-algorithm-filters",
+                picker_id="benchmark-result-algorithm-tags",
+                tags=algorithm_tags,
+                selected_tags=filters["algorithm_tag_slugs"],
+                tag_match=filters["algorithm_tag_match"],
+                skeleton=filters["skeleton_preparation"],
+                priors=filters["decoder_priors_preparation"],
+                probability=filters["probability_output"],
+                tag_name="algorithm_tag",
+                tag_match_name="algorithm_tag_match",
+                priors_name="decoder_priors",
+            ),
+            "circuit_filter_grid": build_circuit_grid(
+                grid_id="benchmark-result-circuit-filters",
+                code_tags=circuit_options["code_tags"],
+                selected_code_tags=filters["code_tag_slugs"],
+                code_tag_match=filters["code_tag_match"],
+                experiment_tags=circuit_options["experiment_tags"],
+                selected_experiment_tags=filters["experiment_tag_slugs"],
+                experiment_tag_match=filters["experiment_tag_match"],
+                noise_model_picker=noise_model_picker,
+                randomises_priors=filters["randomises_priors"],
+                is_css=filters["is_css"],
+                raw_values=filter_state.raw_ranges,
+                distributions=circuit_options["distributions"],
+                priors_name="circuit_priors",
+            ),
+            "machine_filter_grid": build_machine_grid(
+                grid_id="benchmark-result-machine-filters",
+                machine_classes=Machine.MachineClass.choices,
+                selected_machine_class=filters["machine_class"],
+            ),
+            "result_rows": result_rows,
+            "result_filters_active": result_filters_active,
+            "result_reset_url": detail_url,
+            **comparison,
         },
     )
 

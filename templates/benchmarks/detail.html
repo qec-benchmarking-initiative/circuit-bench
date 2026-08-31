@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ benchmark.name }} {{ benchmark.version }} · Circuit Bench{% endblock %}
 
@@ -107,5 +108,36 @@
         {% include "components/empty_state.html" with title="No published attempts" message="No published attempt currently resolves against this exact benchmark revision." only %}
       {% endfor %}
     </section>
+
+    <section class="record-related" aria-labelledby="benchmark-results-heading">
+      <h2 id="benchmark-results-heading">Exact constituent result comparison</h2>
+      <p>These are the individual published results referenced by attempts on this exact benchmark revision. The plot and table do not pool circuits or calculate an aggregate benchmark score.</p>
+      <form class="leaderboard-filter-form" method="get">
+        {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+        {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+        {% for name, value in plot_control_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+        {% include "components/result_query.html" with query_id="benchmark-result-odata" scripted_query_text=scripted_query_text last_valid_scripted_query=last_valid_scripted_query only %}
+        <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
+        {% include "components/filters/grid.html" with grid=algorithm_filter_grid only %}
+        {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
+        {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
+        <div class="leaderboard-filter-actions">
+          {% include "components/filters/query_actions.html" with show_reset=result_filters_active reset_url=result_reset_url reset_label="Reset filters" only %}
+        </div>
+      </form>
+      <div class="collection-results" aria-live="polite">
+        {% include "components/result_comparison.html" with result_plot=result_plot only %}
+        {% include "components/explorer_toolbar.html" with explorer_id="benchmark-results" %}
+        {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No constituent results match these filters and query." only %}
+      </div>
+    </section>
   </article>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/filter-grid.js' %}" defer></script>
+  <script src="{% static 'js/related-record-picker.js' %}" defer></script>
+  <script src="{% static 'js/filter-query.js' %}" defer></script>
+  <script src="{% static 'js/explorer.js' %}" defer></script>
+  <script src="{% static 'js/result-plot.js' %}" defer></script>
 {% endblock %}

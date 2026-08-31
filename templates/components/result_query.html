@@ -1,0 +1,10 @@
+<details class="scripted-query"{% if scripted_query_text %} open{% endif %}>
+  <summary>Scripted query (OData 4.01 subset)</summary>
+  <div class="scripted-query-input">
+    <label for="{{ query_id }}">Raw query options</label>
+    <textarea id="{{ query_id }}" name="odata" rows="2" spellcheck="false" placeholder="$filter=machine_class eq 'cpu'&amp;$orderby=score_ler_upper_95_at_5pct_acceptance_v0_1 asc">{{ scripted_query_text }}</textarea>
+    <input type="hidden" name="last_odata" value="{{ last_valid_scripted_query }}">
+    <button class="button-compact" type="submit">Run scripted query</button>
+    <a href="{% url 'pages:query-syntax' %}">Syntax and field reference</a>
+  </div>
+</details>

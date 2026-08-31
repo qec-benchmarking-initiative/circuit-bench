@@ -31,13 +31,30 @@
 
 {% block entity_related %}
   <h2>Published results using this machine</h2>
-  <p class="muted">Every result below refers to this exact machine record.</p>
+  <p class="muted">Every result below refers to this exact machine record. Filter by algorithm or circuit without changing that scope.</p>
+  <form class="leaderboard-filter-form" method="get">
+    {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+    {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+    {% for name, value in plot_control_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+    {% include "components/result_query.html" with query_id="machine-result-odata" scripted_query_text=scripted_query_text last_valid_scripted_query=last_valid_scripted_query only %}
+    <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
+    {% include "components/filters/grid.html" with grid=algorithm_filter_grid only %}
+    {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
+    <div class="leaderboard-filter-actions">
+      {% include "components/filters/query_actions.html" with show_reset=result_filters_active reset_url=result_reset_url reset_label="Reset filters" only %}
+    </div>
+  </form>
   <div class="collection-results" aria-live="polite">
+    {% include "components/result_comparison.html" with result_plot=result_plot only %}
     {% include "components/explorer_toolbar.html" with explorer_id="machine-results" %}
     {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No published results use this machine yet." only %}
   </div>
 {% endblock %}
 
 {% block extra_scripts %}
+  <script src="{% static 'js/filter-grid.js' %}" defer></script>
+  <script src="{% static 'js/related-record-picker.js' %}" defer></script>
+  <script src="{% static 'js/filter-query.js' %}" defer></script>
   <script src="{% static 'js/explorer.js' %}" defer></script>
+  <script src="{% static 'js/result-plot.js' %}" defer></script>
 {% endblock %}

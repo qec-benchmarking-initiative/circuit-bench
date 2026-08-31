@@ -26,6 +26,7 @@ String literals use single quotes. An apostrophe inside a string is doubled: `de
 Identity and provenance fields:
 
 - `id`, `decoder_name`, `decoder_slug`, and `decoder_version`
+- `skeleton_preparation`, `prior_preparation`, and `provides_failure_probability`
 - `circuit_name`, `circuit_slug`, `noise_model`, and `noise_model_slug`
 - `evaluator_version`, `machine_slug`, and `machine_class`
 - `reproduction_status` and `published_at`

@@ -1,4 +1,5 @@
 {% extends "layouts/collection.html" %}
+{% load static %}
 
 {% block title %}Results · Circuit Bench{% endblock %}
 {% block explorer_name %}Results{% endblock %}
@@ -10,16 +11,7 @@
     <button class="button-compact" type="submit">Search</button>
     {% if query or filters_active %}<a class="button-link" href="{% url 'results:list' %}">Clear</a>{% endif %}
   </div>
-  <details class="scripted-query"{% if scripted_query_text %} open{% endif %}>
-    <summary>Scripted query (OData 4.01 subset)</summary>
-    <div class="scripted-query-input">
-      <label for="result-odata">Raw query options</label>
-      <textarea id="result-odata" name="odata" rows="2" spellcheck="false" placeholder="$filter=machine_class eq 'cpu'&amp;$orderby=score_ler_upper_95_at_5pct_acceptance_v0_1 asc">{{ scripted_query_text }}</textarea>
-      <input type="hidden" name="last_odata" value="{{ last_valid_scripted_query }}">
-      <button class="button-compact" type="submit">Run scripted query</button>
-      <a href="{% url 'pages:query-syntax' %}">Syntax and field reference</a>
-    </div>
-  </details>
+  {% include "components/result_query.html" with query_id="result-odata" scripted_query_text=scripted_query_text last_valid_scripted_query=last_valid_scripted_query only %}
 {% endblock %}
 
 {% block explorer_status %}
@@ -40,10 +32,12 @@
   <nav class="result-format-links" aria-label="Machine-readable formats">
     Same population: <a href="{{ json_url }}">JSON</a> · <a href="{{ csv_url }}">CSV</a> · <a href="{% url 'results:api-schema' %}">field schema</a>
   </nav>
-  <details class="comparison-plot">
-    <summary>Plot this exact result population ({{ result_plot.plotted_count }}/{{ result_plot.total_count }} points)</summary>
-    {% include "components/result_plot.html" with plot=result_plot only %}
-  </details>
+  {% include "components/result_comparison.html" with result_plot=result_plot only %}
   {% include "components/explorer_toolbar.html" with explorer_id="results" %}
   {% include "components/data_table.html" with columns=table_columns rows=table_rows empty_message="No matching results. Try removing one or more filters." only %}
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ block.super }}
+  <script src="{% static 'js/result-plot.js' %}" defer></script>
 {% endblock %}

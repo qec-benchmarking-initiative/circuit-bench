@@ -2,18 +2,98 @@ from django.conf import settings
 from django.db import connection
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
+
+from registry.services.benchmarks import public_benchmark_catalogue
+from registry.services.circuits import circuit_catalogue, noise_model_catalogue
+from registry.services.decoders import public_decoder_catalogue
 
 from .content import (
     ContentError,
     blog_posts,
+    definition_documents,
     get_blog_post,
     get_definition,
     get_page,
+    static_pages,
 )
 
 
 def home(request):
-    return render(request, "pages/home.html")
+    return render(
+        request,
+        "pages/home.html",
+        {"reference_groups": _reference_groups()},
+    )
+
+
+def search(request):
+    query = request.GET.get("q", "").strip()
+    groups = []
+    if query:
+        groups = [
+            {
+                "title": "Circuits",
+                "items": [
+                    {
+                        "title": circuit.name,
+                        "detail": circuit.slug,
+                        "url": reverse("circuits:detail", args=[circuit.slug]),
+                    }
+                    for circuit in circuit_catalogue(query=query).order_by(
+                        "name", "slug"
+                    )[:12]
+                ],
+            },
+            {
+                "title": "Decoders",
+                "items": [
+                    {
+                        "title": f"{decoder.name} v{decoder.version}",
+                        "detail": decoder.slug,
+                        "url": reverse("decoders:detail", args=[decoder.slug]),
+                    }
+                    for decoder in public_decoder_catalogue(query=query).order_by(
+                        "name", "version", "slug"
+                    )[:12]
+                ],
+            },
+            {
+                "title": "Benchmarks",
+                "items": [
+                    {
+                        "title": f"{benchmark.name} v{benchmark.version}",
+                        "detail": benchmark.slug,
+                        "url": reverse("benchmarks:detail", args=[benchmark.slug]),
+                    }
+                    for benchmark in public_benchmark_catalogue(query=query).order_by(
+                        "name", "version", "slug"
+                    )[:12]
+                ],
+            },
+            {
+                "title": "Noise models",
+                "items": [
+                    {
+                        "title": noise_model.name,
+                        "detail": noise_model.slug,
+                        "url": reverse("noise-models:detail", args=[noise_model.slug]),
+                    }
+                    for noise_model in noise_model_catalogue(query=query).order_by(
+                        "name", "slug"
+                    )[:12]
+                ],
+            },
+        ]
+    return render(
+        request,
+        "pages/search.html",
+        {
+            "query": query,
+            "groups": groups,
+            "match_count": sum(len(group["items"]) for group in groups),
+        },
+    )
 
 
 def health(request):
@@ -24,11 +104,22 @@ def health(request):
 
 
 def about(request):
-    return _static_page(request, "about")
+    return render(
+        request,
+        "pages/about_index.html",
+        {
+            "document": get_page("about"),
+            "reference_groups": _reference_groups(),
+        },
+    )
 
 
 def query_syntax(request):
     return _static_page(request, "query-syntax")
+
+
+def static_reference_page(request, slug):
+    return _static_page(request, slug)
 
 
 def definition(request, record_type, version):
@@ -57,6 +148,52 @@ def _static_page(request, slug):
     except ContentError as error:
         raise Http404 from error
     return render(request, "pages/static_page.html", {"document": document})
+
+
+def _reference_groups():
+    general_pages = []
+    for document in static_pages():
+        if document.slug == "about":
+            url = reverse("pages:about")
+        elif document.slug == "query-syntax":
+            url = reverse("pages:query-syntax")
+        else:
+            url = reverse("pages:static-reference", args=[document.slug])
+        general_pages.append(
+            {
+                "title": document.title,
+                "summary": document.summary,
+                "url": url,
+            }
+        )
+    posts = [
+        {
+            "title": post.title,
+            "summary": post.summary,
+            "url": reverse("pages:blog-detail", args=[post.slug]),
+        }
+        for post in blog_posts()
+    ]
+    definitions = [
+        {
+            "title": document.title,
+            "summary": document.summary,
+            "url": reverse(
+                "pages:definition",
+                args=document.slug.rsplit("-", 1),
+            ),
+        }
+        for document in definition_documents()
+    ]
+    return [
+        {"title": "General reference", "items": general_pages},
+        {
+            "title": "Development notes",
+            "index_url": reverse("pages:blog-index"),
+            "items": posts,
+        },
+        {"title": "Versioned scientific definitions", "items": definitions},
+    ]
 
 
 def component_gallery(request):

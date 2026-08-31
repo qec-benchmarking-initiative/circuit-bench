@@ -29,11 +29,13 @@ from registry.filter_grids import (
 )
 from registry.models import DecoderVersion, Machine
 from registry.record_pickers import record_picker_context
+from registry.result_comparison import (
+    api_parameters_from_request,
+    result_comparison_context,
+)
 from registry.result_tables import (
     RESULT_METRIC_COLUMNS,
-    RESULT_METRIC_SORT_FIELDS,
     result_cell_map,
-    with_result_metrics,
 )
 from registry.services.decoders import (
     catalogue_algorithm_tags,
@@ -62,18 +64,6 @@ DECODER_RESULT_COLUMNS = (
     ColumnSpec("reproduction", "Reproduction"),
     ColumnSpec("published", "Published", default_direction="desc"),
 )
-
-DECODER_RESULT_SORT_FIELDS = {
-    "result": "id",
-    "circuit": "circuit_revision__name",
-    "noise_model": "circuit_revision__noise_model__name",
-    "machine_class": "machine__machine_class",
-    "machine": "machine__slug",
-    "shots": "shots_total",
-    **RESULT_METRIC_SORT_FIELDS,
-    "reproduction": "reproduction_status",
-    "published": "published_at",
-}
 
 
 class DecoderCatalogueView(ListView):
@@ -392,44 +382,56 @@ class DecoderDetailView(DetailView):
         parsed_ranges = {
             name: parse_nonnegative_int(value) for name, value in raw_ranges.items()
         }
-        sort_keys = parse_sort(
-            request.GET.get("sort", ""),
-            DECODER_RESULT_COLUMNS,
-            (("circuit", "asc"),),
-        )
-        results = list(
-            apply_sort(
-                with_result_metrics(
-                    public_result_catalogue(
-                        decoder=decoder,
-                        code_tag_slugs=code_tags,
-                        code_tag_match=code_tag_match,
-                        experiment_tag_slugs=experiment_tags,
-                        experiment_tag_match=experiment_tag_match,
-                        noise_model_slugs=noise_models,
-                        randomises_priors=randomises_priors,
-                        is_css=is_css,
-                        code_distance_min=parsed_ranges["code_d_min"],
-                        code_distance_max=parsed_ranges["code_d_max"],
-                        circuit_distance_min=parsed_ranges["circuit_d_min"],
-                        circuit_distance_max=parsed_ranges["circuit_d_max"],
-                        detector_min=parsed_ranges["detector_min"],
-                        detector_max=parsed_ranges["detector_max"],
-                        error_min=parsed_ranges["error_min"],
-                        error_max=parsed_ranges["error_max"],
-                        machine_class=machine_class,
-                    )
+        comparison = result_comparison_context(
+            request,
+            queryset=public_result_catalogue(
+                decoder=decoder,
+                code_tag_slugs=code_tags,
+                code_tag_match=code_tag_match,
+                experiment_tag_slugs=experiment_tags,
+                experiment_tag_match=experiment_tag_match,
+                noise_model_slugs=noise_models,
+                randomises_priors=randomises_priors,
+                is_css=is_css,
+                code_distance_min=parsed_ranges["code_d_min"],
+                code_distance_max=parsed_ranges["code_d_max"],
+                circuit_distance_min=parsed_ranges["circuit_d_min"],
+                circuit_distance_max=parsed_ranges["circuit_d_max"],
+                detector_min=parsed_ranges["detector_min"],
+                detector_max=parsed_ranges["detector_max"],
+                error_min=parsed_ranges["error_min"],
+                error_max=parsed_ranges["error_max"],
+                machine_class=machine_class,
+            ),
+            columns=DECODER_RESULT_COLUMNS,
+            default_sort=(("circuit", "asc"),),
+            plot_id="decoder-results-scatter",
+            point_context="decoder",
+            api_parameters=api_parameters_from_request(
+                request.GET,
+                overrides=(
+                    ("scope_decoder", decoder.slug),
+                    *(("code_tag", tag) for tag in code_tags),
+                    ("code_tag_match", code_tag_match if code_tags else ""),
+                    *(("experiment_tag", tag) for tag in experiment_tags),
+                    (
+                        "experiment_tag_match",
+                        experiment_tag_match if experiment_tags else "",
+                    ),
+                    *(("noise_model", slug) for slug in noise_models),
+                    ("circuit_priors", randomises_priors),
+                    ("css", is_css),
+                    *((name, value) for name, value in raw_ranges.items()),
+                    ("machine_class", machine_class),
                 ),
-                sort_keys,
-                DECODER_RESULT_SORT_FIELDS,
-            )
+            ),
         )
-        table = table_context(request, DECODER_RESULT_COLUMNS, sort_keys)
+        results = comparison["results"]
         detail_url = reverse("decoders:detail", args=[decoder.slug])
         rows = [
             {
                 "cells": cells_for_visible_columns(
-                    table["visible_column_keys"],
+                    comparison["visible_column_keys"],
                     result_cell_map(result, filter_url=detail_url),
                 )
             }
@@ -444,6 +446,7 @@ class DecoderDetailView(DetailView):
             or is_css
             or machine_class
             or any(value is not None for value in parsed_ranges.values())
+            or comparison["scripted_query_active"]
         )
         return {
             "circuit_filter_grid": build_circuit_grid(
@@ -465,14 +468,10 @@ class DecoderDetailView(DetailView):
                 machine_classes=Machine.MachineClass.choices,
                 selected_machine_class=machine_class,
             ),
-            "result_count": len(results),
             "result_rows": rows,
             "result_filters_active": filters_active,
             "result_reset_url": detail_url,
-            "reset_sort_url": url_without(request, "sort"),
-            "raw_sort": request.GET.get("sort", ""),
-            "raw_columns": request.GET.get("columns", ""),
-            **table,
+            **comparison,
         }
 
     def _selected(self, name: str) -> tuple[str, ...]:

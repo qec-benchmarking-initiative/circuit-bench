@@ -1,0 +1,15 @@
+<div class="reference-index">
+  {% for group in reference_groups %}
+    <section>
+      <h2>{{ group.title }}{% if group.index_url %} <a class="reference-index-all" href="{{ group.index_url }}">View index</a>{% endif %}</h2>
+      <ul>
+        {% for item in group.items %}
+          <li>
+            <a href="{{ item.url }}">{{ item.title }}</a>
+            {% if item.summary %}<span>{{ item.summary }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+</div>

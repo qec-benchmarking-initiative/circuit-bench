@@ -70,6 +70,24 @@ RESULT_FIELDS = (
     ResultField(
         "decoder_version", "Decoder version", "string", "decoder_version__version"
     ),
+    ResultField(
+        "skeleton_preparation",
+        "Circuit-skeleton preparation",
+        "string",
+        "decoder_version__circuit_skeleton_preparation",
+    ),
+    ResultField(
+        "prior_preparation",
+        "Circuit-prior preparation",
+        "string",
+        "decoder_version__circuit_priors_preparation",
+    ),
+    ResultField(
+        "provides_failure_probability",
+        "Failure-probability output",
+        "boolean",
+        "decoder_version__provides_failure_probability",
+    ),
     ResultField("circuit_name", "Circuit", "string", "circuit_revision__name"),
     ResultField("circuit_slug", "Circuit slug", "string", "circuit_revision__slug"),
     ResultField(

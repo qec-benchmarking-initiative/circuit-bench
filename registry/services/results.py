@@ -14,6 +14,10 @@ def public_result_catalogue(
     circuit: CircuitRevision | None = None,
     decoder: DecoderVersion | None = None,
     machine: Machine | None = None,
+    circuit_slug: str = "",
+    decoder_slug: str = "",
+    machine_slug: str = "",
+    benchmark_slug: str = "",
     algorithm_tag_slugs: Sequence[str] = (),
     algorithm_tag_match: str = "all",
     skeleton_preparation: str = "",
@@ -68,10 +72,23 @@ def public_result_catalogue(
     )
     if circuit is not None:
         results = results.filter(circuit_revision=circuit)
+    elif circuit_slug:
+        results = results.filter(circuit_revision__slug=circuit_slug)
     if decoder is not None:
         results = results.filter(decoder_version=decoder)
+    elif decoder_slug:
+        results = results.filter(decoder_version__slug=decoder_slug)
     if machine is not None:
         results = results.filter(machine=machine)
+    elif machine_slug:
+        results = results.filter(machine__slug=machine_slug)
+    if benchmark_slug:
+        results = results.filter(
+            benchmark_attempt_memberships__benchmark_attempt__benchmark_revision__slug=(
+                benchmark_slug
+            ),
+            benchmark_attempt_memberships__benchmark_attempt__state="published",
+        )
     if query:
         results = results.filter(
             Q(decoder_version__name__icontains=query)

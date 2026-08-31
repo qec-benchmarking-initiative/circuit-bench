@@ -84,6 +84,38 @@ def test_axes_must_be_whitelisted_numeric_result_record_fields():
     assert nonnumeric.value.code == "nonnumeric_axis"
 
 
+def test_each_axis_can_use_a_logarithmic_scale_with_numeric_ticks():
+    low = _result(1, 10, Decimal("0.01"))
+    high = _result(2, 1_000, Decimal("1"))
+
+    plot = build_result_scatter_plot([low, high], x_scale="log", y_scale="log")
+
+    assert plot["x_axis"]["scale"] == "log"
+    assert plot["y_axis"]["scale"] == "log"
+    assert len(plot["x_axis"]["ticks"]) == 5
+    assert len(plot["y_axis"]["ticks"]) == 5
+    assert all(tick["label"] for tick in plot["x_axis"]["ticks"])
+    assert Decimal(plot["points"][0]["x"]) < Decimal(plot["points"][1]["x"])
+
+
+def test_log_scale_omits_nonpositive_values_and_explains_why():
+    zero = _result(1, 0, Decimal("0.1"))
+    positive = _result(2, 10, Decimal("0.2"))
+
+    plot = build_result_scatter_plot([zero, positive], x_scale="log")
+
+    assert plot["plotted_count"] == 1
+    assert plot["log_omission_count"] == 1
+    assert "non-positive value" in plot["omitted_explanation"]
+
+
+def test_invalid_plot_scale_has_a_stable_error():
+    with pytest.raises(PlotDeclarationError) as caught:
+        build_result_scatter_plot([_result(1, 10, Decimal("0.1"))], x_scale="sqrt")
+
+    assert caught.value.code == "invalid_scale"
+
+
 def test_missing_metric_annotation_is_reported_without_querying():
     result = Result(
         id=UUID("00000000-0000-0000-0000-000000000001"),
@@ -124,6 +156,8 @@ def test_component_renders_accessible_svg_and_the_same_tabular_points():
     assert f'id="comparison-point-{missing.id}"' not in rendered
     assert rendered.count(f'data-result-id="{first.id}"') == 2
     assert "Tabular data for this plot (1 rows)" in rendered
+    assert "plot-tick-label" in rendered
+    assert "data-download-plot" in rendered
     assert "/definitions/result/0.1/#preparation-and-timing" in rendered
     assert "/definitions/result/0.1/#stored-scores" in rendered
     assert "2.5e7 ns" in rendered

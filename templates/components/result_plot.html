@@ -1,6 +1,7 @@
 <figure
   class="result-plot"
   id="{{ plot.id }}"
+  data-result-plot
   data-result-record-schema="{{ plot.schema_version }}"
   data-total-results="{{ plot.total_count }}"
   data-plotted-results="{{ plot.plotted_count }}"
@@ -8,95 +9,178 @@
   <figcaption id="{{ plot.id }}-caption">
     <strong>{{ plot.title }}</strong>
     <span>
-      {{ plot.plotted_count }} of {{ plot.total_count }} results plotted;
-      {{ plot.omitted_count }} omitted because at least one axis value is null.
+      {{ plot.plotted_count }} of {{ plot.total_count }} results plotted{% if plot.omitted_count %};
+      {{ plot.omitted_count }} omitted{% if plot.omitted_explanation %} ({{ plot.omitted_explanation }}){% endif %}{% endif %}.
     </span>
   </figcaption>
 
-  <svg
-    class="result-plot-svg"
-    viewBox="{{ plot.viewbox }}"
-    role="img"
-    aria-labelledby="{{ plot.id }}-svg-title {{ plot.id }}-svg-description"
-  >
-    <title id="{{ plot.id }}-svg-title">{{ plot.title }}</title>
-    <desc id="{{ plot.id }}-svg-description">{{ plot.description }} {{ plot.plotted_count }} of {{ plot.total_count }} results have both axis values.</desc>
+  <form class="result-plot-controls" method="get" action="{{ plot.action_url }}#{{ plot.id }}">
+    {% for name, value in plot.preserved_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+    <input type="hidden" name="plot_open" value="1">
+    <label>
+      <span>x-axis</span>
+      <select name="plot_x">
+        {% for option in plot.axis_options %}
+          <option value="{{ option.name }}"{% if option.name == plot.selected_x_field %} selected{% endif %}>{{ option.label }}{% if option.unit %} ({{ option.unit }}){% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>x-scale</span>
+      <select name="plot_x_scale">
+        <option value="linear"{% if plot.selected_x_scale == "linear" %} selected{% endif %}>Linear</option>
+        <option value="log"{% if plot.selected_x_scale == "log" %} selected{% endif %}>Logarithmic</option>
+      </select>
+    </label>
+    <label>
+      <span>y-axis</span>
+      <select name="plot_y">
+        {% for option in plot.axis_options %}
+          <option value="{{ option.name }}"{% if option.name == plot.selected_y_field %} selected{% endif %}>{{ option.label }}{% if option.unit %} ({{ option.unit }}){% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>y-scale</span>
+      <select name="plot_y_scale">
+        <option value="linear"{% if plot.selected_y_scale == "linear" %} selected{% endif %}>Linear</option>
+        <option value="log"{% if plot.selected_y_scale == "log" %} selected{% endif %}>Logarithmic</option>
+      </select>
+    </label>
+    <button class="button-compact" type="submit">Update plot</button>
+    <button class="button-compact" type="button" data-download-plot data-filename="{{ plot.download_filename }}">Download SVG</button>
+    {% if plot.configuration_error %}<span class="query-status-error" role="alert">{{ plot.configuration_error }}</span>{% endif %}
+  </form>
 
-    <line x1="{{ plot.plot_left }}" y1="{{ plot.plot_bottom }}" x2="{{ plot.plot_right }}" y2="{{ plot.plot_bottom }}" class="plot-axis" />
-    <line x1="{{ plot.plot_left }}" y1="{{ plot.plot_top }}" x2="{{ plot.plot_left }}" y2="{{ plot.plot_bottom }}" class="plot-axis" />
+  <div class="result-plot-graphic">
+    <svg
+      class="result-plot-svg"
+      viewBox="{{ plot.viewbox }}"
+      role="img"
+      aria-labelledby="{{ plot.id }}-svg-title {{ plot.id }}-svg-description"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title id="{{ plot.id }}-svg-title">{{ plot.title }}</title>
+      <desc id="{{ plot.id }}-svg-description">{{ plot.description }} {{ plot.plotted_count }} of {{ plot.total_count }} results have plottable axis values.</desc>
+      <style>
+        .plot-background{fill:#fffdf8}.plot-axis{stroke:#241e18;stroke-width:1.3}.plot-grid-line{stroke:#d8cdbf;stroke-width:.7}.plot-tick-label,.plot-axis-label{fill:#241e18;font-family:ui-monospace,monospace;font-size:12px}.plot-axis-label{font-weight:700}.result-plot-point{fill:#8a4f24;stroke:#fffdf8;stroke-width:1.5}
+      </style>
+      <rect class="plot-background" width="{{ plot.width }}" height="{{ plot.height }}" />
 
-    {% for tick in plot.x_axis.ticks %}
-      <line x1="{{ tick.position }}" y1="{{ plot.plot_bottom }}" x2="{{ tick.position }}" y2="{{ plot.plot_top }}" class="plot-grid-line" />
-      <text x="{{ tick.position }}" y="{{ plot.plot_bottom|add:'22' }}" text-anchor="middle">{{ tick.label }}</text>
-    {% endfor %}
-    {% for tick in plot.y_axis.ticks %}
-      <line x1="{{ plot.plot_left }}" y1="{{ tick.position }}" x2="{{ plot.plot_right }}" y2="{{ tick.position }}" class="plot-grid-line" />
-      <text x="{{ plot.plot_left|add:'-10' }}" y="{{ tick.position }}" dy="0.35em" text-anchor="end">{{ tick.label }}</text>
-    {% endfor %}
+      <line x1="{{ plot.plot_left }}" y1="{{ plot.plot_bottom }}" x2="{{ plot.plot_right }}" y2="{{ plot.plot_bottom }}" class="plot-axis" />
+      <line x1="{{ plot.plot_left }}" y1="{{ plot.plot_top }}" x2="{{ plot.plot_left }}" y2="{{ plot.plot_bottom }}" class="plot-axis" />
 
-    <text x="{{ plot.plot_centre_x }}" y="{{ plot.height|add:'-20' }}" text-anchor="middle" class="plot-axis-label">{{ plot.x_axis.label_with_unit }}</text>
-    <text x="20" y="{{ plot.plot_centre_y }}" text-anchor="middle" transform="rotate(-90 20 {{ plot.plot_centre_y }})" class="plot-axis-label">{{ plot.y_axis.label_with_unit }}</text>
+      {% for tick in plot.x_axis.ticks %}
+        <line x1="{{ tick.position }}" y1="{{ plot.plot_bottom }}" x2="{{ tick.position }}" y2="{{ plot.plot_top }}" class="plot-grid-line" />
+        <text x="{{ tick.position }}" y="{{ plot.plot_bottom|add:'22' }}" text-anchor="middle" class="plot-tick-label"><title>{{ tick.value }}</title>{{ tick.label }}</text>
+      {% endfor %}
+      {% for tick in plot.y_axis.ticks %}
+        <line x1="{{ plot.plot_left }}" y1="{{ tick.position }}" x2="{{ plot.plot_right }}" y2="{{ tick.position }}" class="plot-grid-line" />
+        <text x="{{ plot.plot_left|add:'-10' }}" y="{{ tick.position }}" dy="0.35em" text-anchor="end" class="plot-tick-label"><title>{{ tick.value }}</title>{{ tick.label }}</text>
+      {% endfor %}
 
-    {% for point in plot.points %}
-      <circle
-        id="{{ plot.id }}-point-{{ point.id }}"
-        data-result-id="{{ point.id }}"
-        cx="{{ point.x }}"
-        cy="{{ point.y }}"
-        r="4"
-        tabindex="0"
-        class="result-plot-point"
-      >
-        <title>{{ point.label }}: {{ plot.x_axis.label }} {{ point.x_display }}; {{ plot.y_axis.label }} {{ point.y_display }}</title>
-      </circle>
-    {% empty %}
-      <text x="{{ plot.plot_centre_x }}" y="{{ plot.plot_centre_y }}" text-anchor="middle">No results have both axis values.</text>
-    {% endfor %}
-  </svg>
+      <text x="{{ plot.plot_centre_x }}" y="{{ plot.height|add:'-20' }}" text-anchor="middle" class="plot-axis-label">{{ plot.x_axis.label_with_unit }} · {{ plot.x_axis.scale }}</text>
+      <text x="20" y="{{ plot.plot_centre_y }}" text-anchor="middle" transform="rotate(-90 20 {{ plot.plot_centre_y }})" class="plot-axis-label">{{ plot.y_axis.label_with_unit }} · {{ plot.y_axis.scale }}</text>
 
-  <dl class="result-plot-definitions">
-    <div>
-      <dt>x-axis</dt>
-      <dd>
-        <code>{{ plot.x_axis.field }}</code> — {{ plot.x_axis.label_with_unit }},
-        {{ plot.x_axis.scale }} scale{% if plot.x_axis.direction != "not_ranked" %}, {{ plot.x_axis.direction_label }}{% endif %}.
-        {% if plot.x_axis.definition %}<a href="{{ plot.x_axis.definition }}">Definition</a>{% endif %}
-      </dd>
-    </div>
-    <div>
-      <dt>y-axis</dt>
-      <dd>
-        <code>{{ plot.y_axis.field }}</code> — {{ plot.y_axis.label_with_unit }},
-        {{ plot.y_axis.scale }} scale{% if plot.y_axis.direction != "not_ranked" %}, {{ plot.y_axis.direction_label }}{% endif %}.
-        {% if plot.y_axis.definition %}<a href="{{ plot.y_axis.definition }}">Definition</a>{% endif %}
-      </dd>
-    </div>
-  </dl>
+      {% for point in plot.points %}
+        <circle
+          id="{{ plot.id }}-point-{{ point.id }}"
+          data-result-id="{{ point.id }}"
+          data-hover-label="{{ point.label }}"
+          data-summary-id="{{ plot.id }}-summary-{{ point.id }}"
+          cx="{{ point.x }}"
+          cy="{{ point.y }}"
+          r="4"
+          tabindex="0"
+          role="button"
+          aria-label="{{ point.label }}; {{ plot.x_axis.label }} {{ point.x_display }}; {{ plot.y_axis.label }} {{ point.y_display }}"
+          class="result-plot-point"
+        >
+          <title>{{ point.label }}: {{ plot.x_axis.label }} {{ point.x_display }}; {{ plot.y_axis.label }} {{ point.y_display }}</title>
+        </circle>
+      {% empty %}
+        <text x="{{ plot.plot_centre_x }}" y="{{ plot.plot_centre_y }}" text-anchor="middle" class="plot-tick-label">No results have plottable values on both axes.</text>
+      {% endfor %}
+    </svg>
+    <output class="result-plot-tooltip" data-plot-tooltip hidden></output>
+  </div>
 
-  <details class="result-plot-data">
-    <summary>Tabular data for this plot ({{ plot.plotted_count }} rows)</summary>
-    <div class="table-scroll">
-      <table class="data-table">
-        <caption>{{ plot.title }}; points with null axis values are omitted.</caption>
-        <thead>
-          <tr>
-            <th>Result UUID</th>
-            <th class="numeric">{{ plot.x_axis.label_with_unit }}</th>
-            <th class="numeric">{{ plot.y_axis.label_with_unit }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for point in plot.points %}
-            <tr data-result-id="{{ point.id }}">
-              <th scope="row"><code>{{ point.id }}</code></th>
-              <td class="numeric" data-raw-value="{{ point.x_value }}">{{ point.x_display }}</td>
-              <td class="numeric" data-raw-value="{{ point.y_value }}">{{ point.y_display }}</td>
+  <aside class="result-plot-sidebar" aria-label="Plot definitions and selected point">
+    <section class="result-plot-selection" aria-live="polite">
+      <h3>Selected point</h3>
+      <p data-plot-selection-empty>Select a point to inspect its exact result.</p>
+      {% for point in plot.points %}
+        <article id="{{ plot.id }}-summary-{{ point.id }}" data-plot-summary hidden>
+          <p><a href="{{ point.link_url }}">{{ point.link_label }} →</a></p>
+          <h4>{{ point.label }}</h4>
+          <dl class="compact-technical-metadata">
+            {% for item in point.summary_items %}
+              <div><dt>{{ item.label }}</dt><dd>{% if item.technical %}<code>{{ item.value|default:"—" }}</code>{% else %}{{ item.value|default:"—" }}{% endif %}</dd></div>
+            {% endfor %}
+            <div><dt>{{ plot.x_axis.label_with_unit }}</dt><dd>{{ point.x_display }}</dd></div>
+            <div><dt>{{ plot.y_axis.label_with_unit }}</dt><dd>{{ point.y_display }}</dd></div>
+          </dl>
+          {% if point.link_url != point.result_url %}<p><a href="{{ point.result_url }}">Open exact result record</a></p>{% endif %}
+        </article>
+      {% endfor %}
+    </section>
+
+    <dl class="result-plot-definitions">
+      <div>
+        <dt>x-axis</dt>
+        <dd>
+          <code>{{ plot.x_axis.field }}</code> — {{ plot.x_axis.label_with_unit }},
+          {{ plot.x_axis.scale }} scale{% if plot.x_axis.direction != "not_ranked" %}, {{ plot.x_axis.direction_label }}{% endif %}.
+          {% if plot.x_axis.definition %}<a href="{{ plot.x_axis.definition }}">Definition</a>{% endif %}
+        </dd>
+      </div>
+      <div>
+        <dt>y-axis</dt>
+        <dd>
+          <code>{{ plot.y_axis.field }}</code> — {{ plot.y_axis.label_with_unit }},
+          {{ plot.y_axis.scale }} scale{% if plot.y_axis.direction != "not_ranked" %}, {{ plot.y_axis.direction_label }}{% endif %}.
+          {% if plot.y_axis.definition %}<a href="{{ plot.y_axis.definition }}">Definition</a>{% endif %}
+        </dd>
+      </div>
+    </dl>
+  </aside>
+
+  <section class="result-plot-data">
+    <header class="result-plot-data-heading">
+      <strong>Plot data</strong>
+      <nav aria-label="Plot data formats">
+        <a href="{{ plot.json_url }}">JSON</a> ·
+        <a href="{{ plot.csv_url }}">CSV</a> ·
+        <a href="{{ plot.schema_url }}">field schema</a>
+      </nav>
+    </header>
+    <details>
+      <summary>Tabular data for this plot ({{ plot.plotted_count }} rows)</summary>
+      <div class="table-scroll">
+        <table class="data-table">
+          <caption>{{ plot.title }}; omitted points are reported above.</caption>
+          <thead>
+            <tr>
+              <th>Record</th>
+              <th>Result UUID</th>
+              <th class="numeric">{{ plot.x_axis.label_with_unit }}</th>
+              <th class="numeric">{{ plot.y_axis.label_with_unit }}</th>
             </tr>
-          {% empty %}
-            <tr><td colspan="3">No results have both axis values.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </details>
+          </thead>
+          <tbody>
+            {% for point in plot.points %}
+              <tr data-result-id="{{ point.id }}">
+                <td><a href="{{ point.link_url }}">{{ point.label }}</a></td>
+                <th scope="row"><a href="{{ point.result_url }}"><code>{{ point.id }}</code></a></th>
+                <td class="numeric" data-raw-value="{{ point.x_value }}">{{ point.x_display }}</td>
+                <td class="numeric" data-raw-value="{{ point.y_value }}">{{ point.y_display }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4">No results have plottable values on both axes.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
 </figure>

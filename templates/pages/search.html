@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Search · Circuit Bench{% endblock %}
+
+{% block content %}
+  <section class="page-shell registry-search" aria-labelledby="search-heading">
+    <header class="page-heading">
+      <p class="eyebrow">Registry search</p>
+      <h1 id="search-heading">Search Circuit Bench</h1>
+    </header>
+    <form class="site-search" role="search" action="{% url 'pages:search' %}" method="get">
+      <label for="registry-search">Decoder, circuit, benchmark or noise model</label>
+      <div class="input-row">
+        <input id="registry-search" name="q" type="search" value="{{ query }}" autofocus>
+        <button type="submit">Search</button>
+      </div>
+    </form>
+    {% if query %}
+      <p class="search-summary" role="status">{{ match_count }} match{{ match_count|pluralize:"es" }} for “{{ query }}”.</p>
+      <div class="search-groups">
+        {% for group in groups %}
+          <section>
+            <h2>{{ group.title }}</h2>
+            <ul>
+              {% for item in group.items %}
+                <li><a href="{{ item.url }}">{{ item.title }}</a><span>{{ item.detail }}</span></li>
+              {% empty %}
+                <li class="null-value">No matches.</li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="null-value">Enter a name or identifier to search the public registry.</p>
+    {% endif %}
+  </section>
+{% endblock %}

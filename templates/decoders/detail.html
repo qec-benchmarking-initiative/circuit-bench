@@ -106,6 +106,11 @@
   <h2>Results for this exact decoder version</h2>
   <p class="muted">Filter the exact published results by circuit or execution hardware.</p>
   <form class="leaderboard-filter-form" method="get">
+    {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+    {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+    {% for name, value in plot_control_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+    {% include "components/result_query.html" with query_id="decoder-result-odata" scripted_query_text=scripted_query_text last_valid_scripted_query=last_valid_scripted_query only %}
+    <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
     {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
     {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
     <div class="leaderboard-filter-actions">
@@ -113,6 +118,7 @@
     </div>
   </form>
   <div class="collection-results" aria-live="polite">
+    {% include "components/result_comparison.html" with result_plot=result_plot only %}
     {% include "components/explorer_toolbar.html" with explorer_id="decoder-results" %}
     {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No published results yet. This exact decoder version has no results matching the selected circuit and machine filters." only %}
   </div>
@@ -123,4 +129,5 @@
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
   <script src="{% static 'js/filter-query.js' %}" defer></script>
   <script src="{% static 'js/explorer.js' %}" defer></script>
+  <script src="{% static 'js/result-plot.js' %}" defer></script>
 {% endblock %}

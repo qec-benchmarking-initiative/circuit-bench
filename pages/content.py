@@ -48,6 +48,21 @@ def get_page(slug: str) -> MarkdownDocument:
     return load_document(CONTENT_ROOT / "pages" / filename, default_slug=slug)
 
 
+def static_pages() -> list[MarkdownDocument]:
+    """Return every version-controlled general reference page."""
+
+    return [get_page(slug) for slug in PAGE_FILES]
+
+
+def definition_documents() -> list[MarkdownDocument]:
+    """Return every currently rendered versioned scientific definition."""
+
+    documents = []
+    for path in sorted(DEFINITION_ROOT.glob("*/*.md")):
+        documents.append(get_definition(path.parent.name, path.stem))
+    return documents
+
+
 def get_definition(record_type: str, version: str) -> MarkdownDocument:
     if not re.fullmatch(r"[a-z][a-z0-9_]*", record_type) or not re.fullmatch(
         r"[0-9]+\.[0-9]+", version

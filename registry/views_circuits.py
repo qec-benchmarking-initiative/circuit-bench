@@ -31,11 +31,13 @@ from registry.filter_grids import (
 )
 from registry.models import Machine
 from registry.record_pickers import record_picker_context
+from registry.result_comparison import (
+    api_parameters_from_request,
+    result_comparison_context,
+)
 from registry.result_tables import (
     RESULT_METRIC_COLUMNS,
-    RESULT_METRIC_SORT_FIELDS,
     result_cell_map,
-    with_result_metrics,
 )
 from registry.services.circuits import (
     circuit_catalogue,
@@ -65,20 +67,6 @@ CIRCUIT_RESULT_COLUMNS = (
     ColumnSpec("reproduction", "Reproduction"),
     ColumnSpec("published", "Published", default_direction="desc"),
 )
-
-CIRCUIT_RESULT_SORT_FIELDS = {
-    "decoder": "decoder_version__name",
-    "version": "decoder_version__version",
-    "skeleton": "decoder_version__circuit_skeleton_preparation",
-    "priors": "decoder_version__circuit_priors_preparation",
-    "probability": "decoder_version__provides_failure_probability",
-    "machine_class": "machine__machine_class",
-    "machine": "machine__slug",
-    "shots": "shots_total",
-    **RESULT_METRIC_SORT_FIELDS,
-    "reproduction": "reproduction_status",
-    "published": "published_at",
-}
 
 
 def circuit_list(request):
@@ -370,29 +358,35 @@ def circuit_detail(request, slug):
     valid_machine_classes = {value for value, _label in Machine.MachineClass.choices}
     if machine_class not in {*valid_machine_classes, "unreported"}:
         machine_class = ""
-    sort_keys = parse_sort(
-        request.GET.get("sort", ""),
-        CIRCUIT_RESULT_COLUMNS,
-        (("decoder", "asc"),),
-    )
-    results = list(
-        apply_sort(
-            with_result_metrics(
-                circuit_result_leaderboard(
-                    circuit=circuit,
-                    tag_slugs=selected_tags,
-                    tag_match=tag_match,
-                    skeleton_preparation=skeleton_preparation,
-                    priors_preparation=priors_preparation,
-                    probability_output=probability_output,
-                    machine_class=machine_class,
-                )
+    comparison = result_comparison_context(
+        request,
+        queryset=circuit_result_leaderboard(
+            circuit=circuit,
+            tag_slugs=selected_tags,
+            tag_match=tag_match,
+            skeleton_preparation=skeleton_preparation,
+            priors_preparation=priors_preparation,
+            probability_output=probability_output,
+            machine_class=machine_class,
+        ),
+        columns=CIRCUIT_RESULT_COLUMNS,
+        default_sort=(("decoder", "asc"),),
+        plot_id="circuit-results-scatter",
+        point_context="circuit",
+        api_parameters=api_parameters_from_request(
+            request.GET,
+            overrides=(
+                ("scope_circuit", circuit.slug),
+                *(("algorithm_tag", tag) for tag in selected_tags),
+                ("algorithm_tag_match", tag_match if selected_tags else ""),
+                ("skeleton", skeleton_preparation),
+                ("decoder_priors", priors_preparation),
+                ("probability", probability_output),
+                ("machine_class", machine_class),
             ),
-            sort_keys,
-            CIRCUIT_RESULT_SORT_FIELDS,
-        )
+        ),
     )
-    table = table_context(request, CIRCUIT_RESULT_COLUMNS, sort_keys)
+    results = comparison["results"]
     result_rows = []
     for result in results:
         decoder = result.decoder_version
@@ -420,7 +414,7 @@ def circuit_detail(request, slug):
         result_rows.append(
             {
                 "cells": cells_for_visible_columns(
-                    table["visible_column_keys"], cell_by_key
+                    comparison["visible_column_keys"], cell_by_key
                 )
             }
         )
@@ -498,19 +492,16 @@ def circuit_detail(request, slug):
                 machine_classes=Machine.MachineClass.choices,
                 selected_machine_class=machine_class,
             ),
-            "result_count": len(results),
             "result_rows": result_rows,
-            "reset_sort_url": url_without(request, "sort"),
-            "raw_sort": request.GET.get("sort", ""),
-            "raw_columns": request.GET.get("columns", ""),
             "leaderboard_filters_active": bool(
                 selected_tags
                 or skeleton_preparation
                 or priors_preparation
                 or probability_output
                 or machine_class
+                or comparison["scripted_query_active"]
             ),
             "circuit_reset_url": detail_url,
-            **table,
+            **comparison,
         },
     )

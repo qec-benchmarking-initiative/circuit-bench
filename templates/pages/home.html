@@ -7,12 +7,17 @@
     <p class="eyebrow">Open QEC evidence</p>
     <h1>Quantum error-correction evidence, with its meaning attached.</h1>
     <p>Find circuits, decoders, benchmarks and exact result records.</p>
-    <form class="site-search" role="search" action="/search/" method="get">
+    <form class="site-search" role="search" action="{% url 'pages:search' %}" method="get">
       <label for="site-search">Search the registry</label>
       <div class="input-row">
         <input id="site-search" name="q" type="search" placeholder="Decoder, circuit, benchmark…">
         <button type="submit">Search</button>
       </div>
     </form>
+  </section>
+  <section class="page-shell home-reference" aria-labelledby="home-reference-heading">
+    <h2 id="home-reference-heading">Reference, methodology and development notes</h2>
+    <p>All explanatory material is collected here and under the <a href="{% url 'pages:about' %}">About</a> tab.</p>
+    {% include "components/reference_index.html" with reference_groups=reference_groups only %}
   </section>
 {% endblock %}
