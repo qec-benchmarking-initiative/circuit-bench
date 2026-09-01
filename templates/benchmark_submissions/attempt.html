@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Submit benchmark attempt · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading"><p class="eyebrow">Submission</p><h1>Submit benchmark attempt</h1></header>
+    <aside class="submission-policy-bar"><strong>Publication:</strong> An attempt groups already-published exact results. A complete, compatible attempt is published immediately and does not assign an aggregate score.</aside>
+    {% if not results_form %}
+      <form method="get" class="submission-vertical-form">{{ selection_form.as_div }}<div class="submission-actions"><button type="submit">Choose results</button></div></form>
+    {% else %}
+      <form method="post" class="submission-vertical-form">
+        {% csrf_token %}<input type="hidden" name="benchmark_revision" value="{{ selection_form.cleaned_data.benchmark_revision.id }}"><input type="hidden" name="decoder_version" value="{{ selection_form.cleaned_data.decoder_version.id }}">
+        {% if results_form.non_field_errors %}<div role="alert">{{ results_form.non_field_errors }}</div>{% endif %}
+        {% for field in results_form %}<div class="submission-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<div role="alert">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
+        <div class="submission-actions"><a class="button button-secondary" href="{% url 'benchmark-submissions:attempt-create' %}">Back</a><button type="submit">Publish attempt</button></div>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}
