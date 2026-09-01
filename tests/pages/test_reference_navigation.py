@@ -1,6 +1,9 @@
+import pytest
 from django.urls import reverse
 
 from pages.content import blog_posts, definition_documents, static_pages
+
+pytestmark = pytest.mark.django_db
 
 
 def test_home_and_about_index_link_every_static_document(client):

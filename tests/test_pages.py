@@ -1,14 +1,33 @@
+import re
+from collections import Counter
+from datetime import timedelta
+
 import pytest
 from django.urls import reverse
+from django.utils import timezone
+
+from pages.daily_quotes import (
+    UNIX_EPOCH_DATE,
+    load_daily_quotes,
+    quote_display_parts,
+    quote_for_date,
+    quote_window_for_date,
+)
 
 
-def test_home_page_uses_shared_shell(client):
+def test_home_page_uses_shared_shell(client, db):
     response = client.get(reverse("pages:home"))
     assert response.status_code == 200
     assert b"Circuit Bench" in response.content
     assert b"Search the registry" in response.content
     assert b'class="home-title-logo"' in response.content
+    assert b'class="home-daily-quote"' in response.content
     assert b"Copyright Stasiu Wolanski 2026" in response.content
+    assert response.context["daily_quote"] == quote_for_date(timezone.localdate())
+    assert (
+        f'href="{response.context["daily_quote"].source_url}"'
+        in response.content.decode()
+    )
     site_name = response.content.decode().split('<a class="site-name"', 1)[1]
     site_name = site_name.split("</a>", 1)[0]
     assert 'href="/"' in site_name
@@ -17,6 +36,79 @@ def test_home_page_uses_shared_shell(client):
     search_row = response.content.decode().split('<div class="input-row">', 1)[1]
     search_row = search_row.split("</div>", 1)[0]
     assert search_row.index('id="site-search"') < search_row.index(">Search</button>")
+
+
+def test_daily_quote_collection_is_large_and_well_formed():
+    quotes = load_daily_quotes()
+    words_by_source = Counter()
+    for item in quotes:
+        words_by_source[item.source_url] += len(item.quote_original.split())
+
+    assert len(quotes) >= 100
+    assert len(
+        {(item.quote_original, item.speaker, item.work) for item in quotes}
+    ) == len(quotes)
+    assert {item.speaker_kind for item in quotes} <= {"character", "person"}
+    assert all(len(item.quote_original.split()) <= 25 for item in quotes)
+    assert all(word_count <= 25 for word_count in words_by_source.values())
+
+
+def test_daily_quote_rotates_in_collection_order(monkeypatch):
+    quotes = load_daily_quotes()[:3]
+    monkeypatch.setattr("pages.daily_quotes.load_daily_quotes", lambda: quotes)
+
+    assert quote_for_date(UNIX_EPOCH_DATE) == quotes[0]
+    assert quote_for_date(UNIX_EPOCH_DATE + timedelta(days=1)) == quotes[1]
+    assert quote_for_date(UNIX_EPOCH_DATE, day_offset=2) == quotes[2]
+    assert quote_for_date(UNIX_EPOCH_DATE, day_offset=3) == quotes[0]
+
+
+def test_daily_quote_window_has_three_previous_and_five_following(monkeypatch):
+    quotes = load_daily_quotes()[:12]
+    monkeypatch.setattr("pages.daily_quotes.load_daily_quotes", lambda: quotes)
+
+    window = quote_window_for_date(UNIX_EPOCH_DATE, day_offset=4)
+
+    assert [item.relative_day for item in window] == list(range(-3, 6))
+    assert [item.collection_index for item in window] == list(range(1, 10))
+    assert [item.quote for item in window] == list(quotes[1:10])
+    assert [item.relative_label for item in window] == [
+        "-3 days",
+        "-2 days",
+        "-1 day",
+        "Current",
+        "+1 day",
+        "+2 days",
+        "+3 days",
+        "+4 days",
+        "+5 days",
+    ]
+
+
+def test_stored_quote_kets_receive_structured_display_parts():
+    parts = quote_display_parts("This isn't a democracy, mother|1010⟩r!")
+
+    assert "".join(part.text for part in parts) == (
+        "This isn't a democracy, mother|1010⟩r!"
+    )
+    assert [part.text for part in parts if part.is_ket] == ["|1010⟩"]
+
+
+def test_every_censored_quote_keeps_enough_of_each_word_to_be_legible():
+    censored_quotes = [
+        item
+        for item in load_daily_quotes()
+        if item.quote_display != item.quote_original
+    ]
+
+    assert censored_quotes
+    for item in censored_quotes:
+        matches = list(
+            re.finditer(r"([A-Za-z]*)\|[01]+⟩([A-Za-z]*)", item.quote_display)
+        )
+        assert matches
+        for match in matches:
+            assert len(match.group(1)) + len(match.group(2)) >= 2
 
 
 @pytest.mark.django_db

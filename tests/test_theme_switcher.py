@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.django_db
+
 
 def test_shared_shell_exposes_the_seven_theme_mouse_control(client):
     response = client.get("/")

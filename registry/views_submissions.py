@@ -6,12 +6,19 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.http import Http404, JsonResponse
+from django.db import transaction
+from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from pages.daily_quotes import (
+    UNIX_EPOCH_DATE,
+    load_daily_quotes,
+    quote_window_for_date,
+)
+from pages.models import DailyQuoteSchedule
 from registry.forms_submissions import (
     WithdrawalForm,
     submission_form,
@@ -570,6 +577,10 @@ def review_dashboard(request):
         ],
         controls["sort"],
     )
+    quote_day = timezone.localdate()
+    quote_offset = DailyQuoteSchedule.current_day_offset()
+    quote_window = quote_window_for_date(quote_day, quote_offset)
+    current_quote = next(item for item in quote_window if item.is_current)
     return render(
         request,
         "submissions/review.html",
@@ -583,8 +594,43 @@ def review_dashboard(request):
             "recently_withdrawn": _page_context(
                 request, recently_withdrawn, "withdrawn_page"
             ),
+            "daily_quote_schedule": {
+                "collection_size": len(load_daily_quotes()),
+                "current_index": current_quote.collection_index,
+                "day_offset": quote_offset,
+                "day_offset_label": f"{quote_offset:+d}",
+                "epoch_day": (quote_day - UNIX_EPOCH_DATE).days,
+                "window": quote_window,
+            },
         },
     )
+
+
+@login_required
+@require_POST
+def rotate_daily_quote(request):
+    if not request.user.is_admin:
+        raise PermissionDenied
+    try:
+        delta = int(request.POST.get("delta", ""))
+    except ValueError:
+        return HttpResponseBadRequest("Invalid quote rotation.")
+    if delta not in {-3, -2, -1, 1, 2, 3, 4, 5}:
+        return HttpResponseBadRequest("Invalid quote rotation.")
+
+    with transaction.atomic():
+        schedule, _created = (
+            DailyQuoteSchedule.objects.select_for_update().get_or_create(pk=1)
+        )
+        schedule.day_offset += delta
+        schedule.updated_by = request.user
+        schedule.save(update_fields=["day_offset", "updated_at", "updated_by"])
+
+    messages.success(
+        request,
+        f"Daily quotation offset changed to {schedule.day_offset:+d}.",
+    )
+    return redirect(f"{reverse('submissions:review')}#daily-quote-schedule")
 
 
 @login_required

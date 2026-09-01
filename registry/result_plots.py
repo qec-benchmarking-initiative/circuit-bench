@@ -230,6 +230,8 @@ def build_result_scatter_plot(
         "plot_right": _coordinate(VIEWBOX_WIDTH - PLOT_RIGHT),
         "plot_top": _coordinate(PLOT_TOP),
         "plot_bottom": _coordinate(VIEWBOX_HEIGHT - PLOT_BOTTOM),
+        "plot_width": _coordinate(PLOT_WIDTH),
+        "plot_height": _coordinate(PLOT_HEIGHT),
         "plot_centre_x": _coordinate(PLOT_LEFT + PLOT_WIDTH / 2),
         "plot_centre_y": _coordinate(PLOT_TOP + PLOT_HEIGHT / 2),
         "x_axis": x_axis,

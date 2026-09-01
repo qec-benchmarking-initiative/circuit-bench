@@ -39,6 +39,7 @@
 body {
   min-height: 100vh;
   margin: 0;
+  cursor: default;
   background: var(--paper);
   font-size: 15px;
   line-height: 1.42;
@@ -273,8 +274,35 @@ textarea {
   margin: 0;
 }
 
-.home-title + .site-search {
-  margin-top: 2rem;
+.home-daily-quote {
+  max-width: 46rem;
+  margin: 1.5rem 0 2rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--line-strong);
+}
+
+.home-daily-quote blockquote {
+  margin: 0;
+  font: italic 1.08rem/1.4 var(--font-reference);
+}
+
+.home-daily-quote-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.quote-ket {
+  white-space: nowrap;
+  font-family: var(--font-technical);
+  font-style: normal;
+  letter-spacing: 0.02em;
+}
+
+.home-daily-quote figcaption {
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font: 0.82rem/1.3 var(--font-interface);
 }
 
 .hero > p:not(.eyebrow),
@@ -1370,6 +1398,116 @@ code {
 
 .submission-table-section {
   margin-top: 1.35rem;
+}
+
+.daily-quote-schedule {
+  margin-bottom: 1rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+
+.daily-quote-schedule-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.48rem 0.58rem;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface-muted);
+}
+
+.daily-quote-schedule-header h2,
+.daily-quote-schedule-header p {
+  margin: 0;
+}
+
+.daily-quote-schedule-header h2 {
+  font-size: 1rem;
+}
+
+.daily-quote-schedule-header p {
+  color: var(--muted);
+  font: 0.72rem/1.3 var(--font-interface);
+}
+
+.daily-quote-offset output {
+  color: var(--ink);
+  font: 700 0.8rem/1 var(--font-technical);
+}
+
+.daily-quote-step-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.daily-quote-step-actions form,
+.daily-quote-schedule-window form {
+  margin: 0;
+}
+
+.daily-quote-step-actions button {
+  min-height: 1.75rem;
+  padding: 0.18rem 0.42rem;
+  border-radius: 0;
+  font-size: 0.74rem;
+}
+
+.daily-quote-schedule-window {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(7.5rem, 1fr));
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.daily-quote-schedule-window li {
+  display: grid;
+  grid-template-rows: auto minmax(4.5rem, 1fr) auto auto;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.4rem 0.45rem;
+  border-right: 1px solid var(--line);
+}
+
+.daily-quote-schedule-window li:last-child {
+  border-right: 0;
+}
+
+.daily-quote-schedule-window li.current {
+  box-shadow: inset 0 3px 0 var(--accent);
+  background: var(--accent-soft);
+}
+
+.daily-quote-relative {
+  color: var(--muted);
+  font: 700 0.68rem/1.2 var(--font-technical);
+}
+
+.daily-quote-schedule-window q {
+  font: italic 0.78rem/1.35 var(--font-reference);
+}
+
+.daily-quote-credit {
+  color: var(--muted);
+  font: 0.67rem/1.25 var(--font-interface);
+}
+
+.daily-quote-schedule .table-action,
+.daily-quote-current {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  font: 700 0.68rem/1.2 var(--font-interface);
+}
+
+.daily-quote-schedule .table-action {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
 }
 
 .submission-table-section > h2 {
@@ -3037,9 +3175,14 @@ code {
   -webkit-user-select: none;
 }
 
-.result-plot-svg.has-plot-crosshair,
-.result-plot-svg.has-plot-crosshair .result-plot-point:hover {
+.plot-interaction-surface,
+.result-plot-point {
   cursor: none;
+}
+
+.plot-interaction-surface {
+  fill: transparent;
+  pointer-events: all;
 }
 
 .result-plot-svg text {
@@ -3129,7 +3272,8 @@ code {
   vector-effect: non-scaling-stroke;
 }
 
-.result-plot-svg.is-plot-selecting {
+.result-plot-svg.is-plot-selecting .plot-interaction-surface,
+.result-plot-svg.is-plot-selecting .result-plot-point {
   cursor: crosshair;
 }
 

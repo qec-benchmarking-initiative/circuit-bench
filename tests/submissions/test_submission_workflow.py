@@ -9,6 +9,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Account
+from pages.daily_quotes import quote_for_date
+from pages.models import DailyQuoteSchedule
 from registry.demo import DEMO_ACCOUNT_ID, demo_id
 from registry.demo_submissions import (
     seed_submission_demo_data,
@@ -185,6 +187,47 @@ def test_review_dashboard_is_admin_only_and_header_link_is_conditional(
     assert "Rotated surface-code memory d=7" in content
     assert "Synthetic pending independent reproduction" not in content
     assert "Clear Matcher 0.2 on Rotated surface-code memory d=5" in content
+
+
+def test_admin_can_rotate_daily_quote_and_see_schedule_window(client, workflow_data):
+    admin = workflow_data["admin"]
+    schedule = DailyQuoteSchedule.objects.get(pk=1)
+    client.force_login(admin)
+
+    response = client.get(reverse("submissions:review"))
+    content = response.content.decode()
+    assert response.status_code == 200
+    assert "Daily quotation" in content
+    assert "Offset integer" in content
+    assert ">+0</output>" in content
+    assert content.count("Use this quote") == 8
+    assert "-3 days" in content
+    assert "+5 days" in content
+
+    response = client.post(
+        reverse("submissions:rotate-daily-quote"),
+        {"delta": "1"},
+    )
+    schedule.refresh_from_db()
+    assert response.status_code == 302
+    assert response.url == f"{reverse('submissions:review')}#daily-quote-schedule"
+    assert schedule.day_offset == 1
+    assert schedule.updated_by == admin
+
+    home = client.get(reverse("pages:home"))
+    assert home.context["daily_quote"] == quote_for_date(timezone.localdate(), 1)
+
+
+def test_daily_quote_rotation_rejects_non_admin_and_invalid_delta(
+    client, workflow_data
+):
+    rotate_url = reverse("submissions:rotate-daily-quote")
+    client.force_login(workflow_data["contributor"])
+    assert client.post(rotate_url, {"delta": "1"}).status_code == 403
+
+    client.force_login(workflow_data["admin"])
+    assert client.post(rotate_url, {"delta": "6"}).status_code == 400
+    assert client.post(rotate_url, {"delta": "nonsense"}).status_code == 400
 
 
 def test_pending_record_has_private_exact_view_for_owner_and_admin(

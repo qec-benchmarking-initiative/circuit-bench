@@ -124,7 +124,7 @@
     clone.querySelectorAll("[data-plot-export-exclude]").forEach((element) => {
       element.remove();
     });
-    clone.classList.remove("has-plot-crosshair", "is-plot-selecting");
+    clone.classList.remove("is-plot-selecting");
     clone.querySelectorAll(".result-plot-point").forEach((point) => {
       point.classList.remove("is-selected");
       point.removeAttribute("aria-pressed");
@@ -156,6 +156,10 @@
       svg.setAttribute("viewBox", `0 0 ${width} ${baseHeight}`);
       svg.dataset.currentPlotRight = String(plotRight);
       svg.querySelector("[data-plot-background]")?.setAttribute("width", String(width));
+      svg.querySelector("[data-plot-interaction-surface]")?.setAttribute(
+        "width",
+        String(plotRight - plotLeft),
+      );
       svg.querySelectorAll("[data-plot-extends-right]").forEach((element) => {
         element.setAttribute("x2", String(plotRight));
       });
@@ -291,11 +295,9 @@
       const plotRight = Number(svg.dataset.currentPlotRight)
         || (svg.viewBox.baseVal.width - rightMargin);
       if (x < plotLeft || x > plotRight || y < plotTop || y > plotBottom) {
-        svg.classList.remove("has-plot-crosshair");
         setSvgHidden(crosshair, true);
         return;
       }
-      svg.classList.add("has-plot-crosshair");
       vertical.setAttribute("x1", String(x));
       vertical.setAttribute("x2", String(x));
       vertical.setAttribute("y1", String(plotTop));
@@ -377,7 +379,6 @@
       );
     });
     svg.addEventListener("pointerleave", () => {
-      svg.classList.remove("has-plot-crosshair");
       setSvgHidden(crosshair, true);
     });
   }
