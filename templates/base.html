@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Circuit Bench{% endblock %}</title>
     <script src="{% static 'js/theme-switcher.js' %}"></script>
-    <link rel="stylesheet" href="{% static 'css/site.css' %}?v=0.1.20260901a">
+    <link rel="stylesheet" href="{% static 'css/site.css' %}?v=0.1.20260901b">
     <link rel="stylesheet" href="{% static 'css/themes.css' %}">
   </head>
   <body>
@@ -17,7 +17,10 @@
       </div>
     {% endif %}
     <header class="site-header">
-      <a class="site-name" href="{% url 'pages:home' %}">Circuit Bench</a>
+      <a class="site-name" href="{% url 'pages:home' %}">
+        <span class="site-name-logo" aria-hidden="true"></span>
+        <span>Circuit Bench</span>
+      </a>
       <nav aria-label="Primary navigation">
         <a href="/circuits/"{% if request.resolver_match.namespace == "circuits" %} class="active" aria-current="page"{% endif %}>Circuits</a>
         <a href="/decoders/"{% if request.resolver_match.namespace == "decoders" %} class="active" aria-current="page"{% endif %}>Decoders</a>

@@ -9,6 +9,11 @@ def test_home_page_uses_shared_shell(client):
     assert b"Search the registry" in response.content
     assert b'class="home-title-logo"' in response.content
     assert b"Copyright Stasiu Wolanski 2026" in response.content
+    site_name = response.content.decode().split('<a class="site-name"', 1)[1]
+    site_name = site_name.split("</a>", 1)[0]
+    assert 'href="/"' in site_name
+    assert 'class="site-name-logo"' in site_name
+    assert "Circuit Bench" in site_name
     search_row = response.content.decode().split('<div class="input-row">', 1)[1]
     search_row = search_row.split("</div>", 1)[0]
     assert search_row.index('id="site-search"') < search_row.index(">Search</button>")
