@@ -91,6 +91,28 @@ def noise_model_submit(request):
 
 
 @login_required
+@require_GET
+def noise_model_candidate(request, noise_model_id):
+    noise_model = get_object_or_404(
+        NoiseModel.objects.select_related(
+            "submitted_by", "schema_release", "supersedes_noise_model"
+        ),
+        id=noise_model_id,
+    )
+    if noise_model.submitted_by_id != request.user.id and not request.user.is_admin:
+        raise PermissionDenied
+    return render(
+        request,
+        "taxonomy/noise_model_candidate.html",
+        {
+            "noise_model": noise_model,
+            "can_approve": request.user.is_admin
+            and noise_model.state in {"pending_review", "pending_reapproval"},
+        },
+    )
+
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def custom_tag_preview(request, preview_id):
     preview = _preview_or_404(request, preview_id, "tag")

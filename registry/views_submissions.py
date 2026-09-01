@@ -51,8 +51,10 @@ from registry.services.submissions import (
 )
 from registry.submission_collections import (
     SORT_CHOICES,
+    collect_specialized_submission_rows,
     collect_submission_rows,
     normalise_collection_controls,
+    sort_submission_rows,
 )
 from registry.submission_form_layout import (
     ARTIFACT_FIELDS,
@@ -153,6 +155,7 @@ def _submission_editor(request, kind, *, operation, record=None):
     form_options = {
         "record": validation_record,
         "allow_withdrawn_lineage": allow_withdrawn_lineage,
+        "actor": request.user,
     }
     structured_form = submission_form(kind, initial=initial, **form_options)
     _lock_lineage_field(structured_form, kind, operation, record)
@@ -197,6 +200,7 @@ def _submission_editor(request, kind, *, operation, record=None):
                         payload,
                         record=validation_record,
                         allow_withdrawn_lineage=allow_withdrawn_lineage,
+                        actor=request.user,
                     )
                 except SubmissionValidationError as error:
                     structured_form.add_error(None, str(error))
@@ -226,6 +230,7 @@ def _submission_editor(request, kind, *, operation, record=None):
                         parsed,
                         record=validation_record,
                         allow_withdrawn_lineage=allow_withdrawn_lineage,
+                        actor=request.user,
                     )
                 except SubmissionValidationError as error:
                     json_error = str(error)
@@ -313,6 +318,7 @@ def submission_preview(request, preview_id):
                 preview["payload"],
                 record=record if operation == "edit" else None,
                 allow_withdrawn_lineage=reapproval,
+                actor=request.user,
             ),
             "payload_json": json.dumps(preview["payload"], indent=2, sort_keys=True),
             "operation": operation,
@@ -395,6 +401,20 @@ def profile(request):
         kind_filter=controls["kind"],
         sort=controls["sort"],
     )
+    pending = sort_submission_rows(
+        [
+            *pending,
+            *collect_specialized_submission_rows(
+                states=pending_states,
+                actor=request.user,
+                owner=request.user,
+                query=controls["query"],
+                kind_filter=controls["kind"],
+                sort=controls["sort"],
+            ),
+        ],
+        controls["sort"],
+    )
     published_sections = []
     for kind in ENABLED_SUBMISSION_KINDS:
         if controls["kind"] and controls["kind"] != kind.value:
@@ -422,6 +442,20 @@ def profile(request):
         kind_filter=controls["kind"],
         sort=controls["sort"],
     )
+    withdrawn = sort_submission_rows(
+        [
+            *withdrawn,
+            *collect_specialized_submission_rows(
+                states=["withdrawn"],
+                actor=request.user,
+                owner=request.user,
+                query=controls["query"],
+                kind_filter=controls["kind"],
+                sort=controls["sort"],
+            ),
+        ],
+        controls["sort"],
+    )
     rejected = collect_submission_rows(
         states=["rejected"],
         actor=request.user,
@@ -438,9 +472,7 @@ def profile(request):
             "sort_choices": SORT_CHOICES,
             "sort_links": _sort_links(request, controls["sort"]),
             "kind_choices": _kind_choices(),
-            "pending_state_choices": _pending_state_choices(
-                PROFILE_PENDING_STATES
-            ),
+            "pending_state_choices": _pending_state_choices(PROFILE_PENDING_STATES),
             "pending": _page_context(request, pending, "pending_page"),
             "published_sections": published_sections,
             "withdrawn": _page_context(request, withdrawn, "withdrawn_page"),
@@ -501,6 +533,20 @@ def review_dashboard(request):
         kind_filter=controls["kind"],
         sort=controls["sort"],
     )
+    pending = sort_submission_rows(
+        [
+            *pending,
+            *collect_specialized_submission_rows(
+                states=pending_states,
+                actor=request.user,
+                admin=True,
+                query=controls["query"],
+                kind_filter=controls["kind"],
+                sort=controls["sort"],
+            ),
+        ],
+        controls["sort"],
+    )
     recently_withdrawn = collect_submission_rows(
         states=["withdrawn"],
         actor=request.user,
@@ -508,6 +554,21 @@ def review_dashboard(request):
         kind_filter=controls["kind"],
         sort="-withdrawn",
         withdrawn_since=timezone.now() - timedelta(days=7),
+    )
+    recently_withdrawn = sort_submission_rows(
+        [
+            *recently_withdrawn,
+            *collect_specialized_submission_rows(
+                states=["withdrawn"],
+                actor=request.user,
+                admin=True,
+                query=controls["query"],
+                kind_filter=controls["kind"],
+                sort=controls["sort"],
+                withdrawn_since=timezone.now() - timedelta(days=7),
+            ),
+        ],
+        controls["sort"],
     )
     return render(
         request,
@@ -664,25 +725,32 @@ def _manageable_record(request, kind, record_id):
 
 
 def _force_lineage(kind, record, operation, payload):
-    locked = operation == "successor" or (
+    locked = operation in {"create", "successor"} or (
         operation == "edit" and candidate_lineage_is_locked(kind, record)
     )
     if not locked:
         return payload
     payload = dict(payload)
-    lineage_id = (
-        record.id
-        if operation == "successor"
-        else getattr(record, f"{LINEAGE_FIELD_BY_KIND[kind]}_id")
+    if operation == "create":
+        lineage_id = None
+    elif operation == "successor":
+        lineage_id = record.id
+    else:
+        lineage_id = getattr(record, f"{LINEAGE_FIELD_BY_KIND[kind]}_id")
+    payload[LINEAGE_FIELD_BY_KIND[kind]] = (
+        str(lineage_id) if lineage_id is not None else None
     )
-    payload[LINEAGE_FIELD_BY_KIND[kind]] = str(lineage_id)
     return payload
 
 
 def _lock_lineage_field(form, kind, operation, record):
-    if record is None:
-        return
-    if operation == "successor" or (
+    if operation == "create":
+        field = form.fields[LINEAGE_FIELD_BY_KIND[kind]]
+        field.disabled = True
+        field.help_text = (
+            "Use the Revise action on an existing record to create a successor."
+        )
+    elif operation == "successor" or (
         operation == "edit" and candidate_lineage_is_locked(kind, record)
     ):
         field = form.fields[LINEAGE_FIELD_BY_KIND[kind]]
@@ -758,6 +826,10 @@ def _kind_choices():
     return [
         (kind.value, get_submission_spec(kind).label.title())
         for kind in ENABLED_SUBMISSION_KINDS
+    ] + [
+        ("noise_model", "Noise model"),
+        ("benchmark", "Benchmark revision"),
+        ("benchmark_attempt", "Benchmark attempt"),
     ]
 
 
@@ -927,7 +999,6 @@ def _example_payload(kind: SubmissionKind) -> dict:
         "software_environment": None,
         "t_1000_ns": None,
         "supersedes_result": None,
-        "reproduction_status": "independent_reproduction",
         "scores": [
             {
                 "score_definition": str(definition.id) if definition else missing,

@@ -10,6 +10,11 @@ from accounts.models import Account
 from registry.models import Credit, CreditClaim, Result, ResultAuthorApprovalEvent
 from registry.models.attribution import CREDIT_SUBJECT_FIELDS
 from registry.models.common import LifecycleState
+from registry.services.result_verification import (
+    account_is_credited_on_decoder,
+    recompute_decoder_results_for_account,
+    recompute_result_reproduction_status,
+)
 
 
 class CreditError(Exception):
@@ -62,8 +67,10 @@ def searchable_name_credits(query: str) -> QuerySet[Credit]:
     query = query.strip()
     if not query:
         return Credit.objects.none()
-    return claimable_name_credits().filter(display_name__icontains=query).order_by(
-        "display_name", "position", "id"
+    return (
+        claimable_name_credits()
+        .filter(display_name__icontains=query)
+        .order_by("display_name", "position", "id")
     )
 
 
@@ -183,9 +190,7 @@ def review_credit_claim(
         claim.reviewed_by = reviewer
         claim.reviewed_at = reviewed_at
         claim.review_note = note
-        claim.save(
-            update_fields=["state", "reviewed_by", "reviewed_at", "review_note"]
-        )
+        claim.save(update_fields=["state", "reviewed_by", "reviewed_at", "review_note"])
         return claim
 
     subject = describe_credit_subject(name_credit)
@@ -193,10 +198,14 @@ def review_credit_claim(
     _lock_subject_credits(subject.field, subject.record)
     name_credit.refresh_from_db()
     _require_claimable_name_credit(name_credit)
-    if CreditClaim.objects.filter(
-        name_credit=name_credit,
-        state=CreditClaim.State.APPROVED,
-    ).exclude(id=claim.id).exists():
+    if (
+        CreditClaim.objects.filter(
+            name_credit=name_credit,
+            state=CreditClaim.State.APPROVED,
+        )
+        .exclude(id=claim.id)
+        .exists()
+    ):
         raise CreditStateError("That name credit has already been claimed.")
     if _account_credit_exists(subject.field, subject.record, claim.claimant_account):
         raise CreditStateError("The claimant is already credited on that exact record.")
@@ -229,6 +238,11 @@ def review_credit_claim(
             "created_account_credit",
         ]
     )
+    if subject.field == "decoder_version":
+        recompute_decoder_results_for_account(
+            decoder_version_id=subject.record.id,
+            account_id=claim.claimant_account_id,
+        )
     return claim
 
 
@@ -243,11 +257,10 @@ def current_result_author_approval(
 
 
 def is_exact_decoder_author(account: Account, result: Result) -> bool:
-    return Credit.objects.filter(
-        decoder_version=result.decoder_version,
-        account=account,
-        hidden_at__isnull=True,
-    ).exists()
+    return account_is_credited_on_decoder(
+        account_id=account.id,
+        decoder_version_id=result.decoder_version_id,
+    )
 
 
 @transaction.atomic
@@ -281,15 +294,18 @@ def set_result_author_approval(
     )
     current = current_result_author_approval(result, account)
     if current is not None and current.action == action:
+        recompute_result_reproduction_status(result)
         return current
     if not approve and current is None:
         raise CreditStateError("There is no author approval to revoke.")
-    return ResultAuthorApprovalEvent.objects.create(
+    event = ResultAuthorApprovalEvent.objects.create(
         result=result,
         account=account,
         action=action,
         note=note.strip() or None,
     )
+    recompute_result_reproduction_status(result)
+    return event
 
 
 def _credits_with_subjects(*, for_update: bool = False) -> QuerySet[Credit]:

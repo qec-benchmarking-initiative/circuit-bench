@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Credit claims to review · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading"><h1>Credit claims to review</h1></header>
+    <div class="table-scroll" tabindex="0" aria-label="Credit claims to review">
+      <table class="data-table">
+        <thead><tr><th>Credited name</th><th>Claimant</th><th>Scientific record</th><th>Submitted</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.claim.name_credit.display_name }}</td>
+              <td>{{ row.claim.claimant_account.display_name }}</td>
+              <td>{{ row.subject.kind }} · {{ row.subject.label }}</td>
+              <td>{{ row.claim.created_at }}</td>
+              <td><a class="table-action" href="{% url 'credits:claim-review' claim_id=row.claim.id %}">Review</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="table-empty">There are no credit claims waiting for your review.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

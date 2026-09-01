@@ -8,7 +8,6 @@ from uuid import UUID
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-from django.utils import timezone
 
 from accounts.models import Account
 from registry.models import (
@@ -24,10 +23,11 @@ from registry.models import (
     SchemaRelease,
 )
 from registry.models.common import REVIEW_QUEUE_STATES
-from registry.services.artifacts import store_artifact_chunks, verify_artifact
+from registry.services.artifacts import open_verified_artifact, store_artifact_chunks
 from registry.services.histories import (
     append_history_event,
     history_for_new_record,
+    latest_snapshot_event,
     submission_snapshot,
 )
 
@@ -114,6 +114,10 @@ def create_benchmark_submission(
 
     previous = _previous_revision(payload["previous_revision"])
     if previous is not None:
+        if previous.submitted_by_id != submitter.id and not submitter.is_admin:
+            raise BenchmarkPermissionError(
+                "Only the uploader or an administrator may revise this benchmark."
+            )
         try:
             previous.next_revision
         except ObjectDoesNotExist:
@@ -122,8 +126,15 @@ def create_benchmark_submission(
             raise BenchmarkStateError(
                 "That benchmark revision already has an exact successor."
             )
+        if BenchmarkRevision.objects.filter(
+            history_id=previous.history_id,
+            version=payload["version"],
+        ).exists():
+            raise BenchmarkValidationError(
+                "That version label is already used in this benchmark history."
+            )
 
-    items = _manifest_items(payload["items"])
+    items = _manifest_items(payload["items"], lock=True)
     release = _frozen_benchmark_schema()
     state = (
         "pending_reapproval"
@@ -229,6 +240,7 @@ def approve_benchmark_submission(
         action=ModerationEvent.Action.APPROVED,
         note="Approved the benchmark revision after manifest revalidation.",
         details=details,
+        caused_by=latest_snapshot_event("benchmark", benchmark),
     )
     publication = append_history_event(
         kind="benchmark",
@@ -269,8 +281,14 @@ def promote_benchmark_official(
         raise BenchmarkStateError("Benchmark revision not found.") from error
     if benchmark.state != "published":
         raise BenchmarkStateError("Only a published benchmark can become official.")
-    if benchmark.recognition_status == BenchmarkRevision.RecognitionStatus.OFFICIAL:
-        raise BenchmarkStateError("This benchmark revision is already official.")
+    if (
+        benchmark.recognition_status
+        != BenchmarkRevision.RecognitionStatus.ADMIN_APPROVED
+    ):
+        raise BenchmarkStateError(
+            "Only an administrator-approved benchmark can become official."
+        )
+    previous_status = benchmark.recognition_status
     benchmark.recognition_status = BenchmarkRevision.RecognitionStatus.OFFICIAL
     benchmark.save(update_fields=["recognition_status"])
     append_history_event(
@@ -279,7 +297,7 @@ def promote_benchmark_official(
         actor=reviewer,
         action=ModerationEvent.Action.PROMOTED_OFFICIAL,
         note=note,
-        details={"policy_version": "0.1", "previous_status": "admin_approved"},
+        details={"policy_version": "0.1", "previous_status": previous_status},
     )
     return benchmark
 
@@ -293,19 +311,32 @@ def create_benchmark_attempt(
     submitter: Account,
     description: str = "",
 ) -> BenchmarkAttempt:
-    """Publish a grouping of already-published compatible exact results."""
+    """Create an immutable grouping for administrator review."""
 
     if not submitter.is_active:
         raise BenchmarkPermissionError("Inactive accounts cannot submit attempts.")
     benchmark = BenchmarkRevision.objects.select_for_update().get(id=benchmark.id)
-    decoder = DecoderVersion.objects.get(id=decoder.id)
+    decoder = DecoderVersion.objects.select_for_update().get(id=decoder.id)
     if benchmark.state != "published":
         raise BenchmarkStateError("The benchmark revision must be published.")
     if decoder.state != "published":
         raise BenchmarkStateError("The decoder version must be published.")
     items = list(
-        benchmark.items.select_related("circuit_revision").order_by("position")
+        benchmark.items.select_for_update()
+        .select_related("circuit_revision")
+        .order_by("position")
     )
+    circuits = {
+        circuit.id: circuit
+        for circuit in CircuitRevision.objects.select_for_update()
+        .filter(id__in=[item.circuit_revision_id for item in items])
+        .order_by("id")
+    }
+    if any(circuits[item.circuit_revision_id].state != "published" for item in items):
+        raise BenchmarkValidationError(
+            "Every benchmark circuit must remain published when an attempt is "
+            "submitted."
+        )
     manifest_ids = {str(item.circuit_revision_id) for item in items}
     unexpected = set(result_ids_by_circuit) - manifest_ids
     if unexpected:
@@ -326,7 +357,9 @@ def create_benchmark_attempt(
             continue
         try:
             result_id = UUID(str(raw_result_id))
-            result = Result.objects.get(id=result_id, state="published")
+            result = Result.objects.select_for_update().get(
+                id=result_id, state="published"
+            )
         except (ValueError, Result.DoesNotExist) as error:
             raise BenchmarkValidationError(
                 f"Manifest position {item.position} does not name a published result."
@@ -346,14 +379,15 @@ def create_benchmark_attempt(
         seen_results.add(result.id)
         memberships.append((item.circuit_revision, result))
 
-    published_at = timezone.now()
+    history = history_for_new_record("benchmark_attempt")
     attempt = BenchmarkAttempt.objects.create(
+        history=history,
         benchmark_revision=benchmark,
         decoder_version=decoder,
         submitted_by=submitter,
         description=_nullable_text(description),
-        state="published",
-        published_at=published_at,
+        state="pending_review",
+        published_at=None,
     )
     BenchmarkAttemptResult.objects.bulk_create(
         [
@@ -365,10 +399,152 @@ def create_benchmark_attempt(
             for circuit, result in memberships
         ]
     )
+    append_history_event(
+        kind="benchmark_attempt",
+        record=attempt,
+        actor=submitter,
+        action=ModerationEvent.Action.SUBMITTED,
+        note="Submitted a benchmark attempt for administrator review.",
+        details={
+            "policy_version": "0.1",
+            "approval_route": "admin_review",
+            "projected_state": "pending_review",
+        },
+        payload_snapshot=submission_snapshot(
+            "benchmark_attempt",
+            {
+                "benchmark_revision": str(benchmark.id),
+                "decoder_version": str(decoder.id),
+                "description": attempt.description,
+                "results": [
+                    {
+                        "circuit_revision": str(circuit.id),
+                        "result": str(result.id),
+                    }
+                    for circuit, result in memberships
+                ],
+            },
+        ),
+    )
     return attempt
 
 
-def _manifest_items(raw_items) -> tuple[ManifestItem, ...]:
+@transaction.atomic
+def approve_benchmark_attempt(attempt_id, *, reviewer: Account) -> BenchmarkAttempt:
+    """Revalidate and publish one exact benchmark-attempt grouping."""
+
+    _require_admin(reviewer)
+    try:
+        attempt = (
+            BenchmarkAttempt.objects.select_for_update()
+            .select_related("benchmark_revision", "decoder_version")
+            .get(id=attempt_id)
+        )
+    except BenchmarkAttempt.DoesNotExist as error:
+        raise BenchmarkStateError("Benchmark attempt not found.") from error
+    if attempt.state not in REVIEW_QUEUE_STATES:
+        raise BenchmarkStateError("Only waiting benchmark attempts can be approved.")
+    _validate_stored_attempt(attempt)
+    details = {
+        "policy_version": "0.1",
+        "approval_route": "admin_review",
+        "approved_by": str(reviewer.id),
+        "approved_by_name": reviewer.display_name,
+        "previous_state": attempt.state,
+    }
+    approval = append_history_event(
+        kind="benchmark_attempt",
+        record=attempt,
+        actor=reviewer,
+        action=ModerationEvent.Action.APPROVED,
+        note="Approved the benchmark attempt after publication-time revalidation.",
+        details=details,
+        caused_by=latest_snapshot_event("benchmark_attempt", attempt),
+    )
+    publication = append_history_event(
+        kind="benchmark_attempt",
+        record=attempt,
+        actor=reviewer,
+        action=ModerationEvent.Action.PUBLISHED,
+        note="Published the administrator-approved benchmark attempt.",
+        details=details,
+        caused_by=approval,
+    )
+    attempt.state = "published"
+    attempt.published_at = publication.occurred_at
+    attempt.withdrawn_at = None
+    attempt.full_clean()
+    attempt.save(update_fields=["state", "published_at", "withdrawn_at"])
+    return attempt
+
+
+def _validate_stored_attempt(attempt: BenchmarkAttempt) -> None:
+    benchmark = BenchmarkRevision.objects.select_for_update().get(
+        id=attempt.benchmark_revision_id
+    )
+    decoder = DecoderVersion.objects.select_for_update().get(
+        id=attempt.decoder_version_id
+    )
+    if benchmark.state != "published":
+        raise BenchmarkStateError("The benchmark revision is no longer published.")
+    if decoder.state != "published":
+        raise BenchmarkStateError("The decoder version is no longer published.")
+
+    items = list(benchmark.items.select_for_update().order_by("position"))
+    memberships = list(
+        attempt.result_memberships.select_for_update().order_by("circuit_revision_id")
+    )
+    circuits = {
+        circuit.id: circuit
+        for circuit in CircuitRevision.objects.select_for_update()
+        .filter(id__in=[item.circuit_revision_id for item in items])
+        .order_by("id")
+    }
+    if any(circuits[item.circuit_revision_id].state != "published" for item in items):
+        raise BenchmarkValidationError(
+            "Every benchmark circuit must remain published at attempt approval."
+        )
+    result_ids = [item.result_id for item in memberships]
+    results = {
+        result.id: result
+        for result in Result.objects.select_for_update()
+        .filter(id__in=result_ids)
+        .order_by("id")
+    }
+    by_circuit = {item.circuit_revision_id: item for item in memberships}
+    if len(by_circuit) != len(memberships):
+        raise BenchmarkValidationError(
+            "A benchmark attempt contains duplicate circuit memberships."
+        )
+    manifest_ids = {item.circuit_revision_id for item in items}
+    if set(by_circuit) - manifest_ids:
+        raise BenchmarkValidationError(
+            "A benchmark attempt contains a circuit outside its manifest."
+        )
+    for item in items:
+        membership = by_circuit.get(item.circuit_revision_id)
+        if membership is None:
+            if item.is_required:
+                raise BenchmarkValidationError(
+                    f"Required manifest position {item.position} has no result."
+                )
+            continue
+        result = results[membership.result_id]
+        if result.state != "published":
+            raise BenchmarkValidationError(
+                f"Manifest position {item.position} no longer names a published result."
+            )
+        if result.decoder_version_id != attempt.decoder_version_id:
+            raise BenchmarkValidationError(
+                f"Manifest position {item.position} uses a different decoder."
+            )
+        if result.circuit_revision_id != item.circuit_revision_id:
+            raise BenchmarkValidationError(
+                f"Manifest position {item.position} uses a different circuit."
+            )
+
+
+def _manifest_items(raw_items, *, lock=False) -> tuple[ManifestItem, ...]:
     if not isinstance(raw_items, list) or not raw_items:
         raise BenchmarkValidationError("Select at least one circuit revision.")
     seen = set()
@@ -380,7 +556,10 @@ def _manifest_items(raw_items) -> tuple[ManifestItem, ...]:
             )
         try:
             circuit_id = UUID(str(raw["circuit_revision"]))
-            circuit = CircuitRevision.objects.get(id=circuit_id, state="published")
+            circuits = CircuitRevision.objects
+            if lock:
+                circuits = circuits.select_for_update()
+            circuit = circuits.get(id=circuit_id, state="published")
         except (KeyError, ValueError, CircuitRevision.DoesNotExist) as error:
             raise BenchmarkValidationError(
                 f"Manifest position {position} must name a published circuit revision."
@@ -444,20 +623,66 @@ def _manifest_bytes(payload: dict) -> bytes:
 
 
 def _validate_stored_manifest(benchmark: BenchmarkRevision) -> None:
-    verify_artifact(benchmark.manifest_artifact)
-    items = list(
-        benchmark.items.select_related("circuit_revision").order_by("position")
-    )
+    items = list(benchmark.items.select_for_update().order_by("position"))
     if not items or not any(item.is_required for item in items):
         raise BenchmarkValidationError(
             "A benchmark needs at least one required manifest circuit."
         )
     if [item.position for item in items] != list(range(1, len(items) + 1)):
         raise BenchmarkValidationError("Manifest positions must be continuous from 1.")
-    if any(item.circuit_revision.state != "published" for item in items):
+    circuits = {
+        circuit.id: circuit
+        for circuit in CircuitRevision.objects.select_for_update()
+        .filter(id__in=[item.circuit_revision_id for item in items])
+        .order_by("id")
+    }
+    if any(circuits[item.circuit_revision_id].state != "published" for item in items):
         raise BenchmarkValidationError(
             "Every manifest circuit must still be published at approval."
         )
+    expected = _manifest_bytes(
+        {
+            "slug": benchmark.slug,
+            "version": benchmark.version,
+            "items": [
+                {
+                    "circuit_revision": str(item.circuit_revision_id),
+                    "required": item.is_required,
+                }
+                for item in items
+            ],
+        }
+    )
+    stored_file, _verification = open_verified_artifact(benchmark.manifest_artifact)
+    try:
+        stored = stored_file.read()
+    finally:
+        stored_file.close()
+    try:
+        json.loads(stored.decode("utf-8"), object_pairs_hook=_unique_json_object)
+    except (
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        BenchmarkValidationError,
+    ) as error:
+        raise BenchmarkValidationError(
+            "The stored benchmark manifest is not valid canonical JSON."
+        ) from error
+    if stored != expected:
+        raise BenchmarkValidationError(
+            "The stored benchmark manifest does not exactly match its ordered rows."
+        )
+
+
+def _unique_json_object(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise BenchmarkValidationError(
+                f"The stored benchmark manifest repeats key {key!r}."
+            )
+        value[key] = item
+    return value
 
 
 def _require_admin(account: Account) -> None:

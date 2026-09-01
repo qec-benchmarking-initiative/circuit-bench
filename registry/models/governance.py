@@ -11,6 +11,7 @@ MODERATION_SUBJECT_FIELDS = (
     "result",
     "tag",
     "benchmark_revision",
+    "benchmark_attempt",
     "evaluator_release",
 )
 
@@ -24,6 +25,7 @@ class RecordHistory(UUIDModel):
         RESULT = "result", "Result"
         TAG = "tag", "Tag"
         BENCHMARK = "benchmark", "Benchmark revision"
+        BENCHMARK_ATTEMPT = "benchmark_attempt", "Benchmark attempt"
         EVALUATOR = "evaluator", "Evaluator release"
 
     record_kind = models.CharField(max_length=30, choices=RecordKind)
@@ -42,6 +44,7 @@ class RecordHistory(UUIDModel):
                         "result",
                         "tag",
                         "benchmark",
+                        "benchmark_attempt",
                         "evaluator",
                     ]
                 ),
@@ -141,6 +144,13 @@ class ModerationEvent(UUIDModel):
     )
     benchmark_revision = models.ForeignKey(
         "registry.BenchmarkRevision",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="moderation_events",
+    )
+    benchmark_attempt = models.ForeignKey(
+        "registry.BenchmarkAttempt",
         null=True,
         blank=True,
         on_delete=models.PROTECT,

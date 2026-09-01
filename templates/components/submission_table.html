@@ -30,7 +30,7 @@
           {% if allow_review %}
             <td>
               {% if row.can_approve %}
-                <form method="post" action="{% url 'submissions:approve' kind=row.kind record_id=row.id %}">
+                <form method="post" action="{{ row.approve_url }}">
                   {% csrf_token %}<button class="table-action" type="submit">Approve and publish</button>
                 </form>
                 {% for action in row.review_actions %}{% if not forloop.first %} · {% endif %}<a class="table-action{% if action.danger %} table-action-danger{% endif %}" href="{{ action.url }}">{{ action.label }}</a>{% endfor %}

@@ -282,8 +282,10 @@ def get_picker_spec(key: str) -> RecordPickerSpec:
         raise LookupError(key) from error
 
 
-def search_picker_records(spec: RecordPickerSpec, query: str) -> QuerySet:
-    records = spec.public_queryset()
+def search_picker_records(
+    spec: RecordPickerSpec, query: str, *, records: QuerySet | None = None
+) -> QuerySet:
+    records = records if records is not None else spec.public_queryset()
     if not query:
         return records
     predicate = Q()

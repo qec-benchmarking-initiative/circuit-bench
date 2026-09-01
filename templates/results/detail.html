@@ -155,4 +155,7 @@
     {% if result.withdrawn_at %}<div><dt>Withdrawn</dt><dd>{{ result.withdrawn_at }}</dd></div>{% endif %}
     {% if result.supersedes_result %}<div><dt>Supersedes result</dt><dd><code>{{ result.supersedes_result_id }}</code></dd></div>{% endif %}
   </dl>
+  {% if can_review_author_status %}
+    <p><a class="table-action" href="{% url 'credits:result-author-approval' result.id %}">{% if current_author_approval.action == "approve" %}Review or revoke decoder-author approval{% else %}Record decoder-author approval{% endif %}</a></p>
+  {% endif %}
 {% endblock %}

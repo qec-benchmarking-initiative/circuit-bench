@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -102,6 +103,35 @@ def credit_claims(request):
 
 
 @login_required
+@require_GET
+def credit_claim_review_queue(request):
+    claims = CreditClaim.objects.filter(state=CreditClaim.State.PENDING)
+    if not request.user.is_admin:
+        claims = claims.filter(
+            Q(name_credit__decoder_version__submitted_by=request.user)
+            | Q(name_credit__noise_model__submitted_by=request.user)
+            | Q(name_credit__circuit_revision__submitted_by=request.user)
+            | Q(name_credit__result__submitted_by=request.user)
+            | Q(name_credit__benchmark_revision__submitted_by=request.user)
+        )
+    claims = claims.select_related(
+        "claimant_account",
+        "name_credit__decoder_version__submitted_by",
+        "name_credit__noise_model__submitted_by",
+        "name_credit__circuit_revision__submitted_by",
+        "name_credit__result__submitted_by",
+        "name_credit__result__decoder_version",
+        "name_credit__result__circuit_revision",
+        "name_credit__benchmark_revision__submitted_by",
+    ).order_by("created_at", "id")
+    rows = [
+        {"claim": claim, "subject": describe_credit_subject(claim.name_credit)}
+        for claim in claims
+    ]
+    return render(request, "credits/review_queue.html", {"rows": rows})
+
+
+@login_required
 @require_POST
 def credit_claim_cancel(request, claim_id):
     try:
@@ -165,7 +195,7 @@ def result_author_approval(request, result_id):
     try:
         result = Result.objects.select_related(
             "decoder_version", "circuit_revision"
-        ).get(id=result_id)
+        ).get(id=result_id, state="published")
     except Result.DoesNotExist as error:
         raise Http404("Result not found") from error
     if not is_exact_decoder_author(request.user, result):
@@ -174,9 +204,7 @@ def result_author_approval(request, result_id):
         )
     current = current_result_author_approval(result, request.user)
     initial_action = (
-        "revoke"
-        if current is not None and current.action == "approve"
-        else "approve"
+        "revoke" if current is not None and current.action == "approve" else "approve"
     )
     form = ResultAuthorApprovalForm(
         request.POST or None, initial={"action": initial_action}

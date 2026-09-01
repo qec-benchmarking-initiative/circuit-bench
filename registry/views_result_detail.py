@@ -7,11 +7,20 @@ from django.urls import NoReverseMatch, reverse
 
 from registry.formatting import format_scientific_value
 from registry.models import Artifact, Result, ResultScore
+from registry.services.credits import (
+    current_result_author_approval,
+    is_exact_decoder_author,
+)
 from registry.services.result_detail import public_result_detail
 
 
 def result_detail(request, result_id):
     result = get_object_or_404(public_result_detail(), id=result_id)
+    viewer = getattr(request, "user", None)
+    can_review_author_status = bool(
+        getattr(viewer, "is_authenticated", False)
+        and is_exact_decoder_author(viewer, result)
+    )
     return render(
         request,
         "results/detail.html",
@@ -24,6 +33,12 @@ def result_detail(request, result_id):
             "execution": _execution(result),
             "score_rows": [_score_row(score) for score in result.display_scores],
             "evaluator": _evaluator(result),
+            "can_review_author_status": can_review_author_status,
+            "current_author_approval": (
+                current_result_author_approval(result, viewer)
+                if can_review_author_status
+                else None
+            ),
             "hyperparameter_artifact_url": _artifact_download_url(
                 result.hyperparameter_values_artifact
             ),

@@ -21,6 +21,11 @@ urlpatterns = [
         views_taxonomy.noise_model_preview,
         name="noise-model-preview",
     ),
+    path(
+        "taxonomy/noise-models/<uuid:noise_model_id>/candidate/",
+        views_taxonomy.noise_model_candidate,
+        name="noise-model-candidate",
+    ),
     path("taxonomy/curation/", views_taxonomy.curation_queue, name="curation"),
     path(
         "taxonomy/curation/tags/<uuid:tag_id>/promote/",

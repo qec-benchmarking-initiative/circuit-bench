@@ -16,9 +16,10 @@ from registry.forms_benchmark_submissions import (
     BenchmarkAttemptSelectionForm,
     BenchmarkRevisionSubmissionForm,
 )
-from registry.models import BenchmarkRevision, CircuitRevision
+from registry.models import BenchmarkAttempt, BenchmarkRevision, CircuitRevision
 from registry.services.benchmark_submissions import (
     BenchmarkSubmissionError,
+    approve_benchmark_attempt,
     approve_benchmark_submission,
     canonical_benchmark_payload,
     create_benchmark_attempt,
@@ -170,10 +171,17 @@ def benchmark_review_queue(request):
         .annotate()
         .order_by("created_at", "id")
     )
+    attempts = (
+        BenchmarkAttempt.objects.filter(
+            state__in=["pending_review", "pending_reapproval"]
+        )
+        .select_related("submitted_by", "benchmark_revision", "decoder_version")
+        .order_by("created_at", "id")
+    )
     return render(
         request,
         "benchmark_submissions/review.html",
-        {"records": records},
+        {"records": records, "attempts": attempts},
     )
 
 
@@ -206,11 +214,53 @@ def benchmark_promote(request, record_id):
 
 
 @login_required
+@require_GET
+def benchmark_attempt_candidate(request, attempt_id):
+    attempt = get_object_or_404(
+        BenchmarkAttempt.objects.select_related(
+            "submitted_by", "benchmark_revision", "decoder_version"
+        ).prefetch_related(
+            "result_memberships__circuit_revision",
+            "result_memberships__result",
+            "moderation_events",
+        ),
+        id=attempt_id,
+    )
+    if attempt.submitted_by_id != request.user.id and not request.user.is_admin:
+        raise PermissionDenied
+    return render(
+        request,
+        "benchmark_submissions/attempt_candidate.html",
+        {
+            "attempt": attempt,
+            "memberships": attempt.result_memberships.select_related(
+                "circuit_revision", "result"
+            ).order_by("circuit_revision__name", "circuit_revision_id"),
+            "can_approve": request.user.is_admin
+            and attempt.state in {"pending_review", "pending_reapproval"},
+        },
+    )
+
+
+@login_required
+@require_POST
+def benchmark_attempt_approve(request, attempt_id):
+    try:
+        attempt = approve_benchmark_attempt(attempt_id, reviewer=request.user)
+    except BenchmarkSubmissionError as error:
+        messages.error(request, f"Could not approve benchmark attempt: {error}")
+        return redirect(
+            "benchmark-submissions:attempt-candidate", attempt_id=attempt_id
+        )
+    messages.success(request, "Benchmark attempt approved and published.")
+    return redirect("benchmarks:detail", slug=attempt.benchmark_revision.slug)
+
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def attempt_create(request):
     has_complete_get_selection = all(
-        request.GET.get(name)
-        for name in ("benchmark_revision", "decoder_version")
+        request.GET.get(name) for name in ("benchmark_revision", "decoder_version")
     )
     selection_data = (
         request.POST
@@ -242,8 +292,10 @@ def attempt_create(request):
             except BenchmarkSubmissionError as error:
                 results_form.add_error(None, str(error))
             else:
-                messages.success(request, f"Published benchmark attempt {attempt.id}.")
-                return redirect("benchmarks:detail", slug=benchmark.slug)
+                messages.success(request, "Benchmark attempt submitted for review.")
+                return redirect(
+                    "benchmark-submissions:attempt-candidate", attempt_id=attempt.id
+                )
     return render(
         request,
         "benchmark_submissions/attempt.html",

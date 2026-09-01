@@ -218,7 +218,10 @@ class ScoreDefinition(UUIDModel):
 class Result(UUIDModel, PublishedLifecycleModel):
     class ReproductionStatus(models.TextChoices):
         INDEPENDENT = "independent_reproduction", "Independent reproduction"
-        AUTHOR_VERIFIED = "decoder_author_verified", "Decoder author verified"
+        AUTHOR_VERIFIED = (
+            "decoder_author_verified",
+            "Decoder-author submitted/approved",
+        )
 
     schema_release = models.ForeignKey(
         SchemaRelease,

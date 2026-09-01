@@ -8,7 +8,7 @@
       <p class="eyebrow">Account profile</p>
       <h1>{{ user.display_name }}</h1>
       <p><a href="{% url 'pages:static-reference' slug='submission-policy' %}">Submission, revision, and withdrawal policy</a></p>
-      <p class="profile-header-actions"><a class="button" href="{% url 'submissions:hub' %}">Submit data</a> <a class="button button-secondary" href="/accounts/">Settings</a></p>
+      <p class="profile-header-actions"><a class="button" href="{% url 'submissions:hub' %}">Submit data</a> <a class="button button-secondary" href="/accounts/">Settings</a> <a class="table-action" href="{% url 'credits:search' %}">Claim a credit</a> <a class="table-action" href="{% url 'credits:claims' %}">Your credit claims</a> <a class="table-action" href="{% url 'credits:review-queue' %}">Credit claims to review</a></p>
     </header>
 
     {% include "components/submission_collection_controls.html" with reset_url=request.path controls=controls kind_choices=kind_choices pending_state_choices=pending_state_choices sort_choices=sort_choices only %}

@@ -189,9 +189,9 @@ LAYOUTS = {
             ),
         ),
         (
-            "Result lineage and status",
+            "Result lineage",
             "A successor is a new exact result; its predecessor remains immutable.",
-            (("stack", ("supersedes_result", "reproduction_status")),),
+            (("stack", ("supersedes_result",)),),
         ),
         (
             "Description and hyperparameters",

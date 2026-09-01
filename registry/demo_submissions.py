@@ -8,18 +8,28 @@ from django.utils import timezone
 from accounts.models import Account
 from registry.demo import DEMO_ACCOUNT_ID, _demo_history, demo_id, seed_demo_data
 from registry.models import (
+    BenchmarkAttempt,
+    BenchmarkRevision,
     CircuitRevision,
     Credit,
+    CreditClaim,
     DecoderVersion,
     Machine,
     ModerationEvent,
+    NoiseModel,
     Result,
     ResultScore,
     SchemaRelease,
     ScoreDefinition,
     Tag,
 )
+from registry.services.benchmark_submissions import (
+    create_benchmark_attempt,
+    create_benchmark_submission,
+)
+from registry.services.credits import submit_credit_claim
 from registry.services.histories import append_history_event, submission_snapshot
+from registry.services.taxonomy import submit_noise_model
 
 
 @transaction.atomic
@@ -214,6 +224,66 @@ def seed_submission_demo_data() -> dict[str, int]:
             caused_by=approved,
         )
         Machine.objects.filter(id=machine.id).update(published_at=published.occurred_at)
+
+    if not NoiseModel.objects.filter(slug="community-biased-noise-review").exists():
+        submit_noise_model(
+            submitter=contributor,
+            slug="community-biased-noise-review",
+            name="Community biased noise",
+            short_description="Synthetic noise-model submission awaiting review.",
+            paper_url="https://example.org/papers/community-biased-noise",
+            randomises_priors=True,
+        )
+
+    if not BenchmarkRevision.objects.filter(
+        slug="community-memory-review-0-1"
+    ).exists():
+        create_benchmark_submission(
+            {
+                "slug": "community-memory-review-0-1",
+                "name": "Community memory review",
+                "version": "0.1",
+                "previous_revision": None,
+                "description": "Synthetic benchmark revision awaiting review.",
+                "revision_description": "First submitted revision.",
+                "items": [
+                    {
+                        "circuit_revision": str(base_circuit.id),
+                        "required": True,
+                    }
+                ],
+            },
+            submitter=contributor,
+        )
+
+    published_benchmark = BenchmarkRevision.objects.get(
+        id=demo_id("benchmark/memory-smoke-test/0.1")
+    )
+    attempt_description = "Synthetic benchmark attempt awaiting review."
+    if not BenchmarkAttempt.objects.filter(
+        benchmark_revision=published_benchmark,
+        decoder_version=base_decoder,
+        submitted_by=contributor,
+        description=attempt_description,
+    ).exists():
+        create_benchmark_attempt(
+            benchmark=published_benchmark,
+            decoder=base_decoder,
+            result_ids_by_circuit={str(base_circuit.id): str(base_result.id)},
+            submitter=contributor,
+            description=attempt_description,
+        )
+
+    name_credit = Credit.objects.get(id=demo_id("credit/decoder/name"))
+    if not CreditClaim.objects.filter(
+        name_credit=name_credit,
+        claimant_account=contributor,
+    ).exists():
+        submit_credit_claim(
+            name_credit.id,
+            claimant=contributor,
+            retain_name_credit=True,
+        )
     return submission_demo_counts()
 
 
@@ -234,6 +304,23 @@ def submission_demo_counts() -> dict[str, int]:
         "published_machines": Machine.objects.filter(
             id=demo_id("submission/machine/simulated-gpu"),
             state="published",
+        ).count(),
+        "pending_noise_models": NoiseModel.objects.filter(
+            slug="community-biased-noise-review",
+            state="pending_review",
+        ).count(),
+        "pending_benchmarks": BenchmarkRevision.objects.filter(
+            slug="community-memory-review-0-1",
+            state="pending_review",
+        ).count(),
+        "pending_benchmark_attempts": BenchmarkAttempt.objects.filter(
+            description="Synthetic benchmark attempt awaiting review.",
+            state="pending_review",
+        ).count(),
+        "pending_credit_claims": CreditClaim.objects.filter(
+            name_credit_id=demo_id("credit/decoder/name"),
+            claimant_account_id=demo_id("account/contributor"),
+            state=CreditClaim.State.PENDING,
         ).count(),
     }
 

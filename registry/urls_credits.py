@@ -7,6 +7,11 @@ app_name = "credits"
 urlpatterns = [
     path("credits/", views_credits.credit_search, name="search"),
     path("credits/claims/", views_credits.credit_claims, name="claims"),
+    path(
+        "credits/review/",
+        views_credits.credit_claim_review_queue,
+        name="review-queue",
+    ),
     path("credits/<uuid:credit_id>/claim/", views_credits.credit_claim, name="claim"),
     path(
         "credits/claims/<uuid:claim_id>/cancel/",

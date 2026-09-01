@@ -110,6 +110,11 @@ class BenchmarkRevisionItem(models.Model):
 
 
 class BenchmarkAttempt(UUIDModel, PublishedLifecycleModel):
+    history = models.ForeignKey(
+        "registry.RecordHistory",
+        on_delete=models.PROTECT,
+        related_name="benchmark_attempts",
+    )
     benchmark_revision = models.ForeignKey(
         BenchmarkRevision,
         on_delete=models.PROTECT,

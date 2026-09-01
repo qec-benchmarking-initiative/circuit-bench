@@ -1,6 +1,6 @@
 # Submission and approval policy 0.1
 
-Status: implemented development contract, 31 August 2026.
+Status: implemented development contract, 1 September 2026.
 
 The canonical user-facing policy is
 [`content/pages/submission-policy.md`](../content/pages/submission-policy.md).
@@ -14,7 +14,7 @@ state, and timestamps.
 ## Policy decision
 
 Every valid submission receives one explicit approval route before it is
-stored. Policy 0.1 has two routes:
+stored. Policy 0.1 uses the following routes:
 
 | Record kind | Route | Initial lifecycle state |
 | --- | --- | --- |
@@ -22,16 +22,23 @@ stored. Policy 0.1 has two routes:
 | Circuit revision | Admin review | `pending_review` |
 | Result | Admin review | `pending_review` |
 | Machine | Immediate publication | `published` |
+| Custom tag | Immediate provisional use by System | `custom` |
+| Community noise model | Admin review | `pending_review` |
+| Benchmark revision | Admin review | `pending_review` |
+| Benchmark attempt | Admin review | `pending_review` |
 
-Admin status does not currently bypass review: a decoder, circuit, or result
-submitted by an admin still enters `pending_review`. A machine submitted by any
-active account publishes immediately after validation.
+Admin status does not currently bypass review. A machine submitted by any
+active account publishes immediately after validation. A custom tag is made
+available provisionally by a named System policy; official tag status is a
+separate admin decision. Approved community noise models likewise remain
+community-curated until a separate official-promotion decision.
 
-The decision is made by `registry/submission_policy.py`. Its interface accepts
-both record kind and submitter even though policy 0.1 only varies by kind. This
+The generic decision is made by `registry/submission_policy.py`. Its interface
+accepts both record kind and submitter even though policy 0.1 only varies by kind. This
 leaves an explicit extension point for later trusted-uploader, uploader-owner,
 or per-kind rules without embedding those rules in forms or views. Every
-submission audit event records the policy version and chosen route.
+submission audit event records the policy version and chosen route. Specialised
+tag, noise-model, and benchmark services record the same information explicitly.
 
 ## Entry and preview
 
@@ -62,7 +69,8 @@ underlying 0.1 result model permits a null machine. A pending decoder or circuit
 therefore cannot be used to create a pending result. This avoids a dependency
 graph inside the moderation queue.
 
-The same reference checks run again when an admin approves a pending result.
+The same reference checks run again under database row locks when an admin
+approves a pending result.
 If a referenced record has been withdrawn or otherwise ceased to be published,
 approval fails and the result remains pending. Circuit approval likewise
 rechecks its noise model and previous revision; decoder approval rechecks its
@@ -74,17 +82,19 @@ Final submission creates the scientific record, tag memberships, score rows,
 and uploader credit (where the credit model supports that kind) in one database
 transaction. It also creates a `submitted` moderation event.
 
-Admin approval locks the pending record, revalidates it, sets `published_at`,
+Admin approval locks the pending record and its mutable scientific references,
+revalidates it, sets `published_at`,
 and creates `approved` and `published` moderation events in one transaction.
 Immediate machine publication creates `submitted`, `approved`, and `published`
-events in the creation transaction. The approval event is attributed to a
-reserved inactive `System` account; manual approval is attributed to the exact
-admin account. Machines have an uploader but no credit row because
+events in the creation transaction. The approval event is attributed to the
+named `submission_policy` System actor; manual approval is attributed to the
+exact admin account. Machines have an uploader but no credit row because
 the existing credit model does not define machine as a credit subject.
 
 ## Editing, succession, and withdrawal
 
-`pending_review` and `pending_reapproval` are unpublished candidate states.
+`pending_review`, `pending_reapproval`, and `changes_requested` are unpublished
+candidate states.
 Their uploader or an admin can edit scientific fields in place while retaining
 the candidate UUID; every stored edit creates an `edited` moderation event.
 
@@ -93,8 +103,37 @@ record therefore creates a new record linked through its kind-specific lineage
 field. Withdrawing a published record preserves its publication timestamp,
 sets `withdrawn_at`, and writes a reasoned `withdrawn` event. A successor to a
 withdrawn record enters `pending_reapproval`, even for machines that would
-normally publish immediately, and the predecessor receives a `resubmitted`
-event naming the successor UUID.
+normally publish immediately. Its submission and predecessor link are recorded
+on the successor inside their shared history.
+
+For decoder, circuit, result and machine candidates, an admin can request
+changes with a required private note or reject the candidate. The uploader can
+edit a changes-requested candidate and explicitly resubmit it to its original
+review route. Every decision points causally to the exact submitted payload it
+reviewed. The specialised noise-model and benchmark entry surfaces do not yet
+offer this full decision/edit cycle.
+
+## Files and derived trust state
+
+Content-addressed deduplication does not imply public access. Each uploader
+receives a durable access grant even when identical bytes already exist. A file
+becomes public only through a frozen/retired schema release or a published or
+withdrawn exact scientific record; candidate-only files otherwise remain
+available to their uploader and admins. Download and picker validation use the
+same authorization rule.
+
+Result reproduction status is not contributor input. It is projected from
+current exact-decoder account credits and explicit result-author approval
+events, recomputed after relevant credit/approval changes, and checked by
+`manage.py validate_result_verification`.
+
+## Credits
+
+A signed-in user can claim a public name-only credit. The exact record uploader
+or an admin reviews the claim and chooses whether the original name remains
+visible. A database constraint prevents duplicate visible credits for the same
+account and exact record. An exact credited decoder author may separately
+approve or revoke the decoder-author status of a published result.
 
 ## Visibility and permissions
 
@@ -107,10 +146,10 @@ event naming the successor UUID.
 - The local prototype account switcher is present only with `DEBUG=True` and
   only permits the two deterministic demo account UUIDs.
 
-## Deliberately deferred
+## Explicit prototype limits
 
-Policy 0.1 does not yet implement rejection, requested changes, notification,
-tag/noise-model/benchmark submission, credit claims, uploader-scoped
-moderation, or evaluator-summary ingestion. Those can reuse the exact-record
-view, queue table, moderation-event service, and policy boundary added by this
-slice.
+Policy 0.1 does not yet provide the full request-changes/edit/reject/withdraw
+cycle for specialised noise-model, benchmark-revision, or benchmark-attempt
+forms. Credit-claim state is protected from raw-admin mutation but does not yet
+have its own append-only event model. Notification, evaluator-summary ingestion,
+and account recovery are also outside this prototype.

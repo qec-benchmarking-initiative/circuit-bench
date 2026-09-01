@@ -1,4 +1,5 @@
 import pytest
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
 
@@ -14,6 +15,11 @@ from registry.services.credits import (
     set_result_author_approval,
     submit_credit_claim,
 )
+from registry.services.submissions import (
+    create_submission,
+    submission_payload_for_record,
+)
+from registry.submission_policy import SubmissionKind
 
 pytestmark = pytest.mark.django_db
 
@@ -34,9 +40,7 @@ def attribution_data():
             id=demo_id("decoder/clear-matcher/0.1")
         ),
         "name_credit": Credit.objects.get(id=demo_id("credit/decoder/name")),
-        "result": Result.objects.get(
-            id=demo_id("result/clear-matcher-rotated-memory")
-        ),
+        "result": Result.objects.get(id=demo_id("result/clear-matcher-rotated-memory")),
     }
 
 
@@ -112,9 +116,7 @@ def test_claimant_can_cancel_only_their_pending_claim(attribution_data):
 
     cancelled = cancel_credit_claim(claim.id, claimant=attribution_data["contributor"])
     assert cancelled.state == CreditClaim.State.CANCELLED
-    repeated = cancel_credit_claim(
-        claim.id, claimant=attribution_data["contributor"]
-    )
+    repeated = cancel_credit_claim(claim.id, claimant=attribution_data["contributor"])
     assert repeated.id == claim.id
 
 
@@ -173,9 +175,7 @@ def test_admin_can_override_uploader_review_and_reject(attribution_data):
 def test_retain_name_adds_account_at_end_without_hiding_original(attribution_data):
     original = attribution_data["name_credit"]
     claimant = attribution_data["contributor"]
-    claim = submit_credit_claim(
-        original.id, claimant=claimant, retain_name_credit=True
-    )
+    claim = submit_credit_claim(original.id, claimant=claimant, retain_name_credit=True)
     reviewed = review_credit_claim(
         claim.id, reviewer=attribution_data["admin"], approve=True
     )
@@ -184,8 +184,7 @@ def test_retain_name_adds_account_at_end_without_hiding_original(attribution_dat
     assert original.hidden_at is None
     assert reviewed.created_account_credit.account == claimant
     assert (
-        reviewed.created_account_credit.decoder_version
-        == attribution_data["decoder"]
+        reviewed.created_account_credit.decoder_version == attribution_data["decoder"]
     )
     assert reviewed.created_account_credit.position == 3
 
@@ -229,10 +228,25 @@ def test_approval_is_idempotent_and_does_not_duplicate_account_credit(
     )
 
     assert second.created_account_credit_id == first.created_account_credit_id
-    assert Credit.objects.filter(
-        decoder_version=attribution_data["decoder"], account=claimant
-    ).count() == 1
+    assert (
+        Credit.objects.filter(
+            decoder_version=attribution_data["decoder"], account=claimant
+        ).count()
+        == 1
+    )
     assert not searchable_name_credits("Example Collaborator").exists()
+
+
+def test_database_rejects_duplicate_visible_account_credit(attribution_data):
+    decoder = attribution_data["decoder"]
+    account = attribution_data["admin"]
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        Credit.objects.create(
+            decoder_version=decoder,
+            position=3,
+            account=account,
+        )
 
 
 def test_pending_claim_cannot_be_approved_after_name_is_resolved(attribution_data):
@@ -256,20 +270,113 @@ def test_exact_decoder_author_can_approve_and_revoke_published_result(
 ):
     result = attribution_data["result"]
     author = attribution_data["admin"]
+    Result.objects.filter(id=result.id).update(
+        submitted_by=attribution_data["contributor"],
+        reproduction_status=Result.ReproductionStatus.INDEPENDENT,
+    )
+    result.refresh_from_db()
 
     approved = set_result_author_approval(
         result.id, account=author, approve=True, note="The run is compatible."
     )
+    result.refresh_from_db()
+    assert result.reproduction_status == Result.ReproductionStatus.AUTHOR_VERIFIED
     same = set_result_author_approval(result.id, account=author, approve=True)
     assert same.id == approved.id
 
     revoked = set_result_author_approval(
         result.id, account=author, approve=False, note="Approval withdrawn."
     )
+    result.refresh_from_db()
+    assert result.reproduction_status == Result.ReproductionStatus.INDEPENDENT
     same_revoke = set_result_author_approval(result.id, account=author, approve=False)
     assert revoked.action == "revoke"
     assert same_revoke.id == revoked.id
     assert result.author_approval_events.filter(account=author).count() == 2
+
+
+def test_result_submission_derives_author_uploader_status(attribution_data):
+    source = attribution_data["result"]
+    payload = submission_payload_for_record(SubmissionKind.RESULT, source)
+    payload["description"] = "Submitted directly by an exact-version decoder author."
+    payload["supersedes_result"] = None
+
+    outcome = create_submission(
+        SubmissionKind.RESULT,
+        payload,
+        submitter=attribution_data["admin"],
+    )
+
+    assert (
+        outcome.record.reproduction_status == Result.ReproductionStatus.AUTHOR_VERIFIED
+    )
+
+
+def test_result_submission_derives_independent_uploader_status(attribution_data):
+    source = attribution_data["result"]
+    payload = submission_payload_for_record(SubmissionKind.RESULT, source)
+    payload["description"] = "Submitted by an account not credited on the decoder."
+    payload["supersedes_result"] = None
+
+    outcome = create_submission(
+        SubmissionKind.RESULT,
+        payload,
+        submitter=attribution_data["contributor"],
+    )
+
+    assert outcome.record.reproduction_status == Result.ReproductionStatus.INDEPENDENT
+
+
+def test_approved_decoder_credit_claim_recomputes_uploader_result_status(
+    attribution_data,
+):
+    result = attribution_data["result"]
+    claimant = attribution_data["contributor"]
+    Result.objects.filter(id=result.id).update(
+        submitted_by=claimant,
+        reproduction_status=Result.ReproductionStatus.INDEPENDENT,
+    )
+    claim = submit_credit_claim(
+        attribution_data["name_credit"].id,
+        claimant=claimant,
+        retain_name_credit=False,
+    )
+
+    review_credit_claim(
+        claim.id,
+        reviewer=attribution_data["admin"],
+        approve=True,
+    )
+
+    result.refresh_from_db()
+    assert result.reproduction_status == Result.ReproductionStatus.AUTHOR_VERIFIED
+
+
+def test_one_revocation_does_not_override_another_authors_active_approval(
+    attribution_data,
+):
+    result = attribution_data["result"]
+    first_author = attribution_data["admin"]
+    second_author = Account.objects.create_user(display_name="Second decoder author")
+    Credit.objects.create(
+        decoder_version=attribution_data["decoder"],
+        position=3,
+        account=second_author,
+    )
+    Result.objects.filter(id=result.id).update(
+        submitted_by=attribution_data["contributor"],
+        reproduction_status=Result.ReproductionStatus.INDEPENDENT,
+    )
+
+    set_result_author_approval(result.id, account=first_author, approve=True)
+    set_result_author_approval(result.id, account=second_author, approve=True)
+    set_result_author_approval(result.id, account=first_author, approve=False)
+    result.refresh_from_db()
+    assert result.reproduction_status == Result.ReproductionStatus.AUTHOR_VERIFIED
+
+    set_result_author_approval(result.id, account=second_author, approve=False)
+    result.refresh_from_db()
+    assert result.reproduction_status == Result.ReproductionStatus.INDEPENDENT
 
 
 def test_credit_on_another_decoder_version_does_not_authorise_result(
@@ -303,6 +410,20 @@ def test_unpublished_result_cannot_receive_author_approval(attribution_data):
         )
 
 
+def test_unpublished_result_author_page_does_not_disclose_candidate(
+    client, attribution_data
+):
+    result = attribution_data["result"]
+    Result.objects.filter(id=result.id).update(
+        state="pending_review", published_at=None
+    )
+    client.force_login(attribution_data["admin"])
+
+    response = client.get(reverse("credits:result-author-approval", args=[result.id]))
+
+    assert response.status_code == 404
+
+
 def test_review_and_result_pages_enforce_workflow_permissions(client, attribution_data):
     claim = submit_credit_claim(
         attribution_data["name_credit"].id,
@@ -327,9 +448,7 @@ def test_review_and_result_pages_enforce_workflow_permissions(client, attributio
     assert review_page.status_code == 200
     assert b"Review credit claim" in review_page.content
     approval_page = client.get(
-        reverse(
-            "credits:result-author-approval", args=[attribution_data["result"].id]
-        )
+        reverse("credits:result-author-approval", args=[attribution_data["result"].id])
     )
     assert approval_page.status_code == 200
     assert b"Decoder-author approval" in approval_page.content

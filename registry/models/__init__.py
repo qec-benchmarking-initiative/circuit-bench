@@ -1,4 +1,10 @@
-from .artifacts import Artifact, ArtifactAttachment, ExternalLink, SchemaRelease
+from .artifacts import (
+    Artifact,
+    ArtifactAttachment,
+    ArtifactGrant,
+    ExternalLink,
+    SchemaRelease,
+)
 from .attribution import Credit, CreditClaim
 from .benchmarks import (
     BenchmarkAttempt,
@@ -27,6 +33,7 @@ from .tags import (
 __all__ = [
     "Artifact",
     "ArtifactAttachment",
+    "ArtifactGrant",
     "BenchmarkAttempt",
     "BenchmarkAttemptResult",
     "BenchmarkRevision",

@@ -8,6 +8,7 @@
       <p class="eyebrow">Admin</p>
       <h1>Submission review</h1>
       <p><a href="{% url 'pages:static-reference' slug='submission-policy' %}">Submission and approval policy 0.1</a></p>
+      <p class="profile-header-actions"><a class="table-action" href="{% url 'benchmark-submissions:review' %}">Benchmark review</a> <a class="table-action" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a> <a class="table-action" href="{% url 'credits:review-queue' %}">Credit claims</a></p>
     </header>
 
     {% include "components/submission_collection_controls.html" with reset_url=request.path controls=controls kind_choices=kind_choices pending_state_choices=pending_state_choices sort_choices=sort_choices only %}

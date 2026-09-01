@@ -194,9 +194,6 @@ SUBMISSION_SCHEMAS: dict[SubmissionKind, dict[str, Any]] = {
             "software_environment": NULLABLE_STRING,
             "t_1000_ns": NULLABLE_POSITIVE,
             "supersedes_result": NULLABLE_UUID,
-            "reproduction_status": {
-                "enum": ["independent_reproduction", "decoder_author_verified"]
-            },
             "scores": {
                 "type": "array",
                 "minItems": 1,
@@ -238,7 +235,6 @@ SUBMISSION_SCHEMAS: dict[SubmissionKind, dict[str, Any]] = {
             "software_environment",
             "t_1000_ns",
             "supersedes_result",
-            "reproduction_status",
             "scores",
         ],
     ),

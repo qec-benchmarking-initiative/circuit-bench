@@ -20,8 +20,15 @@ SUBJECT_FIELD_BY_KIND = {
     "result": "result",
     "tag": "tag",
     "benchmark": "benchmark_revision",
+    "benchmark_attempt": "benchmark_attempt",
     "evaluator": "evaluator_release",
 }
+
+SNAPSHOT_ACTIONS = (
+    ModerationEvent.Action.SUBMITTED,
+    ModerationEvent.Action.EDITED,
+    ModerationEvent.Action.RESUBMITTED,
+)
 
 
 def history_for_new_record(kind: str, predecessor=None) -> RecordHistory:
@@ -56,6 +63,36 @@ def submission_snapshot(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         "data": payload,
         "artifacts": artifacts,
     }
+
+
+def latest_snapshot_event(kind: str, record) -> ModerationEvent:
+    """Return the latest recorded payload for this exact record, not its lineage.
+
+    Pre-history-migration events may explicitly record that their payload was
+    unavailable. They remain the only defensible cause for a decision on one of
+    those legacy candidates.
+    """
+
+    subject_field = SUBJECT_FIELD_BY_KIND[kind]
+    candidates = ModerationEvent.objects.filter(
+        history_id=record.history_id,
+        action__in=SNAPSHOT_ACTIONS,
+        **{subject_field: record},
+    )
+    event = (
+        candidates.filter(payload_snapshot__isnull=False)
+        .order_by("-sequence", "-id")
+        .first()
+    )
+    event = (
+        event
+        or candidates.filter(details__legacy_payload_unavailable=True)
+        .order_by("-sequence", "-id")
+        .first()
+    )
+    if event is None:
+        raise ValueError("The exact record has no recorded submission payload event.")
+    return event
 
 
 @transaction.atomic
@@ -156,14 +193,7 @@ def history_view(kind: str, record, viewer=None) -> HistoryView:
         )
         .order_by("sequence")
     )
-    if not getattr(viewer, "is_authenticated", False):
-        events = events.filter(visibility=ModerationEvent.Visibility.PUBLIC)
-    elif not getattr(viewer, "is_admin", False):
-        is_uploader = getattr(record, "submitted_by_id", None) == viewer.id
-        if not is_uploader:
-            events = events.filter(visibility=ModerationEvent.Visibility.PUBLIC)
-        else:
-            events = events.exclude(visibility=ModerationEvent.Visibility.ADMIN)
+    events = events.filter(_event_visibility_q(kind, viewer))
 
     predecessor = _predecessor(kind, record)
     successor = _successor(kind, record)
@@ -307,11 +337,18 @@ def _record_url(kind: str, record) -> str | None:
 def events_visible_to(viewer, record):
     """Expose the visibility predicate for bounded table prefetches."""
 
+    return _event_visibility_q(record.history.record_kind, viewer)
+
+
+def _event_visibility_q(kind: str, viewer) -> Q:
+    """Authorise uploader-only notes against each event's exact subject."""
+
     if getattr(viewer, "is_admin", False):
         return Q()
-    if (
-        getattr(viewer, "is_authenticated", False)
-        and getattr(record, "submitted_by_id", None) == viewer.id
-    ):
-        return ~Q(visibility=ModerationEvent.Visibility.ADMIN)
-    return Q(visibility=ModerationEvent.Visibility.PUBLIC)
+    public = Q(visibility=ModerationEvent.Visibility.PUBLIC)
+    if not getattr(viewer, "is_authenticated", False):
+        return public
+    return public | Q(
+        visibility=ModerationEvent.Visibility.UPLOADER,
+        **{f"{SUBJECT_FIELD_BY_KIND[kind]}__submitted_by_id": viewer.id},
+    )

@@ -1,10 +1,14 @@
 import hashlib
+import importlib
+from types import SimpleNamespace
 
 import pytest
+from django.apps import apps
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 
 from accounts.models import Account
-from registry.models import Artifact
+from registry.models import Artifact, ArtifactGrant
 from registry.services.artifacts import (
     ArtifactExpectationError,
     ArtifactIntegrityError,
@@ -28,6 +32,7 @@ def test_content_addressed_storage_deduplicates_identical_bytes(
 ):
     settings.MEDIA_ROOT = tmp_path / "media"
     content = b"same scientific bytes\n"
+    second_uploader = Account.objects.create_user(display_name="Second uploader")
 
     first, first_created = store_uploaded_artifact(
         SimpleUploadedFile("first.dem", content, content_type="text/plain"),
@@ -35,18 +40,65 @@ def test_content_addressed_storage_deduplicates_identical_bytes(
     )
     second, second_created = store_uploaded_artifact(
         SimpleUploadedFile("renamed.dem", content, content_type="text/plain"),
-        uploaded_by=uploader,
+        uploaded_by=second_uploader,
     )
 
     assert first_created is True
     assert second_created is False
     assert second.id == first.id
     assert Artifact.objects.count() == 1
+    assert first.uploaded_by == uploader
+    assert set(
+        ArtifactGrant.objects.filter(artifact=first).values_list("account_id", "source")
+    ) == {
+        (uploader.id, ArtifactGrant.Source.UPLOAD),
+        (second_uploader.id, ArtifactGrant.Source.UPLOAD),
+    }
     assert first.sha256 == hashlib.sha256(content).hexdigest()
     assert first.byte_size == len(content)
     assert first.object_key.endswith(first.sha256)
     assert local_artifact_path(first).read_bytes() == content
     assert verify_artifact(first).byte_size == len(content)
+
+
+@pytest.mark.django_db
+def test_generated_chunks_create_a_generated_access_grant(settings, tmp_path, uploader):
+    settings.MEDIA_ROOT = tmp_path / "media"
+
+    artifact, created = store_artifact_chunks(
+        [b"generated manifest\n"],
+        uploaded_by=uploader,
+        media_type="application/json",
+        original_filename="manifest.json",
+    )
+
+    assert created
+    assert (
+        ArtifactGrant.objects.get(artifact=artifact, account=uploader).source
+        == ArtifactGrant.Source.GENERATED
+    )
+
+
+@pytest.mark.django_db
+def test_grant_migration_backfills_legacy_uploaded_by_provenance(uploader):
+    artifact = Artifact.objects.create(
+        sha256=hashlib.sha256(b"legacy").hexdigest(),
+        byte_size=6,
+        media_type="application/octet-stream",
+        original_filename="legacy.bin",
+        storage_backend=Artifact.StorageBackend.LOCAL,
+        object_key="artifacts/legacy",
+        uploaded_by=uploader,
+    )
+    migration = importlib.import_module("registry.migrations.0013_artifact_grants")
+
+    migration.backfill_uploaded_by_grants(
+        apps,
+        SimpleNamespace(connection=connection),
+    )
+
+    grant = ArtifactGrant.objects.get(artifact=artifact, account=uploader)
+    assert grant.source == ArtifactGrant.Source.LEGACY_UPLOADER
 
 
 @pytest.mark.django_db

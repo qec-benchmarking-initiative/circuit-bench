@@ -16,6 +16,16 @@
           <p><a class="button" href="{% url 'submissions:create' kind=card.kind %}">Submit {{ card.spec.label }}</a></p>
         </section>
       {% endfor %}
+      <section class="submission-kind">
+        <h2>Benchmark</h2>
+        <p><a class="button" href="{% url 'benchmark-submissions:create' %}">Submit benchmark revision</a></p>
+        <p><a class="table-action" href="{% url 'benchmark-submissions:attempt-create' %}">Submit benchmark attempt</a></p>
+      </section>
+      <section class="submission-kind">
+        <h2>Taxonomy</h2>
+        <p><a class="button" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a></p>
+        <p><a class="table-action" href="{% url 'taxonomy:tag-create' %}">Create custom tag</a></p>
+      </section>
     </div>
   </div>
 {% endblock %}

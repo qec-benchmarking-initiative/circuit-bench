@@ -17,7 +17,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 
 from accounts.models import Account
-from registry.models import Artifact
+from registry.models import Artifact, ArtifactGrant
 
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024
@@ -164,6 +164,7 @@ def store_uploaded_artifact(
         expected_sha256=expected_sha256,
         expected_byte_size=expected_byte_size,
         max_bytes=max_bytes,
+        grant_source=ArtifactGrant.Source.UPLOAD,
     )
 
 
@@ -190,6 +191,7 @@ def store_file_artifact(
             expected_sha256=expected_sha256,
             expected_byte_size=expected_byte_size,
             max_bytes=max_bytes,
+            grant_source=ArtifactGrant.Source.UPLOAD,
         )
 
 
@@ -203,8 +205,16 @@ def store_artifact_chunks(
     expected_byte_size: int | None = None,
     max_bytes: int = DEFAULT_MAX_UPLOAD_BYTES,
     artifact_id: uuid.UUID | None = None,
+    grant_source: str = ArtifactGrant.Source.GENERATED,
 ) -> tuple[Artifact, bool]:
-    """Write one immutable object, returning an existing row on duplicate."""
+    """Write immutable bytes and grant the initiating account durable access.
+
+    Content-addressed deduplication may return an artifact first uploaded by a
+    different account. In that case ``uploaded_by`` remains unchanged as legacy
+    provenance, while an ``ArtifactGrant`` records this account's acquisition.
+    """
+    if grant_source not in ArtifactGrant.Source.values:
+        raise ValueError("grant_source must be a supported ArtifactGrant source")
     if max_bytes < 0:
         raise ValueError("max_bytes must be non-negative")
     if expected_sha256 is not None and not SHA256_PATTERN.fullmatch(expected_sha256):
@@ -252,6 +262,7 @@ def store_artifact_chunks(
         existing = Artifact.objects.filter(sha256=sha256).first()
         if existing is not None:
             verify_artifact(existing)
+            _ensure_artifact_grant(existing, uploaded_by, source=grant_source)
             return existing, False
 
         object_key = f"artifacts/sha256/{sha256[:2]}/{sha256}"
@@ -276,9 +287,15 @@ def store_artifact_chunks(
                     object_key=object_key,
                     uploaded_by=uploaded_by,
                 )
+                _ensure_artifact_grant(
+                    artifact,
+                    uploaded_by,
+                    source=grant_source,
+                )
         except IntegrityError:
             artifact = Artifact.objects.get(sha256=sha256)
             verify_artifact(artifact)
+            _ensure_artifact_grant(artifact, uploaded_by, source=grant_source)
             return artifact, False
 
         verify_artifact(artifact)
@@ -286,6 +303,20 @@ def store_artifact_chunks(
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
+
+
+def _ensure_artifact_grant(
+    artifact: Artifact,
+    account: Account,
+    *,
+    source: str,
+) -> ArtifactGrant:
+    grant, _created = ArtifactGrant.objects.get_or_create(
+        artifact=artifact,
+        account=account,
+        defaults={"source": source},
+    )
+    return grant
 
 
 def _file_chunks(source_file: BinaryIO) -> Iterable[bytes]:

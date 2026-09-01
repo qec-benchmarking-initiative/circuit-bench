@@ -20,6 +20,7 @@ from registry.models import ModerationEvent, NoiseModel, SchemaRelease, Tag
 from registry.services.histories import (
     append_history_event,
     history_for_new_record,
+    latest_snapshot_event,
     submission_snapshot,
 )
 
@@ -419,6 +420,7 @@ def approve_and_publish_noise_model(noise_model_id, *, reviewer: Account) -> Noi
         action=ModerationEvent.Action.APPROVED,
         note="Approved this community noise model after admin review.",
         details=details,
+        caused_by=latest_snapshot_event("noise_model", noise_model),
     )
     publication_event = append_history_event(
         kind="noise_model",

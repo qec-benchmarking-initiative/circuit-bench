@@ -5,7 +5,11 @@ from django.db import transaction
 from accounts.models import Account
 from registry.models import ModerationEvent
 from registry.models.common import REVIEW_QUEUE_STATES, LifecycleState
-from registry.services.histories import append_history_event, submission_snapshot
+from registry.services.histories import (
+    append_history_event,
+    latest_snapshot_event,
+    submission_snapshot,
+)
 from registry.services.submissions import (
     MODEL_BY_KIND,
     SubmissionStateError,
@@ -33,6 +37,7 @@ def request_changes(
     record = _locked_review_candidate(kind, record_id, reviewer=reviewer)
     note = _required_note(note)
     previous_state = record.state
+    reviewed_snapshot = latest_snapshot_event(kind.value, record)
     append_history_event(
         kind=kind.value,
         record=record,
@@ -44,6 +49,7 @@ def request_changes(
             "previous_state": previous_state,
             "projected_state": LifecycleState.CHANGES_REQUESTED,
         },
+        caused_by=reviewed_snapshot,
         visibility=ModerationEvent.Visibility.UPLOADER,
     )
     record.state = LifecycleState.CHANGES_REQUESTED
@@ -65,6 +71,7 @@ def reject_submission(
     record = _locked_review_candidate(kind, record_id, reviewer=reviewer)
     note = _required_note(note)
     previous_state = record.state
+    reviewed_snapshot = latest_snapshot_event(kind.value, record)
     append_history_event(
         kind=kind.value,
         record=record,
@@ -76,6 +83,7 @@ def reject_submission(
             "previous_state": previous_state,
             "projected_state": LifecycleState.REJECTED,
         },
+        caused_by=reviewed_snapshot,
         visibility=ModerationEvent.Visibility.UPLOADER,
     )
     record.state = LifecycleState.REJECTED
@@ -101,6 +109,7 @@ def resubmit_for_review(
 
     projected_state = candidate_review_route(kind, record)
     payload = submission_payload_for_record(kind, record)
+    previous_snapshot = latest_snapshot_event(kind.value, record)
     append_history_event(
         kind=kind.value,
         record=record,
@@ -113,6 +122,7 @@ def resubmit_for_review(
             "projected_state": projected_state,
         },
         payload_snapshot=submission_snapshot(kind.value, payload),
+        caused_by=previous_snapshot,
         visibility=ModerationEvent.Visibility.UPLOADER,
     )
     record.state = projected_state

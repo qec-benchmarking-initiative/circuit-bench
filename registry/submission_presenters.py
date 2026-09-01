@@ -34,6 +34,7 @@ def submission_rows(kind: SubmissionKind | str, records, *, admin=False, actor=N
             "approved_by": _approval_label(record),
             "latest_review": _latest_review(record),
             "can_approve": admin and record.state in REVIEW_QUEUE_STATES,
+            "approve_url": reverse("submissions:approve", args=[kind.value, record.id]),
             "review_actions": [],
             "actions": [],
         }
@@ -219,6 +220,7 @@ def preview_sections(
     *,
     record=None,
     allow_withdrawn_lineage=False,
+    actor=None,
 ) -> list[dict]:
     kind = SubmissionKind(kind)
     form = submission_form_for_payload(
@@ -226,6 +228,7 @@ def preview_sections(
         payload,
         record=record,
         allow_withdrawn_lineage=allow_withdrawn_lineage,
+        actor=actor,
     )
     if not form.is_valid():
         return [

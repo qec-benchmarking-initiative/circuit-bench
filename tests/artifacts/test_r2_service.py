@@ -97,6 +97,7 @@ def test_r2_download_streams_only_verified_bytes(
         media_type="application/json",
         original_filename="hyperparameters.json",
     )
+    client.force_login(uploader)
 
     response = client.get(f"/artifacts/{artifact.id}/download/")
 

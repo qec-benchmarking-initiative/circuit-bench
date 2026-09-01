@@ -444,6 +444,10 @@ def seed_demo_data() -> dict[str, int]:
     )
     attempt = BenchmarkAttempt.objects.create(
         id=demo_id("benchmark-attempt/memory-smoke-test/clear-matcher"),
+        history=_demo_history(
+            "benchmark-attempt/memory-smoke-test/clear-matcher",
+            "benchmark_attempt",
+        ),
         benchmark_revision=benchmark,
         decoder_version=decoder,
         submitted_by=uploader,
@@ -533,6 +537,7 @@ def seed_demo_data() -> dict[str, int]:
             evaluator,
             result,
             benchmark,
+            attempt,
         )
     )
 
@@ -551,6 +556,7 @@ def _ensure_demo_history_events(records) -> None:
         EvaluatorRelease: ("evaluator", None),
         Result: ("result", "supersedes_result_id"),
         BenchmarkRevision: ("benchmark", "previous_revision_id"),
+        BenchmarkAttempt: ("benchmark_attempt", None),
     }
     for record in records:
         if record.moderation_events.exists():

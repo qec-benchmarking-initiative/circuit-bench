@@ -43,4 +43,14 @@ urlpatterns = [
         views_benchmark_submissions.benchmark_promote,
         name="promote",
     ),
+    path(
+        "review/benchmark-attempt/<uuid:attempt_id>/",
+        views_benchmark_submissions.benchmark_attempt_candidate,
+        name="attempt-candidate",
+    ),
+    path(
+        "review/benchmark-attempt/<uuid:attempt_id>/approve/",
+        views_benchmark_submissions.benchmark_attempt_approve,
+        name="attempt-approve",
+    ),
 ]
