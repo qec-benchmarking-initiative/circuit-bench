@@ -4,7 +4,14 @@
 
 {% block content %}
   <section class="hero">
-    <h1>Circuit Bench</h1>
+    <div class="home-title">
+      <span class="home-title-logo" aria-hidden="true"></span>
+      <h1>Circuit Bench</h1>
+    </div>
+    <figure class="home-daily-quote">
+      <blockquote><a class="home-daily-quote-link" href="{{ daily_quote.source_url }}" target="_blank" rel="noopener noreferrer">“{% for part in daily_quote.display_parts %}{% if part.is_ket %}<span class="quote-ket" aria-label="redacted expletive">{{ part.text }}</span>{% else %}{{ part.text }}{% endif %}{% endfor %}”</a></blockquote>
+      <figcaption>— {{ daily_quote.speaker }}{% if daily_quote.work %}, <cite>{{ daily_quote.work }}</cite>{% endif %}{% if daily_quote.year %} ({{ daily_quote.year }}){% endif %}</figcaption>
+    </figure>
     <form class="site-search" role="search" action="{% url 'pages:search' %}" method="get">
       <label for="site-search">Search the registry</label>
       <div class="input-row">

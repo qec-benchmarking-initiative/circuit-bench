@@ -11,6 +11,43 @@
       <p class="profile-header-actions"><a class="table-action" href="{% url 'benchmark-submissions:review' %}">Benchmark review</a> <a class="table-action" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a> <a class="table-action" href="{% url 'credits:review-queue' %}">Credit claims</a></p>
     </header>
 
+    <section class="daily-quote-schedule" id="daily-quote-schedule" aria-labelledby="daily-quote-schedule-heading">
+      <header class="daily-quote-schedule-header">
+        <div>
+          <h2 id="daily-quote-schedule-heading">Daily quotation</h2>
+          <p>UTC epoch day {{ daily_quote_schedule.epoch_day }} · collection position {{ daily_quote_schedule.current_index|add:1 }} of {{ daily_quote_schedule.collection_size }}</p>
+        </div>
+        <p class="daily-quote-offset">Offset integer <output>{{ daily_quote_schedule.day_offset_label }}</output></p>
+        <div class="daily-quote-step-actions">
+          <form method="post" action="{% url 'submissions:rotate-daily-quote' %}">
+            {% csrf_token %}
+            <button type="submit" name="delta" value="-1">← Back one</button>
+          </form>
+          <form method="post" action="{% url 'submissions:rotate-daily-quote' %}">
+            {% csrf_token %}
+            <button type="submit" name="delta" value="1">Forward one →</button>
+          </form>
+        </div>
+      </header>
+      <ol class="daily-quote-schedule-window">
+        {% for scheduled in daily_quote_schedule.window %}
+          <li{% if scheduled.is_current %} class="current"{% endif %}>
+            <span class="daily-quote-relative">{{ scheduled.relative_label }}</span>
+            <q>{{ scheduled.quote.quote_display }}</q>
+            <span class="daily-quote-credit">{{ scheduled.quote.speaker }}{% if scheduled.quote.work %}, <cite>{{ scheduled.quote.work }}</cite>{% endif %}</span>
+            {% if scheduled.is_current %}
+              <strong class="daily-quote-current">Shown now</strong>
+            {% else %}
+              <form method="post" action="{% url 'submissions:rotate-daily-quote' %}">
+                {% csrf_token %}
+                <button class="table-action" type="submit" name="delta" value="{{ scheduled.relative_day }}">Use this quote</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+
     {% include "components/submission_collection_controls.html" with reset_url=request.path controls=controls kind_choices=kind_choices pending_state_choices=pending_state_choices sort_choices=sort_choices only %}
 
     <section class="submission-table-section" id="pending">

@@ -126,6 +126,16 @@
         </g>
       {% endif %}
 
+      <rect
+        class="plot-interaction-surface"
+        x="{{ plot.plot_left }}"
+        y="{{ plot.plot_top }}"
+        width="{{ plot.plot_width }}"
+        height="{{ plot.plot_height }}"
+        data-plot-interaction-surface
+        data-plot-export-exclude
+      />
+
       {% for point in plot.points %}
         <g
           id="{{ plot.id }}-point-{{ point.id }}"

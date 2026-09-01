@@ -25,6 +25,11 @@ urlpatterns = [
     path("profile/", views_submissions.profile, name="profile"),
     path("review/", views_submissions.review_dashboard, name="review"),
     path(
+        "review/daily-quote/rotate/",
+        views_submissions.rotate_daily_quote,
+        name="rotate-daily-quote",
+    ),
+    path(
         "review/<str:kind>/<uuid:record_id>/",
         views_submissions.submission_record,
         name="record",

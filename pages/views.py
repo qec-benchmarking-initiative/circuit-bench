@@ -3,6 +3,7 @@ from django.db import connection
 from django.http import Http404, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils import timezone
 
 from registry.services.benchmarks import public_benchmark_catalogue
 from registry.services.circuits import circuit_catalogue, noise_model_catalogue
@@ -17,13 +18,20 @@ from .content import (
     get_page,
     static_pages,
 )
+from .daily_quotes import quote_for_date
+from .models import DailyQuoteSchedule
 
 
 def home(request):
     return render(
         request,
         "pages/home.html",
-        {"reference_groups": _reference_groups()},
+        {
+            "daily_quote": quote_for_date(
+                timezone.localdate(), DailyQuoteSchedule.current_day_offset()
+            ),
+            "reference_groups": _reference_groups(),
+        },
     )
 
 

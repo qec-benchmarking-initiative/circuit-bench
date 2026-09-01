@@ -390,6 +390,7 @@ def test_component_renders_accessible_svg_and_the_same_tabular_points():
     assert "plot-tick-label" in rendered
     assert "data-download-plot" in rendered
     assert "data-plot-crosshair" in rendered
+    assert "data-plot-interaction-surface" in rendered
     assert "data-plot-selection-guides" in rendered
     assert (
         'data-plot-selection-guides data-plot-export-exclude aria-hidden="true"'
@@ -411,7 +412,7 @@ def test_component_renders_accessible_svg_and_the_same_tabular_points():
     assert "data-plot-selection-y" not in halo_markup
     assert "data-plot-selection-x" in stroke_markup
     assert "data-plot-selection-y" in stroke_markup
-    assert rendered.count("data-plot-export-exclude") == 3
+    assert rendered.count("data-plot-export-exclude") == 4
     assert 'data-plot-x-minimum="' in rendered
     assert 'data-plot-y-maximum="' in rendered
     assert "data-plot-tooltip" not in rendered
@@ -444,6 +445,17 @@ def test_plot_selection_uses_delegation_and_does_not_capture_plain_clicks():
     )[0]
     assert "setPointerCapture" not in pointerdown
     assert "setPointerCapture" in pointermove
+
+
+def test_plot_cursor_is_scoped_to_static_plot_targets():
+    root = Path(__file__).resolve().parents[2]
+    source = (root / "static/js/result-plot.js").read_text()
+    styles = (root / "static/css/site.css").read_text()
+
+    assert "has-plot-crosshair" not in source
+    assert ".result-plot-svg.has-plot-crosshair" not in styles
+    assert ".plot-interaction-surface,\n.result-plot-point {\n  cursor: none;" in styles
+    assert "body {\n  min-height: 100vh;\n  margin: 0;\n  cursor: default;" in styles
 
 
 def test_component_renders_shaded_extents_as_a_distinct_option():

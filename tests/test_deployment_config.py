@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 
-def test_staging_banner_is_controlled_centrally(client, settings):
+def test_staging_banner_is_controlled_centrally(client, settings, db):
     settings.DEPLOYMENT_ENVIRONMENT = "staging"
     settings.DEPLOYMENT_GIT_COMMIT = "0123456789abcdef"
     settings.DEPLOYMENT_GIT_MESSAGE = "Show deployment identity in staging banner"
