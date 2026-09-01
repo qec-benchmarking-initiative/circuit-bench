@@ -46,7 +46,13 @@
       "$ref": "#/$defs/nullableUuid"
     },
     "state": {
-      "enum": ["draft", "pending_review", "pending_reapproval", "published", "withdrawn"]
+      "enum": [
+        "pending_reapproval",
+        "changes_requested",
+        "rejected",
+        "published",
+        "withdrawn"
+      ]
     },
     "submitted_by": {
       "type": "string",
