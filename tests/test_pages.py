@@ -59,6 +59,65 @@ def test_daily_quote_collection_is_large_and_well_formed():
     )
 
 
+def test_daily_quote_order_interleaves_works_and_preserves_comic_beats():
+    quotes = load_daily_quotes()
+    positions = {item.id: index for index, item in enumerate(quotes)}
+    comic_beats = [
+        (
+            "circuit-bench:18ff6dd3f324dd19d0a7",
+            "circuit-bench:ed06759f7ae078e09996",
+        ),
+        (
+            "circuit-bench:bfa22c26a5496e4a7953",
+            "circuit-bench:4e949e835d66920ba501",
+        ),
+        (
+            "circuit-bench:bca8798cda6ad1debf91",
+            "circuit-bench:9ec9e52dd8f5145a2bb5",
+        ),
+        (
+            "circuit-bench:ce24b4f44211e5e2698b",
+            "circuit-bench:8ac3893d85f6eb5b2c35",
+        ),
+        (
+            "catalogue-animation_games_comics:league-braum-strongest-muscle",
+            "circuit-bench:7ae0983a537c95159867",
+        ),
+        (
+            "catalogue-live_action_comedy:back-future-three-run-for-fun",
+            "catalogue-live_action_comedy:friends-missed-gym-times",
+        ),
+        (
+            "catalogue-real_sport_fitness:tyson-fury-sorry-late-batman",
+            "circuit-bench:4e0a79e4d64a66ed0a4f",
+        ),
+        (
+            "catalogue-real_sport_fitness:usain-bolt-nuggets-man",
+            "circuit-bench:bc420895469f3acf34ff",
+        ),
+        (
+            "catalogue-real_sport_fitness:ct-fletcher-command-grow",
+            "catalogue-animation_games_comics:garfield-deep-fry-cabbage",
+            "catalogue-animation_games_comics:my-hero-academia-eat-this-hair",
+        ),
+    ]
+
+    for beat in comic_beats:
+        beat_positions = [positions[item_id] for item_id in beat]
+        assert beat_positions == list(
+            range(beat_positions[0], beat_positions[0] + len(beat))
+        )
+
+    same_work_run = 1
+    longest_same_work_run = 1
+    for previous, current in zip(quotes, quotes[1:], strict=False):
+        same_work_run = same_work_run + 1 if current.work == previous.work else 1
+        longest_same_work_run = max(longest_same_work_run, same_work_run)
+
+    assert longest_same_work_run <= 2
+    assert quotes[0].work != quotes[-1].work
+
+
 def test_daily_quote_rotates_in_collection_order(monkeypatch):
     quotes = load_daily_quotes()[:3]
     monkeypatch.setattr("pages.daily_quotes.load_daily_quotes", lambda: quotes)
