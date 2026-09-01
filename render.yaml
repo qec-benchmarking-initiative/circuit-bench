@@ -21,6 +21,10 @@ services:
           property: connectionString
       - key: DEPLOYMENT_ENVIRONMENT
         value: staging
+      - key: DJANGO_ALLOWED_HOSTS
+        value: staging.circuitbench.org
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: https://staging.circuitbench.org
       - key: DJANGO_SECURE_HSTS_SECONDS
         value: "3600"
       - key: ALLOW_DEMO_SEED
