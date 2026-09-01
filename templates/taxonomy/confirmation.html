@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading"><h1>{{ title }}</h1></header>
+    <dl class="metadata-list">
+      <div><dt>Name</dt><dd>{% if record_kind == "tag" %}{{ record.label }}{% else %}{{ record.name }}{% endif %}</dd></div>
+      <div><dt>Identity</dt><dd>{% if record_kind == "tag" %}{{ record.namespace }}:{{ record.slug }}{% else %}{{ record.slug }}{% endif %}</dd></div>
+      <div><dt>Status</dt><dd>{% if record_kind == "tag" %}Custom and available{% else %}Pending review · Community{% endif %}</dd></div>
+    </dl>
+    <p>
+      {% if record_kind == "tag" %}
+        <a class="table-action" href="{% url 'taxonomy:tag-create' %}">Create another custom tag</a>
+      {% else %}
+        <a class="table-action" href="{% url 'taxonomy:noise-model-create' %}">Submit another noise model</a>
+      {% endif %}
+      {% if user.is_admin %} · <a class="table-action" href="{% url 'taxonomy:curation' %}">Open taxonomy curation</a>{% endif %}
+    </p>
+  </div>
+{% endblock %}

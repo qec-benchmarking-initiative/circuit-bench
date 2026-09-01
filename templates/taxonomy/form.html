@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <h1>{{ title }}</h1>
+      {% if user.is_admin %}<p><a class="table-action" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a></p>{% endif %}
+    </header>
+    {% include "components/submission_policy_bar.html" with policy=policy only %}
+
+    <section class="submission-entry-panel">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="submission-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="submission-form-sections">
+          <section class="submission-form-section">
+            <header><h3>{% if kind == "tag" %}Vocabulary term{% else %}Noise-model revision{% endif %}</h3></header>
+            <div class="submission-field-group submission-field-group-stack">
+              {% for field in form %}
+                <div class="submission-field">
+                  {{ field.label_tag }}
+                  {{ field }}
+                  {% if field.help_text %}<p class="helptext">{{ field.help_text }}</p>{% endif %}
+                  {% if field.errors %}<div class="submission-errors" role="alert">{{ field.errors }}</div>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </section>
+        </div>
+        <div class="submission-actions"><button type="submit">Preview</button></div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

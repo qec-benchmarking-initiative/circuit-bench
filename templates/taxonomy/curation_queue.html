@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Taxonomy curation · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <h1>Taxonomy curation</h1>
+      <p><a class="table-action" href="{% url 'taxonomy:tag-create' %}">Create custom tag</a> · <a class="table-action" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a></p>
+    </header>
+
+    <section class="submission-table-section">
+      <h2>Waiting for noise-model review</h2>
+      <div class="table-scroll" tabindex="0" aria-label="Noise models waiting for review">
+        <table class="data-table">
+          <thead><tr><th scope="col">Noise model</th><th scope="col">Submitted by</th><th scope="col">Previous revision</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            {% for noise_model in pending_noise_models %}
+              <tr>
+                <td>{{ noise_model.name }}<br><small>{{ noise_model.slug }}</small></td>
+                <td>{{ noise_model.submitted_by.display_name }}</td>
+                <td>{% if noise_model.supersedes_noise_model %}{{ noise_model.supersedes_noise_model.name }}{% else %}<span class="null-value">—</span>{% endif %}</td>
+                <td><form method="post" action="{% url 'taxonomy:noise-model-approve' noise_model_id=noise_model.id %}">{% csrf_token %}<button class="table-action" type="submit">Approve and publish</button></form></td>
+              </tr>
+            {% empty %}<tr><td class="table-empty" colspan="4">There are no noise models waiting for review.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="submission-table-section">
+      <h2>Tag vocabulary</h2>
+      <div class="table-scroll" tabindex="0" aria-label="Tag curation">
+        <table class="data-table">
+          <thead><tr><th scope="col">Tag</th><th scope="col">Namespace</th><th scope="col">Status</th><th scope="col">Promote</th><th scope="col">Deprecate and map</th></tr></thead>
+          <tbody>
+            {% for row in tag_rows %}
+              <tr>
+                <td>{{ row.tag.label }}<br><small>{{ row.tag.slug }}</small></td>
+                <td>{{ row.tag.get_namespace_display }}</td>
+                <td>{{ row.tag.get_status_display }}</td>
+                <td>
+                  {% if row.tag.status == "custom" %}
+                    <form method="post" action="{% url 'taxonomy:tag-promote' tag_id=row.tag.id %}">{% csrf_token %}<label><span class="visually-hidden">Official colour</span><input name="display_color" size="8" maxlength="7" pattern="#[0-9A-Fa-f]{6}" placeholder="#315F7D" required></label> <button class="table-action" type="submit">Promote</button></form>
+                  {% else %}<span class="null-value">—</span>{% endif %}
+                </td>
+                <td>
+                  {% if row.canonical_options %}
+                    <form method="post" action="{% url 'taxonomy:tag-deprecate' tag_id=row.tag.id %}">{% csrf_token %}<label><span class="visually-hidden">Canonical replacement</span><select name="canonical_tag" required><option value="">Choose replacement</option>{% for candidate in row.canonical_options %}<option value="{{ candidate.id }}">{{ candidate.label }}</option>{% endfor %}</select></label> <button class="table-action" type="submit">Deprecate</button></form>
+                  {% else %}<span class="null-value">No replacement available</span>{% endif %}
+                </td>
+              </tr>
+            {% empty %}<tr><td class="table-empty" colspan="5">There are no active tags.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="submission-table-section">
+      <h2>Published noise models</h2>
+      <div class="table-scroll" tabindex="0" aria-label="Published noise-model curation">
+        <table class="data-table">
+          <thead><tr><th scope="col">Noise model</th><th scope="col">Curation</th><th scope="col">Promote</th><th scope="col">Deprecate</th></tr></thead>
+          <tbody>
+            {% for noise_model in published_noise_models %}
+              <tr>
+                <td>{{ noise_model.name }}<br><small>{{ noise_model.slug }}</small></td>
+                <td>{{ noise_model.get_curation_status_display }}</td>
+                <td>{% if noise_model.curation_status == "community" %}<form method="post" action="{% url 'taxonomy:noise-model-promote' noise_model_id=noise_model.id %}">{% csrf_token %}<button class="table-action" type="submit">Promote to official</button></form>{% else %}<span class="null-value">—</span>{% endif %}</td>
+                <td><form method="post" action="{% url 'taxonomy:noise-model-deprecate' noise_model_id=noise_model.id %}">{% csrf_token %}<label><span class="visually-hidden">Deprecation reason</span><input name="note" required placeholder="Reason"></label> <button class="table-action" type="submit">Deprecate</button></form></td>
+              </tr>
+            {% empty %}<tr><td class="table-empty" colspan="4">There are no published noise models to curate.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+{% endblock %}
