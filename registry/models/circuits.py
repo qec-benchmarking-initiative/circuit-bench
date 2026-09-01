@@ -26,12 +26,12 @@ class NoiseModel(UUIDModel, PublishedLifecycleModel):
     short_description = models.TextField()
     paper_url = models.URLField(max_length=1000)
     randomises_priors = models.BooleanField()
-    supersedes_noise_model = models.ForeignKey(
+    predecessor = models.OneToOneField(
         "self",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="superseded_by",
+        related_name="successor",
     )
     curation_status = models.CharField(max_length=20, choices=CurationStatus)
     submitted_by = models.ForeignKey(
@@ -52,10 +52,10 @@ class NoiseModel(UUIDModel, PublishedLifecycleModel):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(supersedes_noise_model__isnull=True)
-                    | ~models.Q(supersedes_noise_model=models.F("id"))
+                    models.Q(predecessor__isnull=True)
+                    | ~models.Q(predecessor=models.F("id"))
                 ),
-                name="noise_model_supersedes_not_self",
+                name="noise_model_predecessor_not_self",
             ),
         ]
 
@@ -76,12 +76,12 @@ class CircuitRevision(UUIDModel, PublishedLifecycleModel):
     )
     slug = models.SlugField(max_length=200, unique=True)
     name = models.CharField(max_length=200)
-    previous_revision = models.OneToOneField(
+    predecessor = models.OneToOneField(
         "self",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="next_revision",
+        related_name="successor",
     )
     description = models.TextField(null=True, blank=True)
     revision_description = models.TextField()
@@ -146,10 +146,10 @@ class CircuitRevision(UUIDModel, PublishedLifecycleModel):
             *PublishedLifecycleModel.Meta.constraints,
             models.CheckConstraint(
                 condition=(
-                    models.Q(previous_revision__isnull=True)
-                    | ~models.Q(previous_revision=models.F("id"))
+                    models.Q(predecessor__isnull=True)
+                    | ~models.Q(predecessor=models.F("id"))
                 ),
-                name="circuit_revision_previous_not_self",
+                name="circuit_revision_predecessor_not_self",
             ),
             models.CheckConstraint(
                 condition=models.Q(code_distance_upper_bound__isnull=True)

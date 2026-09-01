@@ -36,8 +36,8 @@
           {% for circuit in circuits %}
             <tr>
               <td><a href="{% url 'circuits:detail' circuit.slug %}">{{ circuit.name }}</a></td>
-              <td class="numeric">{{ circuit.num_detectors|human_number }}</td>
-              <td class="numeric">{{ circuit.num_errors|human_number }}</td>
+              <td class="numeric">{% scientific_number circuit.num_detectors "count" %}</td>
+              <td class="numeric">{% scientific_number circuit.num_errors "count" %}</td>
             </tr>
           {% endfor %}
         </tbody>

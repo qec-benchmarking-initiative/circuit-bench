@@ -215,7 +215,7 @@ def seed_demo_data() -> dict[str, int]:
         slug="clear-matcher-0-2",
         name="Clear Matcher",
         version="0.2",
-        previous_version=decoder_root,
+        predecessor=decoder_root,
         description=None,
         revision_description="Adds calibrated per-shot failure probabilities.",
         circuit_skeleton_preparation="not_required",
@@ -549,17 +549,17 @@ def _ensure_demo_history_events(records) -> None:
 
     configurations = {
         Tag: ("tag", None),
-        NoiseModel: ("noise_model", "supersedes_noise_model_id"),
-        DecoderVersion: ("decoder", "previous_version_id"),
-        CircuitRevision: ("circuit", "previous_revision_id"),
-        Machine: ("machine", "supersedes_machine_id"),
+        NoiseModel: ("noise_model", "predecessor_id"),
+        DecoderVersion: ("decoder", "predecessor_id"),
+        CircuitRevision: ("circuit", "predecessor_id"),
+        Machine: ("machine", "predecessor_id"),
         EvaluatorRelease: ("evaluator", None),
-        Result: ("result", "supersedes_result_id"),
-        BenchmarkRevision: ("benchmark", "previous_revision_id"),
+        Result: ("result", "predecessor_id"),
+        BenchmarkRevision: ("benchmark", "predecessor_id"),
         BenchmarkAttempt: ("benchmark_attempt", None),
     }
     for record in records:
-        if record.moderation_events.exists():
+        if record.record_events.exists():
             continue
         kind, predecessor_field = configurations[type(record)]
         model = type(record)

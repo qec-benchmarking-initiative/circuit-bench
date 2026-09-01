@@ -93,7 +93,7 @@ def public_graph():
         slug="access-test-decoder",
         name="Access test decoder",
         version="0.2",
-        previous_version=decoder_root,
+        predecessor=decoder_root,
         revision_description="Second revision.",
         circuit_skeleton_preparation=DecoderVersion.Preparation.NOT_REQUIRED,
         circuit_priors_preparation=DecoderVersion.Preparation.NOT_REQUIRED,

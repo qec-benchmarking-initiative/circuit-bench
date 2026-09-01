@@ -13,8 +13,8 @@ from .models import (
     EvaluatorRelease,
     ExternalLink,
     Machine,
-    ModerationEvent,
     NoiseModel,
+    RecordEvent,
     Result,
     ResultAuthorApprovalEvent,
     SchemaRelease,
@@ -153,6 +153,6 @@ class BenchmarkAttemptAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
 
 admin.site.register([ArtifactAttachment, Credit, ExternalLink])
 admin.site.register(
-    [ArtifactGrant, CreditClaim, ModerationEvent, ResultAuthorApprovalEvent],
+    [ArtifactGrant, CreditClaim, RecordEvent, ResultAuthorApprovalEvent],
     AppendOnlyAdmin,
 )

@@ -10,7 +10,7 @@ from django.db import transaction
 from django.db.models import Max, Q
 from django.urls import NoReverseMatch, reverse
 
-from registry.models import Artifact, ModerationEvent, RecordHistory
+from registry.models import Artifact, RecordEvent, RecordHistory
 
 SUBJECT_FIELD_BY_KIND = {
     "decoder": "decoder_version",
@@ -25,9 +25,9 @@ SUBJECT_FIELD_BY_KIND = {
 }
 
 SNAPSHOT_ACTIONS = (
-    ModerationEvent.Action.SUBMITTED,
-    ModerationEvent.Action.EDITED,
-    ModerationEvent.Action.RESUBMITTED,
+    RecordEvent.Action.SUBMITTED,
+    RecordEvent.Action.EDITED,
+    RecordEvent.Action.RESUBMITTED,
 )
 
 
@@ -65,7 +65,7 @@ def submission_snapshot(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def latest_snapshot_event(kind: str, record) -> ModerationEvent:
+def latest_snapshot_event(kind: str, record) -> RecordEvent:
     """Return the latest recorded payload for this exact record, not its lineage.
 
     Pre-history-migration events may explicitly record that their payload was
@@ -74,7 +74,7 @@ def latest_snapshot_event(kind: str, record) -> ModerationEvent:
     """
 
     subject_field = SUBJECT_FIELD_BY_KIND[kind]
-    candidates = ModerationEvent.objects.filter(
+    candidates = RecordEvent.objects.filter(
         history_id=record.history_id,
         action__in=SNAPSHOT_ACTIONS,
         **{subject_field: record},
@@ -106,9 +106,9 @@ def append_history_event(
     actor=None,
     actor_system: str | None = None,
     payload_snapshot: dict[str, Any] | None = None,
-    caused_by: ModerationEvent | None = None,
-    visibility: str = ModerationEvent.Visibility.PUBLIC,
-) -> ModerationEvent:
+    caused_by: RecordEvent | None = None,
+    visibility: str = RecordEvent.Visibility.PUBLIC,
+) -> RecordEvent:
     """Append one event while serialising sequence allocation per history."""
 
     subject_field = SUBJECT_FIELD_BY_KIND[kind]
@@ -123,18 +123,18 @@ def append_history_event(
     latest = history.events.aggregate(maximum=Max("sequence"))["maximum"] or 0
     actor_values = (
         {
-            "actor_type": ModerationEvent.ActorType.ACCOUNT,
+            "actor_type": RecordEvent.ActorType.ACCOUNT,
             "actor_account": actor,
             "actor_system": None,
         }
         if actor is not None
         else {
-            "actor_type": ModerationEvent.ActorType.SYSTEM,
+            "actor_type": RecordEvent.ActorType.SYSTEM,
             "actor_account": None,
             "actor_system": actor_system,
         }
     )
-    return ModerationEvent.objects.create(
+    return RecordEvent.objects.create(
         history=history,
         sequence=latest + 1,
         action=action,
@@ -184,7 +184,7 @@ def history_view(kind: str, record, viewer=None) -> HistoryView:
     """Return the stable presentation model for one exact data page."""
 
     events = (
-        ModerationEvent.objects.filter(history_id=record.history_id)
+        RecordEvent.objects.filter(history_id=record.history_id)
         .select_related(
             "history",
             "actor_account",
@@ -208,11 +208,11 @@ def history_view(kind: str, record, viewer=None) -> HistoryView:
     )
 
 
-def current_publication_approval(record) -> ModerationEvent | None:
+def current_publication_approval(record) -> RecordEvent | None:
     """Find the approval which caused the latest publication episode."""
 
     publication = (
-        record.moderation_events.filter(action=ModerationEvent.Action.PUBLISHED)
+        record.record_events.filter(action=RecordEvent.Action.PUBLISHED)
         .select_related("caused_by", "caused_by__actor_account")
         .order_by("-sequence")
         .first()
@@ -220,14 +220,14 @@ def current_publication_approval(record) -> ModerationEvent | None:
     return publication.caused_by if publication else None
 
 
-def _event_view(event: ModerationEvent) -> HistoryEventView:
+def _event_view(event: RecordEvent) -> HistoryEventView:
     kind = event.history.record_kind
     record = getattr(event, SUBJECT_FIELD_BY_KIND[kind])
     predecessor_id = event.details.get("predecessor_id")
     predecessor = _record_in_history(event, predecessor_id)
     actor_detail = (
         event.actor_system or "system"
-        if event.actor_type == ModerationEvent.ActorType.SYSTEM
+        if event.actor_type == RecordEvent.ActorType.SYSTEM
         else "Account"
     )
     return HistoryEventView(
@@ -264,24 +264,24 @@ def _record_in_history(event, record_id):
 
 def _predecessor(kind: str, record):
     field = {
-        "decoder": "previous_version",
-        "noise_model": "supersedes_noise_model",
-        "circuit": "previous_revision",
-        "machine": "supersedes_machine",
-        "result": "supersedes_result",
-        "benchmark": "previous_revision",
+        "decoder": "predecessor",
+        "noise_model": "predecessor",
+        "circuit": "predecessor",
+        "machine": "predecessor",
+        "result": "predecessor",
+        "benchmark": "predecessor",
     }.get(kind)
     return getattr(record, field, None) if field else None
 
 
 def _successor(kind: str, record):
     relation = {
-        "decoder": "next_version",
-        "noise_model": "superseded_by",
-        "circuit": "next_revision",
-        "machine": "superseded_by",
-        "result": "superseded_by",
-        "benchmark": "next_revision",
+        "decoder": "successor",
+        "noise_model": "successor",
+        "circuit": "successor",
+        "machine": "successor",
+        "result": "successor",
+        "benchmark": "successor",
     }.get(kind)
     if not relation:
         return None
@@ -345,10 +345,10 @@ def _event_visibility_q(kind: str, viewer) -> Q:
 
     if getattr(viewer, "is_admin", False):
         return Q()
-    public = Q(visibility=ModerationEvent.Visibility.PUBLIC)
+    public = Q(visibility=RecordEvent.Visibility.PUBLIC)
     if not getattr(viewer, "is_authenticated", False):
         return public
     return public | Q(
-        visibility=ModerationEvent.Visibility.UPLOADER,
+        visibility=RecordEvent.Visibility.UPLOADER,
         **{f"{SUBJECT_FIELD_BY_KIND[kind]}__submitted_by_id": viewer.id},
     )

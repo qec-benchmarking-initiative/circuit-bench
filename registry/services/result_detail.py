@@ -48,7 +48,7 @@ def public_result_detail() -> QuerySet[Result]:
             "evaluator_version__source_bundle_artifact",
             "machine",
             "hyperparameter_values_artifact",
-            "supersedes_result",
+            "predecessor",
             "submitted_by",
         )
         .prefetch_related(

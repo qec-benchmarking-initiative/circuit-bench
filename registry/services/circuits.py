@@ -118,7 +118,7 @@ def circuit_detail_queryset() -> QuerySet:
         .select_related(
             "schema_release",
             "noise_model",
-            "previous_revision",
+            "predecessor",
             "sampling_circuit_artifact",
             "detector_error_model_artifact",
             "manifest_artifact",
@@ -160,7 +160,7 @@ def inherited_circuit_description(circuit: CircuitRevision) -> str | None:
         visited.add(current.id)
         if current.description:
             return current.description
-        current = current.previous_revision
+        current = current.predecessor
     return None
 
 
@@ -205,7 +205,7 @@ def noise_model_detail_queryset() -> QuerySet:
         .select_related(
             "schema_release",
             "submitted_by",
-            "supersedes_noise_model",
+            "predecessor",
         )
         .prefetch_related(
             Prefetch(

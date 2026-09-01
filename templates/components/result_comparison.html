@@ -5,7 +5,7 @@
       <span class="comparison-plot-action-show">Show plotter</span>
       <span class="comparison-plot-action-hide">Hide plotter</span>
     </span>
-    <span>{{ result_plot.plotted_count|human_number }}/{{ result_plot.total_count|human_number }} points</span>
+    <span>{% scientific_number result_plot.plotted_count "count" %}/{% scientific_number result_plot.total_count "count" %} points</span>
   </summary>
   {% include "components/result_plot.html" with plot=result_plot only %}
 </details>

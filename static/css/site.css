@@ -4076,3 +4076,13 @@ code {
     flex-wrap: wrap;
   }
 }
+.scientific-number {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.scientific-number sup {
+  font-size: 0.72em;
+  line-height: 0;
+  vertical-align: 0.52em;
+}

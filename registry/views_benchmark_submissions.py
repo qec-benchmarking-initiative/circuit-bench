@@ -136,7 +136,7 @@ def benchmark_candidate(request, record_id):
     benchmark = get_object_or_404(
         BenchmarkRevision.objects.select_related(
             "submitted_by", "manifest_artifact", "schema_release"
-        ).prefetch_related("items__circuit_revision", "moderation_events"),
+        ).prefetch_related("items__circuit_revision", "record_events"),
         id=record_id,
     )
     if benchmark.submitted_by_id != request.user.id and not request.user.is_admin:
@@ -222,7 +222,7 @@ def benchmark_attempt_candidate(request, attempt_id):
         ).prefetch_related(
             "result_memberships__circuit_revision",
             "result_memberships__result",
-            "moderation_events",
+            "record_events",
         ),
         id=attempt_id,
     )

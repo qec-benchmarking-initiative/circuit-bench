@@ -95,7 +95,7 @@ def noise_model_submit(request):
 def noise_model_candidate(request, noise_model_id):
     noise_model = get_object_or_404(
         NoiseModel.objects.select_related(
-            "submitted_by", "schema_release", "supersedes_noise_model"
+            "submitted_by", "schema_release", "predecessor"
         ),
         id=noise_model_id,
     )
@@ -250,7 +250,7 @@ def curation_queue(request):
     ]
     pending_noise_models = NoiseModel.objects.filter(
         state__in=("pending_review", "pending_reapproval")
-    ).select_related("submitted_by", "supersedes_noise_model")
+    ).select_related("submitted_by", "predecessor")
     published_noise_models = NoiseModel.objects.filter(state="published").exclude(
         curation_status=NoiseModel.CurationStatus.DEPRECATED
     )

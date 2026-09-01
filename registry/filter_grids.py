@@ -73,6 +73,7 @@ def range_cell(
             format_scientific_value(maximum_value) if maximum_value else "∞"
         ),
         "filtered": filtered,
+        "number_profile": "count",
         "histogram_label": histogram_label,
         "histogram": histogram,
     }

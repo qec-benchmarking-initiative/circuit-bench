@@ -321,9 +321,11 @@
     return { maximum, maximumBlank, minimum, minimumBlank };
   };
 
-  const displayRangeNumber = (value) => {
+  const displayRangeNumber = (value, source = null) => {
     if (!Number.isFinite(value)) return "auto";
-    return globalThis.CircuitBenchNumber?.format(value) ?? String(value);
+    return globalThis.CircuitBenchNumber?.format(value, {
+      profile: source?.dataset.numberProfile || "default",
+    }) ?? String(value);
   };
 
   const rangeChanged = (overlay) => (
@@ -373,7 +375,7 @@
       minimumPercent,
       `min ${minimumBlank && overlay.autoEmpty
         ? (overlay.source.dataset.rangeEmptyMinimumLabel || "auto")
-        : displayRangeNumber(minimum)}`,
+        : displayRangeNumber(minimum, overlay.source)}`,
       minimumPercent < 8 ? "left" : ""
     );
     setHandle(
@@ -383,7 +385,7 @@
         ? (overlay.autoEmpty
           ? (overlay.source.dataset.rangeEmptyMaximumLabel || "auto")
           : "∞")
-        : displayRangeNumber(maximum)}`,
+        : displayRangeNumber(maximum, overlay.source)}`,
       maximumPercent > 92 ? "right" : ""
     );
     overlay.confirm.hidden = !rangeChanged(overlay);
@@ -401,12 +403,12 @@
       ? (overlay.source.dataset.rangeDefaultDisplay || "0–∞")
       : `${minimumBlank
         ? (overlay.source.dataset.rangeEmptyMinimumLabel || "auto")
-        : displayRangeNumber(minimum)}–${
+        : displayRangeNumber(minimum, overlay.source)}–${
         maximumBlank
           ? (overlay.autoEmpty
             ? (overlay.source.dataset.rangeEmptyMaximumLabel || "auto")
             : "∞")
-          : displayRangeNumber(maximum)
+          : displayRangeNumber(maximum, overlay.source)
       }`;
     overlay.source.classList.toggle("is-filtered", !isDefault);
     updateAppliedCount(overlay.grid);
@@ -504,7 +506,8 @@
       label.style.left = `${fraction * 100}%`;
       label.dataset.edge = fraction === 0 ? "start" : (fraction === 1 ? "end" : "");
       label.textContent = displayRangeNumber(
-        domainMinimum + fraction * (domainMaximum - domainMinimum)
+        domainMinimum + fraction * (domainMaximum - domainMinimum),
+        source,
       );
       axisLabels.appendChild(label);
     });

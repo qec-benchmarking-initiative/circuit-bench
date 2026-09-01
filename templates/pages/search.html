@@ -17,7 +17,7 @@
       </div>
     </form>
     {% if query %}
-      <p class="search-summary" role="status">{{ match_count|human_number }} match{{ match_count|pluralize:"es" }} for “{{ query }}”.</p>
+      <p class="search-summary" role="status">{% scientific_number match_count "count" %} match{{ match_count|pluralize:"es" }} for “{{ query }}”.</p>
       <div class="search-groups">
         {% for group in groups %}
           <section>

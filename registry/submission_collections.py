@@ -13,8 +13,8 @@ from django.urls import reverse
 from registry.models import (
     BenchmarkAttempt,
     BenchmarkRevision,
-    ModerationEvent,
     NoiseModel,
+    RecordEvent,
 )
 from registry.models.common import PROFILE_PENDING_STATES, REVIEW_QUEUE_STATES
 from registry.services.submissions import MODEL_BY_KIND
@@ -60,18 +60,18 @@ def collect_submission_rows(
             "submitted_by", *_select_related(kind)
         ).prefetch_related(
             Prefetch(
-                "moderation_events",
-                queryset=ModerationEvent.objects.filter(action="approved")
+                "record_events",
+                queryset=RecordEvent.objects.filter(action="approved")
                 .select_related("actor_account")
                 .order_by("-sequence", "-id"),
                 to_attr="approval_events",
             ),
             Prefetch(
-                "moderation_events",
-                queryset=ModerationEvent.objects.filter(
+                "record_events",
+                queryset=RecordEvent.objects.filter(
                     action__in=(
-                        ModerationEvent.Action.REQUESTED_CHANGES,
-                        ModerationEvent.Action.REJECTED,
+                        RecordEvent.Action.REQUESTED_CHANGES,
+                        RecordEvent.Action.REJECTED,
                     )
                 )
                 .select_related("actor_account")

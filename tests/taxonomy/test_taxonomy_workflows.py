@@ -8,7 +8,7 @@ from accounts.models import Account
 from registry.demo import DEMO_ACCOUNT_ID, demo_id, seed_demo_data
 from registry.forms_submissions import DecoderSubmissionForm
 from registry.forms_taxonomy import TagPromotionForm
-from registry.models import ModerationEvent, NoiseModel, RecordHistory, Tag
+from registry.models import NoiseModel, RecordEvent, RecordHistory, Tag
 from registry.services.circuits import noise_model_catalogue
 from registry.services.taxonomy import (
     CUSTOM_VOCABULARY_ROUTE,
@@ -91,12 +91,12 @@ def test_custom_tag_is_immediately_usable_with_exact_system_attribution(
         .exists()
     )
 
-    events = list(tag.moderation_events.order_by("sequence"))
+    events = list(tag.record_events.order_by("sequence"))
     assert [event.action for event in events] == ["submitted", "approved", "published"]
-    assert events[0].actor_type == ModerationEvent.ActorType.ACCOUNT
+    assert events[0].actor_type == RecordEvent.ActorType.ACCOUNT
     assert events[0].actor_account == contributor
     assert events[0].details["approval_route"] == CUSTOM_VOCABULARY_ROUTE
-    assert events[1].actor_type == ModerationEvent.ActorType.SYSTEM
+    assert events[1].actor_type == RecordEvent.ActorType.SYSTEM
     assert events[1].actor_system == CUSTOM_VOCABULARY_SYSTEM
     assert events[2].actor_system == CUSTOM_VOCABULARY_SYSTEM
     assert events[1].caused_by == events[0]
@@ -140,7 +140,7 @@ def test_tag_promotion_requires_admin_and_valid_colour(taxonomy_data):
     )
     assert promoted.status == Tag.Status.OFFICIAL
     assert promoted.display_color == "#A1B2C3"
-    event = promoted.moderation_events.get(action="promoted_official")
+    event = promoted.record_events.get(action="promoted_official")
     assert event.actor_account == taxonomy_data["admin"]
     assert event.details["display_color"] == "#A1B2C3"
 
@@ -165,7 +165,7 @@ def test_tag_deprecation_requires_namespace_correct_canonical_target(taxonomy_da
     )
     assert deprecated.status == Tag.Status.DEPRECATED
     assert deprecated.canonical_tag == taxonomy_data["matching"]
-    events = list(deprecated.moderation_events.order_by("sequence"))
+    events = list(deprecated.record_events.order_by("sequence"))
     assert [event.action for event in events[-2:]] == ["deprecated", "merged"]
     assert events[-1].caused_by == events[-2]
     assert events[-1].details["canonical_identity"] == "algorithm:matching"
@@ -204,11 +204,11 @@ def test_noise_model_submission_is_community_pending_and_not_public(taxonomy_dat
     assert noise_model.published_at is None
     assert noise_model.curation_status == NoiseModel.CurationStatus.COMMUNITY
     assert not noise_model_catalogue().filter(id=noise_model.id).exists()
-    event = noise_model.moderation_events.get(action="submitted")
+    event = noise_model.record_events.get(action="submitted")
     assert event.actor_account == contributor
     assert event.actor_system is None
     assert event.details["approval_route"] == "admin_review"
-    assert not noise_model.moderation_events.filter(action="approved").exists()
+    assert not noise_model.record_events.filter(action="approved").exists()
 
 
 def test_noise_model_lineage_reuses_history_and_allows_one_successor(
@@ -221,9 +221,9 @@ def test_noise_model_lineage_reuses_history_and_allows_one_successor(
         predecessor=predecessor,
     )
 
-    assert successor.supersedes_noise_model == predecessor
+    assert successor.predecessor == predecessor
     assert successor.history_id == predecessor.history_id
-    events = list(successor.moderation_events.order_by("sequence"))
+    events = list(successor.record_events.order_by("sequence"))
     revision = next(
         event
         for event in events
@@ -252,7 +252,7 @@ def test_withdrawn_noise_model_successor_enters_reapproval(taxonomy_data):
     )
 
     assert successor.state == "pending_reapproval"
-    event = successor.moderation_events.get(action="resubmitted")
+    event = successor.record_events.get(action="resubmitted")
     assert event.details["projected_state"] == "pending_reapproval"
 
 
@@ -270,7 +270,7 @@ def test_noise_model_approval_and_official_promotion_are_separate(taxonomy_data)
     assert published.published_at is not None
     assert published.curation_status == NoiseModel.CurationStatus.COMMUNITY
     assert noise_model_catalogue().filter(id=published.id).exists()
-    approval, publication = published.moderation_events.filter(
+    approval, publication = published.record_events.filter(
         action__in=("approved", "published")
     ).order_by("sequence")
     assert approval.actor_account == taxonomy_data["admin"]
@@ -281,7 +281,7 @@ def test_noise_model_approval_and_official_promotion_are_separate(taxonomy_data)
         published.id, curator=taxonomy_data["admin"]
     )
     assert official.curation_status == NoiseModel.CurationStatus.OFFICIAL
-    promoted = official.moderation_events.get(action="promoted_official")
+    promoted = official.record_events.get(action="promoted_official")
     assert promoted.actor_account == taxonomy_data["admin"]
 
 
@@ -299,7 +299,7 @@ def test_noise_model_deprecation_is_audited_and_requires_publication(taxonomy_da
         note="The assumptions were replaced.",
     )
     assert deprecated.curation_status == NoiseModel.CurationStatus.DEPRECATED
-    event = deprecated.moderation_events.get(action="deprecated")
+    event = deprecated.record_events.get(action="deprecated")
     assert event.actor_account == taxonomy_data["admin"]
     assert event.note == "The assumptions were replaced."
 

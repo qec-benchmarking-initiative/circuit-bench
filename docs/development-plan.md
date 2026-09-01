@@ -351,7 +351,7 @@ The first write-side slice is implemented and specified in
 `docs/submission-governance-0.1.md`: decoder, circuit, result and machine entry
 through either a structured form or strict JSON; session-bound preview/back;
 searchable and paginated profile tables; a staff-only review work queue; private
-exact candidate-record views; transactional publication and moderation events;
+exact candidate-record views; transactional publication and record events;
 and deterministic workflow fixtures. Pending candidates can be edited in place.
 Published edits create immutable successors, withdrawal requires confirmation,
 and successors to withdrawn records enter `pending_reapproval`. The admin page

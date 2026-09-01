@@ -24,11 +24,11 @@
       {% include "components/metadata_list.html" with items=outcomes only %}
       <p>
         <strong>Arithmetic check:</strong>
-        {{ result.successful_shots|human_number }} successful +
-        {{ result.logical_failure_shots|human_number }} logical failure +
-        {{ result.timeout_shots|human_number }} timeout +
-        {{ result.decoder_error_shots|human_number }} decoder error =
-        {{ outcome_sum|human_number }} = {{ result.shots_total|human_number }} total shots.
+        {% scientific_number result.successful_shots "count" %} successful +
+        {% scientific_number result.logical_failure_shots "count" %} logical failure +
+        {% scientific_number result.timeout_shots "count" %} timeout +
+        {% scientific_number result.decoder_error_shots "count" %} decoder error =
+        {% scientific_number outcome_sum "count" %} = {% scientific_number result.shots_total "count" %} total shots.
       </p>
     </section>
 
@@ -52,13 +52,13 @@
             <div><dt>Ranking direction</dt><dd>{{ score.direction }}</dd></div>
             <div><dt>Primary value kind</dt><dd>{{ score.primary_value_kind }}</dd></div>
             <div><dt>Provisional definition</dt><dd>{{ score.provisional|yesno:"Yes,No" }}</dd></div>
-            <div><dt>Primary value</dt><dd class="numeric">{{ score.value }}</dd></div>
-            <div><dt>Point estimate</dt><dd class="numeric">{{ score.point_estimate|default:"Not stored" }}</dd></div>
-            <div><dt>Lower bound</dt><dd class="numeric">{{ score.lower_bound|default:"Not stored" }}</dd></div>
-            <div><dt>Upper bound</dt><dd class="numeric">{{ score.upper_bound|default:"Not stored" }}</dd></div>
-            <div><dt>Confidence level</dt><dd class="numeric">{{ score.confidence_level|default:"Not stored" }}</dd></div>
-            <div><dt>Sample count</dt><dd class="numeric">{{ score.sample_count|default:"Not stored" }}</dd></div>
-            <div><dt>Event count</dt><dd class="numeric">{{ score.event_count|default:"Not stored" }}</dd></div>
+            <div><dt>Primary value</dt><dd class="numeric">{% scientific_number score.value "score" %}</dd></div>
+            <div><dt>Point estimate</dt><dd class="numeric">{% if score.point_estimate == None %}Not stored{% else %}{% scientific_number score.point_estimate "score" %}{% endif %}</dd></div>
+            <div><dt>Lower bound</dt><dd class="numeric">{% if score.lower_bound == None %}Not stored{% else %}{% scientific_number score.lower_bound "score" %}{% endif %}</dd></div>
+            <div><dt>Upper bound</dt><dd class="numeric">{% if score.upper_bound == None %}Not stored{% else %}{% scientific_number score.upper_bound "score" %}{% endif %}</dd></div>
+            <div><dt>Confidence level</dt><dd class="numeric">{% if score.confidence_level == None %}Not stored{% else %}{% scientific_number score.confidence_level "probability" %}{% endif %}</dd></div>
+            <div><dt>Sample count</dt><dd class="numeric">{% if score.sample_count == None %}Not stored{% else %}{% scientific_number score.sample_count "count" %}{% endif %}</dd></div>
+            <div><dt>Event count</dt><dd class="numeric">{% if score.event_count == None %}Not stored{% else %}{% scientific_number score.event_count "count" %}{% endif %}</dd></div>
           </dl>
           <details class="record-disclosure">
             <summary><span>Definition inputs, parameters, and stored score details</span></summary>
@@ -93,7 +93,7 @@
         <p>
           Machine-readable values:
           {% if hyperparameter_artifact_url %}<a href="{{ hyperparameter_artifact_url }}">{% endif %}{{ result.hyperparameter_values_artifact.original_filename }}{% if hyperparameter_artifact_url %}</a>{% endif %}
-          · {{ result.hyperparameter_values_artifact.byte_size|human_number }} bytes
+          · {% scientific_number result.hyperparameter_values_artifact.byte_size "count" %} bytes
           · SHA-256 <code>{{ result.hyperparameter_values_artifact.sha256 }}</code>
         </p>
       {% endif %}
@@ -109,7 +109,7 @@
           {% for attachment in result.display_artifact_attachments %}
             <li>
               <a href="{% url 'artifacts:download' attachment.artifact.id %}">{{ attachment.artifact.original_filename }}</a>
-              — {{ attachment.role }} · {{ attachment.artifact.byte_size|human_number }} bytes · SHA-256 <code>{{ attachment.artifact.sha256 }}</code>
+              — {{ attachment.role }} · {% scientific_number attachment.artifact.byte_size "count" %} bytes · SHA-256 <code>{{ attachment.artifact.sha256 }}</code>
             </li>
           {% endfor %}
         </ul>
@@ -153,7 +153,7 @@
     <div><dt>Created</dt><dd>{{ result.created_at }}</dd></div>
     <div><dt>Published</dt><dd>{{ result.published_at }}</dd></div>
     {% if result.withdrawn_at %}<div><dt>Withdrawn</dt><dd>{{ result.withdrawn_at }}</dd></div>{% endif %}
-    {% if result.supersedes_result %}<div><dt>Supersedes result</dt><dd><code>{{ result.supersedes_result_id }}</code></dd></div>{% endif %}
+    {% if result.predecessor %}<div><dt>Supersedes result</dt><dd><code>{{ result.predecessor_id }}</code></dd></div>{% endif %}
   </dl>
   {% if can_review_author_status %}
     <p><a class="table-action" href="{% url 'credits:result-author-approval' result.id %}">{% if current_author_approval.action == "approve" %}Review or revoke decoder-author approval{% else %}Record decoder-author approval{% endif %}</a></p>

@@ -80,11 +80,11 @@ previous version.
 
 Final submission creates the scientific record, tag memberships, score rows,
 and uploader credit (where the credit model supports that kind) in one database
-transaction. It also creates a `submitted` moderation event.
+transaction. It also creates a `submitted` record event.
 
 Admin approval locks the pending record and its mutable scientific references,
 revalidates it, sets `published_at`,
-and creates `approved` and `published` moderation events in one transaction.
+and creates `approved` and `published` record events in one transaction.
 Immediate machine publication creates `submitted`, `approved`, and `published`
 events in the creation transaction. The approval event is attributed to the
 named `submission_policy` System actor; manual approval is attributed to the
@@ -96,7 +96,7 @@ the existing credit model does not define machine as a credit subject.
 `pending_review`, `pending_reapproval`, and `changes_requested` are unpublished
 candidate states.
 Their uploader or an admin can edit scientific fields in place while retaining
-the candidate UUID; every stored edit creates an `edited` moderation event.
+the candidate UUID; every stored edit creates an `edited` record event.
 
 Published and withdrawn scientific records are immutable. Editing a published
 record therefore creates a new record linked through its kind-specific lineage

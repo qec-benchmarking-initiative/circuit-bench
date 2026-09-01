@@ -3,7 +3,7 @@
 from django.db import transaction
 
 from accounts.models import Account
-from registry.models import ModerationEvent
+from registry.models import RecordEvent
 from registry.models.common import REVIEW_QUEUE_STATES, LifecycleState
 from registry.services.histories import (
     append_history_event,
@@ -42,7 +42,7 @@ def request_changes(
         kind=kind.value,
         record=record,
         actor=reviewer,
-        action=ModerationEvent.Action.REQUESTED_CHANGES,
+        action=RecordEvent.Action.REQUESTED_CHANGES,
         note=note,
         details={
             "policy_version": "0.1",
@@ -50,7 +50,7 @@ def request_changes(
             "projected_state": LifecycleState.CHANGES_REQUESTED,
         },
         caused_by=reviewed_snapshot,
-        visibility=ModerationEvent.Visibility.UPLOADER,
+        visibility=RecordEvent.Visibility.UPLOADER,
     )
     record.state = LifecycleState.CHANGES_REQUESTED
     record.save(update_fields=["state"])
@@ -76,7 +76,7 @@ def reject_submission(
         kind=kind.value,
         record=record,
         actor=reviewer,
-        action=ModerationEvent.Action.REJECTED,
+        action=RecordEvent.Action.REJECTED,
         note=note,
         details={
             "policy_version": "0.1",
@@ -84,7 +84,7 @@ def reject_submission(
             "projected_state": LifecycleState.REJECTED,
         },
         caused_by=reviewed_snapshot,
-        visibility=ModerationEvent.Visibility.UPLOADER,
+        visibility=RecordEvent.Visibility.UPLOADER,
     )
     record.state = LifecycleState.REJECTED
     record.save(update_fields=["state"])
@@ -114,7 +114,7 @@ def resubmit_for_review(
         kind=kind.value,
         record=record,
         actor=actor,
-        action=ModerationEvent.Action.RESUBMITTED,
+        action=RecordEvent.Action.RESUBMITTED,
         note="Resubmitted after responding to the latest review note.",
         details={
             "policy_version": "0.1",
@@ -123,7 +123,7 @@ def resubmit_for_review(
         },
         payload_snapshot=submission_snapshot(kind.value, payload),
         caused_by=previous_snapshot,
-        visibility=ModerationEvent.Visibility.UPLOADER,
+        visibility=RecordEvent.Visibility.UPLOADER,
     )
     record.state = projected_state
     record.save(update_fields=["state"])

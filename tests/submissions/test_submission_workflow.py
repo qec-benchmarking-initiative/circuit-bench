@@ -20,7 +20,7 @@ from registry.models import (
     Credit,
     DecoderVersion,
     Machine,
-    ModerationEvent,
+    RecordEvent,
     RecordHistory,
     Result,
     Tag,
@@ -86,7 +86,7 @@ def test_normal_create_ignores_a_forged_predecessor(workflow_data):
         submitter=workflow_data["contributor"],
     ).record
 
-    assert created.previous_version is None
+    assert created.predecessor is None
     assert created.history_id != predecessor.history_id
 
 
@@ -130,7 +130,7 @@ def test_pending_edit_preserves_root_lineage(workflow_data):
         actor=workflow_data["contributor"],
     )
 
-    assert updated.previous_version is None
+    assert updated.predecessor is None
     assert updated.history_id == original_history_id
 
 
@@ -261,7 +261,7 @@ def test_structured_decoder_preview_back_and_commit_create_pending_record(
     assert record.published_at is None
     assert record.submitted_by == contributor
     assert Credit.objects.get(decoder_version=record).account == contributor
-    assert ModerationEvent.objects.filter(
+    assert RecordEvent.objects.filter(
         decoder_version=record, action="submitted"
     ).exists()
 
@@ -424,7 +424,7 @@ def test_structured_upload_is_frozen_and_snapshotted_before_preview(
     assert committed.status_code == 302
     record = DecoderVersion.objects.get(slug="uploaded-schema-decoder-0-1")
     assert record.hyperparameter_schema_artifact == artifact
-    snapshot = record.moderation_events.get(action="submitted").payload_snapshot
+    snapshot = record.record_events.get(action="submitted").payload_snapshot
     assert snapshot["data"]["hyperparameter_schema_artifact"] == str(artifact.id)
     assert snapshot["artifacts"][str(artifact.id)]["sha256"] == artifact.sha256
 
@@ -483,10 +483,12 @@ def test_json_machine_submission_publishes_immediately(client, workflow_data):
     assert machine.published_at is not None
     assert committed.status_code == 302
     assert committed.url == reverse("machines:detail", args=[machine.slug])
-    assert [
-        event.action for event in machine.moderation_events.order_by("sequence")
-    ] == ["submitted", "approved", "published"]
-    approval = machine.moderation_events.get(action="approved")
+    assert [event.action for event in machine.record_events.order_by("sequence")] == [
+        "submitted",
+        "approved",
+        "published",
+    ]
+    approval = machine.record_events.get(action="approved")
     assert approval.actor_type == "system"
     assert approval.actor_system == "submission_policy"
     assert approval.actor_account is None
@@ -575,7 +577,7 @@ def test_admin_approval_publishes_after_revalidating_references(client, workflow
     assert pending.state == "published"
     assert pending.published_at is not None
     assert list(
-        pending.moderation_events.order_by("sequence").values_list("action", flat=True)
+        pending.record_events.order_by("sequence").values_list("action", flat=True)
     ) == ["submitted", "approved", "published"]
 
 
@@ -684,7 +686,7 @@ def test_pending_candidate_edit_uses_preview_and_keeps_exact_uuid(
     assert pending.id == original_id
     assert pending.description == "Edited while awaiting review."
     assert pending.state == "pending_review"
-    assert pending.moderation_events.filter(action="edited").exists()
+    assert pending.record_events.filter(action="edited").exists()
 
 
 def test_withdrawn_machine_can_be_revised_into_pending_reapproval(
@@ -719,10 +721,10 @@ def test_withdrawn_machine_can_be_revised_into_pending_reapproval(
     client.post(successor_preview.url + "submit/")
 
     successor = Machine.objects.get(slug="demo-simulated-gpu-revision")
-    assert successor.supersedes_machine == machine
+    assert successor.predecessor == machine
     assert successor.state == "pending_reapproval"
     assert successor.published_at is None
-    assert successor.moderation_events.filter(action="resubmitted").exists()
+    assert successor.record_events.filter(action="resubmitted").exists()
 
     client.force_login(admin)
     approved = client.post(
@@ -731,7 +733,7 @@ def test_withdrawn_machine_can_be_revised_into_pending_reapproval(
     successor.refresh_from_db()
     assert approved.status_code == 302
     assert successor.state == "published"
-    assert successor.moderation_events.get(action="approved").actor_account == admin
+    assert successor.record_events.get(action="approved").actor_account == admin
 
 
 def test_editing_published_record_creates_successor_without_mutating_predecessor(
@@ -762,7 +764,7 @@ def test_editing_published_record_creates_successor_without_mutating_predecessor
     successor = DecoderVersion.objects.get(slug="clear-matcher-0-3-candidate")
     assert predecessor.state == "published"
     assert predecessor.description == original_description
-    assert successor.previous_version == predecessor
+    assert successor.predecessor == predecessor
     assert successor.state == "pending_review"
 
 
@@ -802,9 +804,9 @@ def test_replacement_revision_withdraws_source_and_enters_reapproval(
 
     assert committed.status_code == 302
     assert predecessor.state == "withdrawn"
-    assert successor.previous_revision == predecessor
+    assert successor.predecessor == predecessor
     assert successor.state == "pending_reapproval"
-    assert predecessor.moderation_events.filter(action="withdrawn").exists()
+    assert predecessor.record_events.filter(action="withdrawn").exists()
 
 
 def test_profile_has_unified_pending_published_only_sections_and_row_actions(
@@ -924,7 +926,7 @@ def test_approve_form_works_with_enforced_csrf(workflow_data):
     pending.refresh_from_db()
     assert response.status_code == 302
     assert pending.state == "published"
-    assert pending.moderation_events.get(action="approved").actor_account == admin
+    assert pending.record_events.get(action="approved").actor_account == admin
 
 
 def test_submission_policy_is_rendered_and_listed_with_static_pages(client):

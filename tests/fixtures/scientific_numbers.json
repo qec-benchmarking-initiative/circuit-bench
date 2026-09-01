@@ -1,0 +1,11 @@
+[
+  {"value": "0", "profile": "default", "text": "0"},
+  {"value": "0.15", "profile": "default", "text": "0.15"},
+  {"value": "0.0023", "profile": "default", "text": "2.3 · 10⁻³"},
+  {"value": "1234.56", "profile": "default", "text": "1,235"},
+  {"value": "12340", "profile": "default", "text": "1.234 · 10⁴"},
+  {"value": "-12340", "profile": "default", "text": "-1.234 · 10⁴"},
+  {"value": "12340", "profile": "count", "text": "12,340"},
+  {"value": "1234567", "profile": "count", "text": "1.235 · 10⁶"},
+  {"value": "0.00002341", "profile": "probability", "text": "2.34 · 10⁻⁵"}
+]

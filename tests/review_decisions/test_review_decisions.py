@@ -7,7 +7,7 @@ from accounts.models import Account
 from registry.demo import DEMO_ACCOUNT_ID, demo_id
 from registry.demo_submissions import seed_submission_demo_data
 from registry.management.commands.validate_histories import BaseHistoryValidator
-from registry.models import DecoderVersion, ModerationEvent
+from registry.models import DecoderVersion, RecordEvent
 from registry.services.histories import (
     append_history_event,
     history_view,
@@ -58,11 +58,11 @@ def test_request_changes_records_private_note_and_keeps_edit_in_place(workflow_d
 
     pending.refresh_from_db()
     assert pending.state == "changes_requested"
-    event = pending.moderation_events.get(action="requested_changes")
+    event = pending.record_events.get(action="requested_changes")
     assert event.note == "Please state the clustering radius."
-    assert event.visibility == ModerationEvent.Visibility.UPLOADER
+    assert event.visibility == RecordEvent.Visibility.UPLOADER
     assert event.details["previous_state"] == "pending_review"
-    assert event.caused_by.action == ModerationEvent.Action.SUBMITTED
+    assert event.caused_by.action == RecordEvent.Action.SUBMITTED
     assert event.caused_by.decoder_version_id == pending.id
 
     payload = submission_payload_for_record(SubmissionKind.DECODER, pending)
@@ -85,7 +85,7 @@ def test_review_note_is_required_and_decisions_are_idempotency_safe(workflow_dat
         reject_submission("decoder", pending.id, reviewer=admin, note="  ")
     pending.refresh_from_db()
     assert pending.state == "pending_review"
-    assert not pending.moderation_events.filter(action="rejected").exists()
+    assert not pending.record_events.filter(action="rejected").exists()
 
     reject_submission("decoder", pending.id, reviewer=admin, note="Out of scope.")
     with pytest.raises(SubmissionStateError, match="waiting for review"):
@@ -94,8 +94,8 @@ def test_review_note_is_required_and_decisions_are_idempotency_safe(workflow_dat
     pending.refresh_from_db()
     assert pending.state == "rejected"
     assert pending.published_at is None
-    rejection = pending.moderation_events.get(action="rejected")
-    assert rejection.caused_by.action == ModerationEvent.Action.SUBMITTED
+    rejection = pending.record_events.get(action="rejected")
+    assert rejection.caused_by.action == RecordEvent.Action.SUBMITTED
     assert rejection.caused_by.decoder_version_id == pending.id
     payload = submission_payload_for_record("decoder", pending)
     with pytest.raises(SubmissionStateError, match="pending submissions"):
@@ -162,7 +162,7 @@ def test_resubmit_snapshots_current_record_and_restores_original_queue(workflow_
     )
     assert resubmitted.id == pending.id
     assert resubmitted.state == "pending_review"
-    event = resubmitted.moderation_events.order_by("-sequence").first()
+    event = resubmitted.record_events.order_by("-sequence").first()
     assert event.action == "resubmitted"
     assert event.details == {
         "policy_version": "0.1",
@@ -172,7 +172,7 @@ def test_resubmit_snapshots_current_record_and_restores_original_queue(workflow_
     assert event.payload_snapshot["data"] == submission_payload_for_record(
         "decoder", resubmitted
     )
-    assert event.caused_by.action == ModerationEvent.Action.EDITED
+    assert event.caused_by.action == RecordEvent.Action.EDITED
     assert event.caused_by.decoder_version_id == pending.id
 
     with pytest.raises(SubmissionStateError, match="requested changes"):
@@ -222,16 +222,14 @@ def test_resubmit_returns_withdrawn_predecessor_successor_to_reapproval(
         "machine", successor.id, edited_payload, actor=contributor
     )
     successor.refresh_from_db()
-    assert successor.supersedes_machine_id == source.id
+    assert successor.predecessor_id == source.id
     assert successor.state == "changes_requested"
 
     resubmit_for_review("machine", successor.id, actor=contributor)
     successor.refresh_from_db()
     assert successor.state == "pending_reapproval"
     assert (
-        successor.moderation_events.order_by("-sequence")
-        .first()
-        .details["projected_state"]
+        successor.record_events.order_by("-sequence").first().details["projected_state"]
         == "pending_reapproval"
     )
     call_command("validate_histories", verbosity=0)
@@ -329,7 +327,7 @@ def test_uploader_notes_are_visible_only_to_the_exact_subject_uploader(workflow_
         slug="mixed-uploader-successor",
         name=source.name,
         version="0.2",
-        previous_version=source,
+        predecessor=source,
         description="A successor submitted by another account.",
         revision_description="Mixed-uploader visibility fixture.",
         circuit_skeleton_preparation=source.circuit_skeleton_preparation,
@@ -342,7 +340,7 @@ def test_uploader_notes_are_visible_only_to_the_exact_subject_uploader(workflow_
         kind="decoder",
         record=successor,
         actor=other_owner,
-        action=ModerationEvent.Action.REVISION_CREATED,
+        action=RecordEvent.Action.REVISION_CREATED,
         note="Created a mixed-uploader successor.",
         details={"predecessor_id": str(source.id)},
     )
@@ -350,7 +348,7 @@ def test_uploader_notes_are_visible_only_to_the_exact_subject_uploader(workflow_
         kind="decoder",
         record=successor,
         actor=other_owner,
-        action=ModerationEvent.Action.SUBMITTED,
+        action=RecordEvent.Action.SUBMITTED,
         note="Submitted the successor.",
         details={"projected_state": "pending_review"},
         payload_snapshot=submission_snapshot(
@@ -387,9 +385,7 @@ def test_validator_rejects_cross_revision_and_stale_snapshot_causes(workflow_dat
     source = workflow_data["pending"]
     admin = workflow_data["admin"]
     contributor = workflow_data["contributor"]
-    source_submission = source.moderation_events.get(
-        action=ModerationEvent.Action.SUBMITTED
-    )
+    source_submission = source.record_events.get(action=RecordEvent.Action.SUBMITTED)
     request_changes(
         "decoder",
         source.id,
@@ -400,12 +396,8 @@ def test_validator_rejects_cross_revision_and_stale_snapshot_causes(workflow_dat
     payload["description"] = "Edited after review."
     update_pending_submission("decoder", source.id, payload, actor=contributor)
     resubmit_for_review("decoder", source.id, actor=contributor)
-    resubmission = source.moderation_events.get(
-        action=ModerationEvent.Action.RESUBMITTED
-    )
-    ModerationEvent.objects.filter(id=resubmission.id).update(
-        caused_by=source_submission
-    )
+    resubmission = source.record_events.get(action=RecordEvent.Action.RESUBMITTED)
+    RecordEvent.objects.filter(id=resubmission.id).update(caused_by=source_submission)
 
     errors = BaseHistoryValidator().validate()
     assert any("does not cite the latest exact snapshot" in error for error in errors)
@@ -429,7 +421,7 @@ def test_validator_rejects_cross_revision_and_stale_snapshot_causes(workflow_dat
         kind="decoder",
         record=other,
         actor=other_owner,
-        action=ModerationEvent.Action.SUBMITTED,
+        action=RecordEvent.Action.SUBMITTED,
         note="Submitted a second exact record.",
         details={"projected_state": "pending_review"},
         payload_snapshot=submission_snapshot("decoder", {"record_id": str(other.id)}),
@@ -438,14 +430,14 @@ def test_validator_rejects_cross_revision_and_stale_snapshot_causes(workflow_dat
         kind="decoder",
         record=other,
         actor=admin,
-        action=ModerationEvent.Action.REQUESTED_CHANGES,
+        action=RecordEvent.Action.REQUESTED_CHANGES,
         note="Invalid cross-revision cause.",
         details={
             "previous_state": "pending_review",
             "projected_state": "changes_requested",
         },
         caused_by=source_submission,
-        visibility=ModerationEvent.Visibility.UPLOADER,
+        visibility=RecordEvent.Visibility.UPLOADER,
     )
     other.state = "changes_requested"
     other.save(update_fields=["state"])
@@ -460,7 +452,7 @@ def test_validator_rejects_cross_revision_and_stale_snapshot_causes(workflow_dat
         kind="decoder",
         record=source,
         actor=admin,
-        action=ModerationEvent.Action.APPROVED,
+        action=RecordEvent.Action.APPROVED,
         note="Approval used as an invalid cross-revision publication cause.",
         caused_by=resubmission,
     )
@@ -468,7 +460,7 @@ def test_validator_rejects_cross_revision_and_stale_snapshot_causes(workflow_dat
         kind="decoder",
         record=other,
         actor=admin,
-        action=ModerationEvent.Action.PUBLISHED,
+        action=RecordEvent.Action.PUBLISHED,
         note="Invalid cross-revision publication.",
         caused_by=source_approval,
     )
@@ -491,9 +483,7 @@ def test_validator_rejects_stale_transition_projection(workflow_data):
         reviewer=workflow_data["admin"],
         note="Review transition fixture.",
     )
-    decision = pending.moderation_events.get(
-        action=ModerationEvent.Action.REQUESTED_CHANGES
-    )
+    decision = pending.record_events.get(action=RecordEvent.Action.REQUESTED_CHANGES)
     decision.details = {
         **decision.details,
         "previous_state": "pending_reapproval",

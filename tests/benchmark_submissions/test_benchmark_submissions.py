@@ -18,7 +18,7 @@ from registry.models import (
     BenchmarkRevision,
     CircuitRevision,
     DecoderVersion,
-    ModerationEvent,
+    RecordEvent,
     RecordHistory,
     Result,
 )
@@ -110,7 +110,7 @@ def _second_circuit(data, *, slug="optional-memory-d7"):
         history=RecordHistory.objects.create(record_kind="circuit"),
         slug=slug,
         name="Optional memory circuit d=7",
-        previous_revision=None,
+        predecessor=None,
         state="published",
         published_at=timezone.now(),
     )
@@ -122,7 +122,7 @@ def _result_for(data, circuit, *, decoder=None, state="published"):
         history=RecordHistory.objects.create(record_kind="result"),
         decoder_version=decoder or data["decoder"],
         circuit_revision=circuit,
-        supersedes_result=None,
+        predecessor=None,
         state=state,
         published_at=timezone.now() if state == "published" else None,
     )
@@ -206,7 +206,7 @@ def test_structured_and_json_entry_preview_then_commit(client, benchmark_data, m
     assert record.published_at is None
     assert record.submitted_by == benchmark_data["contributor"]
     assert record.recognition_status == "community_submitted"
-    assert record.moderation_events.get(action="submitted").payload_snapshot["data"][
+    assert record.record_events.get(action="submitted").payload_snapshot["data"][
         "manifest_artifact"
     ] == str(record.manifest_artifact_id)
 
@@ -256,7 +256,7 @@ def test_approval_publishes_as_admin_approved_with_causal_history(benchmark_data
         benchmark.id, reviewer=benchmark_data["admin"]
     )
 
-    events = list(approved.moderation_events.order_by("sequence"))
+    events = list(approved.record_events.order_by("sequence"))
     approval = next(event for event in events if event.action == "approved")
     publication = next(event for event in events if event.action == "published")
     assert approved.state == "published"
@@ -289,7 +289,7 @@ def test_official_promotion_is_separate_noted_and_admin_only(benchmark_data):
         note="Approved as the reference memory benchmark.",
     )
 
-    event = promoted.moderation_events.get(action="promoted_official")
+    event = promoted.record_events.get(action="promoted_official")
     assert promoted.recognition_status == "official"
     assert event.actor_account == benchmark_data["admin"]
     assert event.note == "Approved as the reference memory benchmark."
@@ -318,10 +318,10 @@ def test_predecessor_successor_duplicate_and_withdrawn_reapproval(benchmark_data
         ),
         submitter=benchmark_data["admin"],
     ).benchmark
-    assert successor.previous_revision == predecessor
+    assert successor.predecessor == predecessor
     assert successor.history == predecessor.history
     assert successor.state == "pending_review"
-    assert successor.moderation_events.filter(action="revision_created").exists()
+    assert successor.record_events.filter(action="revision_created").exists()
 
     with pytest.raises(BenchmarkStateError, match="already has an exact successor"):
         create_benchmark_submission(
@@ -352,7 +352,7 @@ def test_predecessor_successor_duplicate_and_withdrawn_reapproval(benchmark_data
         submitter=benchmark_data["admin"],
     ).benchmark
     assert reapproval.state == "pending_reapproval"
-    assert reapproval.moderation_events.get(action="resubmitted")
+    assert reapproval.record_events.get(action="resubmitted")
 
     with pytest.raises(BenchmarkValidationError, match="slug is already in use"):
         create_benchmark_submission(
@@ -391,7 +391,7 @@ def test_approval_revalidates_that_manifest_circuits_remain_public(benchmark_dat
 
     benchmark.refresh_from_db()
     assert benchmark.state == "pending_review"
-    assert not benchmark.moderation_events.filter(action="approved").exists()
+    assert not benchmark.record_events.filter(action="approved").exists()
 
 
 def test_approval_rejects_a_valid_file_with_the_wrong_manifest_meaning(
@@ -413,7 +413,7 @@ def test_approval_rejects_a_valid_file_with_the_wrong_manifest_meaning(
 
     benchmark.refresh_from_db()
     assert benchmark.state == "pending_review"
-    assert not benchmark.moderation_events.filter(action="approved").exists()
+    assert not benchmark.record_events.filter(action="approved").exists()
 
 
 def test_attempt_forms_are_two_step_and_limit_results_to_exact_matches(
@@ -475,7 +475,7 @@ def test_attempt_view_selects_then_submits_results_for_review(client, benchmark_
     assert attempt.published_at is None
     assert attempt.submitted_by == benchmark_data["contributor"]
     assert attempt.result_memberships.get().result == benchmark_data["result"]
-    submitted = attempt.moderation_events.get(action="submitted")
+    submitted = attempt.record_events.get(action="submitted")
     assert submitted.payload_snapshot["data"]["results"] == [
         {
             "circuit_revision": str(benchmark_data["circuit"].id),
@@ -519,7 +519,7 @@ def test_attempt_submission_accepts_optional_omission_or_completion(
     published = approve_benchmark_attempt(attempt.id, reviewer=benchmark_data["admin"])
     assert published.state == "published"
     assert published.published_at is not None
-    events = list(published.moderation_events.order_by("sequence"))
+    events = list(published.record_events.order_by("sequence"))
     assert [event.action for event in events] == ["submitted", "approved", "published"]
     assert events[-1].caused_by == events[-2]
 
@@ -720,8 +720,8 @@ def test_approve_and_promote_forms_work_with_enforced_csrf(benchmark_data):
     assert promoted.status_code == 302
     assert pending.recognition_status == "official"
     assert (
-        pending.moderation_events.get(
-            action=ModerationEvent.Action.PROMOTED_OFFICIAL
+        pending.record_events.get(
+            action=RecordEvent.Action.PROMOTED_OFFICIAL
         ).actor_account
         == benchmark_data["admin"]
     )

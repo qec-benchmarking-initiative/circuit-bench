@@ -23,12 +23,12 @@ class DecoderVersion(UUIDModel, PublishedLifecycleModel):
     slug = models.SlugField(max_length=200, unique=True)
     name = models.CharField(max_length=200)
     version = models.CharField(max_length=100)
-    previous_version = models.OneToOneField(
+    predecessor = models.OneToOneField(
         "self",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="next_version",
+        related_name="successor",
     )
     description = models.TextField(null=True, blank=True)
     revision_description = models.TextField()
@@ -78,10 +78,10 @@ class DecoderVersion(UUIDModel, PublishedLifecycleModel):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(previous_version__isnull=True)
-                    | ~models.Q(previous_version=models.F("id"))
+                    models.Q(predecessor__isnull=True)
+                    | ~models.Q(predecessor=models.F("id"))
                 ),
-                name="decoder_version_previous_not_self",
+                name="decoder_version_predecessor_not_self",
             ),
         ]
 

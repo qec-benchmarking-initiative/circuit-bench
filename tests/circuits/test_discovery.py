@@ -159,7 +159,8 @@ def test_circuit_leaderboard_uses_reusable_algorithm_and_machine_grids(
     assert response.context["result_count"] == 1
     machine = Machine.objects.get(slug="demo-eight-core-cpu")
     assert reverse("machines:detail", args=[machine.slug]) in content
-    assert "2.3e-2 probability" in content
+    assert "10<sup>7</sup>" in content
+    assert "probability" in content
 
 
 def test_circuit_leaderboard_filters_results_by_algorithm_and_machine(

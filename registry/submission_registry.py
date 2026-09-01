@@ -12,8 +12,7 @@ from registry.submission_policy import ENABLED_SUBMISSION_KINDS, SubmissionKind
 class SubmissionKindRegistration:
     kind: SubmissionKind
     model: type[Model]
-    lineage_field: str
-    reverse_lineage_relation: str | None
+    lineage_input_field: str
     public_route_name: str
     public_argument_attribute: str
     select_related: tuple[str, ...] = ()
@@ -24,8 +23,7 @@ SUBMISSION_KIND_REGISTRY = {
     SubmissionKind.DECODER: SubmissionKindRegistration(
         kind=SubmissionKind.DECODER,
         model=DecoderVersion,
-        lineage_field="previous_version",
-        reverse_lineage_relation="next_version",
+        lineage_input_field="previous_version",
         public_route_name="decoders:detail",
         public_argument_attribute="slug",
         supports_replacement_withdrawal=True,
@@ -33,8 +31,7 @@ SUBMISSION_KIND_REGISTRY = {
     SubmissionKind.CIRCUIT: SubmissionKindRegistration(
         kind=SubmissionKind.CIRCUIT,
         model=CircuitRevision,
-        lineage_field="previous_revision",
-        reverse_lineage_relation="next_revision",
+        lineage_input_field="previous_revision",
         public_route_name="circuits:detail",
         public_argument_attribute="slug",
         supports_replacement_withdrawal=True,
@@ -42,8 +39,7 @@ SUBMISSION_KIND_REGISTRY = {
     SubmissionKind.RESULT: SubmissionKindRegistration(
         kind=SubmissionKind.RESULT,
         model=Result,
-        lineage_field="supersedes_result",
-        reverse_lineage_relation="superseded_by",
+        lineage_input_field="supersedes_result",
         public_route_name="results:detail",
         public_argument_attribute="id",
         select_related=("decoder_version", "circuit_revision", "machine"),
@@ -51,8 +47,7 @@ SUBMISSION_KIND_REGISTRY = {
     SubmissionKind.MACHINE: SubmissionKindRegistration(
         kind=SubmissionKind.MACHINE,
         model=Machine,
-        lineage_field="supersedes_machine",
-        reverse_lineage_relation=None,
+        lineage_input_field="supersedes_machine",
         public_route_name="machines:detail",
         public_argument_attribute="slug",
     ),
@@ -80,7 +75,7 @@ MODEL_BY_KIND = {
     registration.kind: registration.model
     for registration in enabled_submission_registrations()
 }
-LINEAGE_FIELD_BY_KIND = {
-    registration.kind: registration.lineage_field
+LINEAGE_INPUT_FIELD_BY_KIND = {
+    registration.kind: registration.lineage_input_field
     for registration in enabled_submission_registrations()
 }

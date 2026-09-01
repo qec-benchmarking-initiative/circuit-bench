@@ -34,7 +34,7 @@ from registry.models.common import (
 )
 from registry.services.artifacts import ArtifactError, store_uploaded_artifact
 from registry.services.submissions import (
-    LINEAGE_FIELD_BY_KIND,
+    LINEAGE_INPUT_FIELD_BY_KIND,
     MODEL_BY_KIND,
     SubmissionStateError,
     SubmissionValidationError,
@@ -736,8 +736,8 @@ def _force_lineage(kind, record, operation, payload):
     elif operation == "successor":
         lineage_id = record.id
     else:
-        lineage_id = getattr(record, f"{LINEAGE_FIELD_BY_KIND[kind]}_id")
-    payload[LINEAGE_FIELD_BY_KIND[kind]] = (
+        lineage_id = record.predecessor_id
+    payload[LINEAGE_INPUT_FIELD_BY_KIND[kind]] = (
         str(lineage_id) if lineage_id is not None else None
     )
     return payload
@@ -745,7 +745,7 @@ def _force_lineage(kind, record, operation, payload):
 
 def _lock_lineage_field(form, kind, operation, record):
     if operation == "create":
-        field = form.fields[LINEAGE_FIELD_BY_KIND[kind]]
+        field = form.fields[LINEAGE_INPUT_FIELD_BY_KIND[kind]]
         field.disabled = True
         field.help_text = (
             "Use the Revise action on an existing record to create a successor."
@@ -753,7 +753,7 @@ def _lock_lineage_field(form, kind, operation, record):
     elif operation == "successor" or (
         operation == "edit" and candidate_lineage_is_locked(kind, record)
     ):
-        field = form.fields[LINEAGE_FIELD_BY_KIND[kind]]
+        field = form.fields[LINEAGE_INPUT_FIELD_BY_KIND[kind]]
         field.disabled = True
         field.help_text = "Fixed by the immutable predecessor relationship."
 

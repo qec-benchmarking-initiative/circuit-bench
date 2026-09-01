@@ -31,7 +31,7 @@ EXPECTED_APPLICATION_TABLES = {
     "benchmark_revision_item",
     "benchmark_attempt",
     "benchmark_attempt_result",
-    "moderation_event",
+    "record_event",
 }
 
 

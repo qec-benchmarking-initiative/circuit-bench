@@ -19,12 +19,12 @@
       <dl class="circuit-facts">
         <div class="circuit-fact-wide"><dt>Noise model</dt><dd><a href="{% url 'noise-models:detail' circuit.noise_model.slug %}">{{ circuit.noise_model.name }}</a></dd></div>
         <div><dt>Priors randomised</dt><dd>{{ circuit.noise_model.randomises_priors|yesno:"Yes,No" }}</dd></div>
-        <div><dt>Code distance upper bound</dt><dd>{% if circuit.code_distance_upper_bound != None %}{{ circuit.code_distance_upper_bound|human_number }}{% else %}—{% endif %}</dd></div>
-        <div><dt>Circuit distance upper bound</dt><dd>{% if circuit.circuit_distance_upper_bound != None %}{{ circuit.circuit_distance_upper_bound|human_number }}{% else %}—{% endif %}</dd></div>
-        <div><dt>Rounds</dt><dd>{% if circuit.rounds != None %}{{ circuit.rounds|human_number }}{% else %}—{% endif %}</dd></div>
-        <div><dt>Detectors</dt><dd>{{ circuit.num_detectors|human_number }}</dd></div>
-        <div><dt>Errors</dt><dd>{{ circuit.num_errors|human_number }}</dd></div>
-        <div><dt>Observables</dt><dd>{{ circuit.num_observables|human_number }}</dd></div>
+        <div><dt>Code distance upper bound</dt><dd>{% if circuit.code_distance_upper_bound != None %}{% scientific_number circuit.code_distance_upper_bound "count" %}{% else %}—{% endif %}</dd></div>
+        <div><dt>Circuit distance upper bound</dt><dd>{% if circuit.circuit_distance_upper_bound != None %}{% scientific_number circuit.circuit_distance_upper_bound "count" %}{% else %}—{% endif %}</dd></div>
+        <div><dt>Rounds</dt><dd>{% if circuit.rounds != None %}{% scientific_number circuit.rounds "count" %}{% else %}—{% endif %}</dd></div>
+        <div><dt>Detectors</dt><dd>{% scientific_number circuit.num_detectors "count" %}</dd></div>
+        <div><dt>Errors</dt><dd>{% scientific_number circuit.num_errors "count" %}</dd></div>
+        <div><dt>Observables</dt><dd>{% scientific_number circuit.num_observables "count" %}</dd></div>
         <div><dt>CSS</dt><dd>{{ circuit.is_css|yesno:"Yes,No" }}</dd></div>
         <div><dt>X only</dt><dd>{{ circuit.dem_x_detectors_only|yesno:"Yes,No" }}</dd></div>
         <div><dt>Z only</dt><dd>{{ circuit.dem_z_detectors_only|yesno:"Yes,No" }}</dd></div>
@@ -47,7 +47,7 @@
                   <tr>
                     <td>{{ role }}</td>
                     <td><a href="{% url 'artifacts:download' artifact.id %}">{{ artifact.original_filename }}</a></td>
-                    <td class="numeric">{{ artifact.byte_size|human_number }}</td>
+                    <td class="numeric">{% scientific_number artifact.byte_size "count" %}</td>
                     <td><code>{{ artifact.sha256 }}</code></td>
                   </tr>
                 {% endfor %}
@@ -63,7 +63,7 @@
             <div><dt>Decompose errors</dt><dd>{{ circuit.dem_decompose_errors|yesno:"true,false" }}</dd></div>
             <div><dt>Flatten loops</dt><dd>{{ circuit.dem_flatten_loops|yesno:"true,false" }}</dd></div>
             <div><dt>Allow gauge detectors</dt><dd>{{ circuit.dem_allow_gauge_detectors|yesno:"true,false" }}</dd></div>
-            <div><dt>Approximate disjoint errors</dt><dd>{{ circuit.dem_approximate_disjoint_errors|human_number }}</dd></div>
+            <div><dt>Approximate disjoint errors</dt><dd>{{ circuit.dem_approximate_disjoint_errors|yesno:"Yes,No" }}</dd></div>
             <div><dt>Ignore decomposition failures</dt><dd>{{ circuit.dem_ignore_decomposition_failures|yesno:"true,false" }}</dd></div>
             <div><dt>Block remnant edges</dt><dd>{{ circuit.dem_block_decomposition_from_introducing_remnant_edges|yesno:"true,false" }}</dd></div>
           </dl>

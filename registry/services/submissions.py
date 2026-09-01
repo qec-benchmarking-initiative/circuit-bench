@@ -2,9 +2,7 @@
 
 from dataclasses import dataclass
 
-from django.core.exceptions import (
-    ObjectDoesNotExist,
-)
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import (
     ValidationError as DjangoValidationError,
 )
@@ -21,8 +19,8 @@ from registry.models import (
     DecoderVersion,
     EvaluatorRelease,
     Machine,
-    ModerationEvent,
     NoiseModel,
+    RecordEvent,
     Result,
     ResultScore,
     SchemaRelease,
@@ -48,7 +46,7 @@ from registry.submission_policy import (
     approval_decision,
 )
 from registry.submission_registry import (
-    LINEAGE_FIELD_BY_KIND,
+    LINEAGE_INPUT_FIELD_BY_KIND,
     MODEL_BY_KIND,
     submission_registration,
 )
@@ -117,7 +115,7 @@ def create_submission(
 ) -> SubmissionOutcome:
     kind = SubmissionKind(kind)
     payload = dict(payload)
-    payload[LINEAGE_FIELD_BY_KIND[kind]] = None
+    payload[LINEAGE_INPUT_FIELD_BY_KIND[kind]] = None
     return _create_submission(
         kind,
         payload,
@@ -136,7 +134,7 @@ def _create_submission(
 ) -> SubmissionOutcome:
     kind = SubmissionKind(kind)
     payload = dict(payload)
-    payload[LINEAGE_FIELD_BY_KIND[kind]] = _id_or_none(
+    payload[LINEAGE_INPUT_FIELD_BY_KIND[kind]] = _id_or_none(
         getattr(expected_predecessor, "id", None)
     )
     payload = validate_submission_payload(
@@ -160,7 +158,7 @@ def _create_submission(
     decision = approval_decision(kind, submitter, reapproval=reapproval)
     release = _frozen_schema_release(kind)
     published_at = timezone.now() if not decision.requires_review else None
-    predecessor = form.cleaned_data.get(LINEAGE_FIELD_BY_KIND[kind])
+    predecessor = form.cleaned_data.get(LINEAGE_INPUT_FIELD_BY_KIND[kind])
     if predecessor != expected_predecessor:
         raise SubmissionStateError(
             "The submitted predecessor does not match the authorized revision route."
@@ -193,7 +191,7 @@ def _create_submission(
             kind=kind.value,
             record=record,
             actor=submitter,
-            action=ModerationEvent.Action.REVISION_CREATED,
+            action=RecordEvent.Action.REVISION_CREATED,
             note="Created this exact record as a successor revision.",
             details={
                 "policy_version": decision.policy_version,
@@ -205,9 +203,9 @@ def _create_submission(
         record=record,
         actor=submitter,
         action=(
-            ModerationEvent.Action.RESUBMITTED
+            RecordEvent.Action.RESUBMITTED
             if reapproval
-            else ModerationEvent.Action.SUBMITTED
+            else RecordEvent.Action.SUBMITTED
         ),
         note=(
             "Submitted a successor for reapproval."
@@ -222,7 +220,7 @@ def _create_submission(
             kind=kind.value,
             record=record,
             actor_system="submission_policy",
-            action=ModerationEvent.Action.APPROVED,
+            action=RecordEvent.Action.APPROVED,
             note="Approved automatically under submission policy 0.1.",
             details={**event_details, "approved_by": "system"},
             caused_by=submission_event,
@@ -231,7 +229,7 @@ def _create_submission(
             kind=kind.value,
             record=record,
             actor_system="submission_policy",
-            action=ModerationEvent.Action.PUBLISHED,
+            action=RecordEvent.Action.PUBLISHED,
             note="Published immediately under submission policy 0.1.",
             details={**event_details, "approved_by": "system"},
             caused_by=approval_event,
@@ -250,7 +248,7 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
             "slug": record.slug,
             "name": record.name,
             "version": record.version,
-            "previous_version": _id_or_none(record.previous_version_id),
+            "previous_version": _id_or_none(record.predecessor_id),
             "description": record.description,
             "revision_description": record.revision_description,
             "circuit_skeleton_preparation": record.circuit_skeleton_preparation,
@@ -271,7 +269,7 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
         return {
             "slug": record.slug,
             "name": record.name,
-            "previous_revision": _id_or_none(record.previous_revision_id),
+            "previous_revision": _id_or_none(record.predecessor_id),
             "description": record.description,
             "revision_description": record.revision_description,
             "noise_model": str(record.noise_model_id),
@@ -335,7 +333,7 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
             "training_workload_description": record.training_workload_description,
             "software_environment": record.software_environment,
             "t_1000_ns": record.t_1000_ns,
-            "supersedes_result": _id_or_none(record.supersedes_result_id),
+            "supersedes_result": _id_or_none(record.predecessor_id),
             "scores": [
                 {
                     "score_definition": str(score.score_definition_id),
@@ -356,7 +354,7 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
         "machine_class": record.machine_class,
         "description": record.description,
         "status": record.status,
-        "supersedes_machine": _id_or_none(record.supersedes_machine_id),
+        "supersedes_machine": _id_or_none(record.predecessor_id),
     }
 
 
@@ -371,11 +369,11 @@ def candidate_review_route(kind: SubmissionKind | str, record) -> LifecycleState
     if record.state == LifecycleState.PENDING_REAPPROVAL:
         return LifecycleState.PENDING_REAPPROVAL
     latest_transition = (
-        record.moderation_events.filter(
+        record.record_events.filter(
             action__in=(
-                ModerationEvent.Action.SUBMITTED,
-                ModerationEvent.Action.RESUBMITTED,
-                ModerationEvent.Action.REQUESTED_CHANGES,
+                RecordEvent.Action.SUBMITTED,
+                RecordEvent.Action.RESUBMITTED,
+                RecordEvent.Action.REQUESTED_CHANGES,
             )
         )
         .order_by("-sequence", "-id")
@@ -384,15 +382,15 @@ def candidate_review_route(kind: SubmissionKind | str, record) -> LifecycleState
     if latest_transition is not None:
         key = (
             "previous_state"
-            if latest_transition.action == ModerationEvent.Action.REQUESTED_CHANGES
+            if latest_transition.action == RecordEvent.Action.REQUESTED_CHANGES
             else "projected_state"
         )
         projected = latest_transition.details.get(key)
         if projected in REVIEW_QUEUE_STATES:
             return LifecycleState(projected)
-    predecessor_id = getattr(record, f"{LINEAGE_FIELD_BY_KIND[kind]}_id")
+    predecessor_id = record.predecessor_id
     if predecessor_id is not None:
-        predecessor = getattr(record, LINEAGE_FIELD_BY_KIND[kind])
+        predecessor = record.predecessor
         if predecessor.state == LifecycleState.WITHDRAWN:
             return LifecycleState.PENDING_REAPPROVAL
     return LifecycleState.PENDING_REVIEW
@@ -424,8 +422,8 @@ def update_pending_submission(
         )
 
     payload = dict(payload)
-    source = getattr(record, f"{LINEAGE_FIELD_BY_KIND[kind]}_id")
-    payload[LINEAGE_FIELD_BY_KIND[kind]] = _id_or_none(source)
+    source = record.predecessor_id
+    payload[LINEAGE_INPUT_FIELD_BY_KIND[kind]] = _id_or_none(source)
 
     payload = validate_submission_payload(kind, payload, record=record, actor=actor)
     form = submission_form_for_payload(kind, payload, record=record, actor=actor)
@@ -438,7 +436,7 @@ def update_pending_submission(
         kind=kind.value,
         record=record,
         actor=actor,
-        action=ModerationEvent.Action.EDITED,
+        action=RecordEvent.Action.EDITED,
         note="Edited while awaiting review; the exact candidate UUID was retained.",
         details={"policy_version": "0.1", "state": record.state},
         payload_snapshot=submission_snapshot(kind.value, payload),
@@ -483,7 +481,7 @@ def create_successor_submission(
             ),
         )
     payload = dict(payload)
-    payload[LINEAGE_FIELD_BY_KIND[kind]] = str(source.id)
+    payload[LINEAGE_INPUT_FIELD_BY_KIND[kind]] = str(source.id)
     outcome = _create_submission(
         kind,
         payload,
@@ -510,7 +508,7 @@ def withdraw_submission(
         kind=kind.value,
         record=record,
         actor=actor,
-        action=ModerationEvent.Action.WITHDRAWN,
+        action=RecordEvent.Action.WITHDRAWN,
         note=note.strip() or "Withdrawn by the uploader or an admin.",
         details={"policy_version": "0.1"},
     )
@@ -560,7 +558,7 @@ def approve_submission(
         kind=kind.value,
         record=record,
         actor=reviewer,
-        action=ModerationEvent.Action.APPROVED,
+        action=RecordEvent.Action.APPROVED,
         note="Approved by an admin after publication-time revalidation.",
         details=details,
         caused_by=latest_snapshot_event(kind.value, record),
@@ -569,7 +567,7 @@ def approve_submission(
         kind=kind.value,
         record=record,
         actor=reviewer,
-        action=ModerationEvent.Action.PUBLISHED,
+        action=RecordEvent.Action.PUBLISHED,
         note="Published as the result of admin approval.",
         details=details,
         caused_by=approval_event,
@@ -618,11 +616,8 @@ def _managed_record(kind: SubmissionKind, record_id, *, actor: Account):
 
 
 def _assert_successor_available(kind, source, *, excluding=None):
-    reverse_name = submission_registration(kind).reverse_lineage_relation
-    if reverse_name is None:
-        return
     try:
-        successor = getattr(source, reverse_name)
+        successor = source.successor
     except ObjectDoesNotExist:
         return
     if excluding is None or successor.id != excluding.id:
@@ -630,7 +625,7 @@ def _assert_successor_available(kind, source, *, excluding=None):
 
 
 def _assert_form_lineage_available(kind, cleaned, *, excluding=None):
-    source = cleaned.get(LINEAGE_FIELD_BY_KIND[kind])
+    source = cleaned.get(LINEAGE_INPUT_FIELD_BY_KIND[kind])
     if source is not None:
         _assert_successor_available(kind, source, excluding=excluding)
 
@@ -642,7 +637,6 @@ def _update_record(kind, record, cleaned):
             "slug",
             "name",
             "version",
-            "previous_version",
             "revision_description",
             "circuit_skeleton_preparation",
             "circuit_priors_preparation",
@@ -650,6 +644,7 @@ def _update_record(kind, record, cleaned):
             "hyperparameter_schema_artifact",
         ):
             setattr(record, name, cleaned[name])
+        record.predecessor = cleaned["previous_version"]
         record.description = cleaned["description"] or None
         record.hyperparameter_definitions = (
             cleaned["hyperparameter_definitions"] or None
@@ -662,7 +657,6 @@ def _update_record(kind, record, cleaned):
         for name in (
             "slug",
             "name",
-            "previous_revision",
             "revision_description",
             "noise_model",
             "is_css",
@@ -685,6 +679,7 @@ def _update_record(kind, record, cleaned):
             "manifest_artifact",
         ):
             setattr(record, name, cleaned[name])
+        record.predecessor = cleaned["previous_revision"]
         record.description = cleaned["description"] or None
         record.dem_approximate_disjoint_errors = cleaned[
             "dem_approximate_disjoint_errors"
@@ -710,9 +705,9 @@ def _update_record(kind, record, cleaned):
             "latency_shots",
             "preparation_duration_seconds",
             "t_1000_ns",
-            "supersedes_result",
         ):
             setattr(record, name, cleaned[name])
+        record.predecessor = cleaned["supersedes_result"]
         for name in (
             "description",
             "hyperparameter_values",
@@ -731,9 +726,9 @@ def _update_record(kind, record, cleaned):
         "machine_class",
         "description",
         "status",
-        "supersedes_machine",
     ):
         setattr(record, name, cleaned[name])
+    record.predecessor = cleaned["supersedes_machine"]
     record.full_clean()
     record.save()
 
@@ -753,7 +748,7 @@ def _create_decoder(cleaned, submitter, release, decision, published_at, history
         slug=cleaned["slug"],
         name=cleaned["name"],
         version=cleaned["version"],
-        previous_version=cleaned["previous_version"],
+        predecessor=cleaned["previous_version"],
         description=cleaned["description"] or None,
         revision_description=cleaned["revision_description"],
         circuit_skeleton_preparation=cleaned["circuit_skeleton_preparation"],
@@ -776,7 +771,7 @@ def _create_circuit(cleaned, submitter, release, decision, published_at, history
         history=history,
         slug=cleaned["slug"],
         name=cleaned["name"],
-        previous_revision=cleaned["previous_revision"],
+        predecessor=cleaned["previous_revision"],
         description=cleaned["description"] or None,
         revision_description=cleaned["revision_description"],
         noise_model=cleaned["noise_model"],
@@ -834,7 +829,7 @@ def _create_result(cleaned, submitter, release, decision, published_at, history)
         training_workload_description=cleaned["training_workload_description"] or None,
         software_environment=cleaned["software_environment"] or None,
         t_1000_ns=cleaned["t_1000_ns"],
-        supersedes_result=cleaned["supersedes_result"],
+        predecessor=cleaned["supersedes_result"],
         reproduction_status=(
             Result.ReproductionStatus.AUTHOR_VERIFIED
             if account_is_credited_on_decoder(
@@ -881,7 +876,7 @@ def _create_machine(cleaned, submitter, release, decision, published_at, history
         machine_class=cleaned["machine_class"],
         description=cleaned["description"],
         status=cleaned["status"],
-        supersedes_machine=cleaned["supersedes_machine"],
+        predecessor=cleaned["supersedes_machine"],
         submitted_by=submitter,
         state=decision.initial_state,
         published_at=published_at,
@@ -903,28 +898,22 @@ def _frozen_schema_release(kind: SubmissionKind) -> SchemaRelease:
 
 def _revalidate_record_for_publication(kind: SubmissionKind, record) -> None:
     if kind is SubmissionKind.DECODER:
-        if (
-            record.previous_version
-            and record.previous_version.state not in PUBLIC_HISTORY_STATES
-        ):
+        if record.predecessor and record.predecessor.state not in PUBLIC_HISTORY_STATES:
             raise SubmissionStateError(
                 "The previous decoder version is neither published nor "
                 "withdrawn history."
             )
-        if not record.previous_version and not (record.description or "").strip():
+        if not record.predecessor and not (record.description or "").strip():
             raise SubmissionStateError("The first decoder version needs a description.")
     elif kind is SubmissionKind.CIRCUIT:
-        if (
-            record.previous_revision
-            and record.previous_revision.state not in PUBLIC_HISTORY_STATES
-        ):
+        if record.predecessor and record.predecessor.state not in PUBLIC_HISTORY_STATES:
             raise SubmissionStateError(
                 "The previous circuit revision is neither published nor "
                 "withdrawn history."
             )
         if record.noise_model.state != "published":
             raise SubmissionStateError("The referenced noise model is not published.")
-        if not record.previous_revision and not (record.description or "").strip():
+        if not record.predecessor and not (record.description or "").strip():
             raise SubmissionStateError(
                 "The first circuit revision needs a description."
             )
@@ -945,27 +934,20 @@ def _revalidate_record_for_publication(kind: SubmissionKind, record) -> None:
             )
         if not record.scores.exists():
             raise SubmissionStateError("A result needs at least one evaluator score.")
-        if (
-            record.supersedes_result
-            and record.supersedes_result.state not in PUBLIC_HISTORY_STATES
-        ):
+        if record.predecessor and record.predecessor.state not in PUBLIC_HISTORY_STATES:
             raise SubmissionStateError(
                 "The superseded result is neither published nor withdrawn history."
             )
-        if record.supersedes_result and (
-            record.supersedes_result.decoder_version_id != record.decoder_version_id
-            or record.supersedes_result.circuit_revision_id
-            != record.circuit_revision_id
+        if record.predecessor and (
+            record.predecessor.decoder_version_id != record.decoder_version_id
+            or record.predecessor.circuit_revision_id != record.circuit_revision_id
         ):
             raise SubmissionStateError(
                 "A result successor must use the same exact decoder version and "
                 "circuit revision as its predecessor."
             )
     elif kind is SubmissionKind.MACHINE:
-        if (
-            record.supersedes_machine
-            and record.supersedes_machine.state not in PUBLIC_HISTORY_STATES
-        ):
+        if record.predecessor and record.predecessor.state not in PUBLIC_HISTORY_STATES:
             raise SubmissionStateError(
                 "The superseded machine is neither published nor withdrawn history."
             )
@@ -979,15 +961,15 @@ def _lock_publication_references(kind: SubmissionKind, record) -> None:
     """Lock every mutable exact reference before publication-time validation."""
 
     if kind is SubmissionKind.DECODER:
-        if record.previous_version_id:
-            record.previous_version = DecoderVersion.objects.select_for_update().get(
-                id=record.previous_version_id
+        if record.predecessor_id:
+            record.predecessor = DecoderVersion.objects.select_for_update().get(
+                id=record.predecessor_id
             )
         return
     if kind is SubmissionKind.CIRCUIT:
-        if record.previous_revision_id:
-            record.previous_revision = CircuitRevision.objects.select_for_update().get(
-                id=record.previous_revision_id
+        if record.predecessor_id:
+            record.predecessor = CircuitRevision.objects.select_for_update().get(
+                id=record.predecessor_id
             )
         record.noise_model = NoiseModel.objects.select_for_update().get(
             id=record.noise_model_id
@@ -1013,9 +995,9 @@ def _lock_publication_references(kind: SubmissionKind, record) -> None:
             record.machine = Machine.objects.select_for_update().get(
                 id=record.machine_id
             )
-        if record.supersedes_result_id:
-            record.supersedes_result = Result.objects.select_for_update().get(
-                id=record.supersedes_result_id
+        if record.predecessor_id:
+            record.predecessor = Result.objects.select_for_update().get(
+                id=record.predecessor_id
             )
         list(
             ResultScore.objects.select_for_update()
@@ -1023,9 +1005,9 @@ def _lock_publication_references(kind: SubmissionKind, record) -> None:
             .order_by("score_definition_id")
         )
         return
-    if record.supersedes_machine_id:
-        record.supersedes_machine = Machine.objects.select_for_update().get(
-            id=record.supersedes_machine_id
+    if record.predecessor_id:
+        record.predecessor = Machine.objects.select_for_update().get(
+            id=record.predecessor_id
         )
 
 

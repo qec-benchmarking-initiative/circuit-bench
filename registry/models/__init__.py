@@ -22,7 +22,7 @@ from .evaluations import (
     ResultScore,
     ScoreDefinition,
 )
-from .governance import ModerationEvent, RecordHistory
+from .governance import RecordEvent, RecordHistory
 from .tags import (
     CircuitRevisionCodeTag,
     CircuitRevisionExperimentTag,
@@ -48,7 +48,7 @@ __all__ = [
     "EvaluatorRelease",
     "ExternalLink",
     "Machine",
-    "ModerationEvent",
+    "RecordEvent",
     "RecordHistory",
     "NoiseModel",
     "Result",

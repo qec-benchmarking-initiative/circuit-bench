@@ -179,10 +179,9 @@ def noise_model_detail(request, slug):
                 "tags": [],
             },
             "supersedes_noise_model": (
-                noise_model.supersedes_noise_model
-                if noise_model.supersedes_noise_model
-                and noise_model.supersedes_noise_model.state
-                in {"published", "withdrawn"}
+                noise_model.predecessor
+                if noise_model.predecessor
+                and noise_model.predecessor.state in {"published", "withdrawn"}
                 else None
             ),
         },

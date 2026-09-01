@@ -16,7 +16,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from accounts.models import Account
-from registry.models import ModerationEvent, NoiseModel, SchemaRelease, Tag
+from registry.models import NoiseModel, RecordEvent, SchemaRelease, Tag
 from registry.services.histories import (
     append_history_event,
     history_for_new_record,
@@ -57,15 +57,15 @@ class TaxonomyValidationError(TaxonomyError, ValueError):
 @dataclass(frozen=True)
 class TagCreationOutcome:
     tag: Tag
-    submission_event: ModerationEvent
-    approval_event: ModerationEvent
-    publication_event: ModerationEvent
+    submission_event: RecordEvent
+    approval_event: RecordEvent
+    publication_event: RecordEvent
 
 
 @dataclass(frozen=True)
 class NoiseModelSubmissionOutcome:
     noise_model: NoiseModel
-    submission_event: ModerationEvent
+    submission_event: RecordEvent
 
 
 def create_custom_tag(
@@ -116,7 +116,7 @@ def create_custom_tag(
                 kind="tag",
                 record=tag,
                 actor=submitter,
-                action=ModerationEvent.Action.SUBMITTED,
+                action=RecordEvent.Action.SUBMITTED,
                 note="Submitted a custom vocabulary term.",
                 details=details,
                 payload_snapshot=submission_snapshot(
@@ -134,7 +134,7 @@ def create_custom_tag(
                 kind="tag",
                 record=tag,
                 actor_system=CUSTOM_VOCABULARY_SYSTEM,
-                action=ModerationEvent.Action.APPROVED,
+                action=RecordEvent.Action.APPROVED,
                 note="Approved provisionally for immediate custom-vocabulary use.",
                 details={**details, "approved_by": "system"},
                 caused_by=submission_event,
@@ -143,7 +143,7 @@ def create_custom_tag(
                 kind="tag",
                 record=tag,
                 actor_system=CUSTOM_VOCABULARY_SYSTEM,
-                action=ModerationEvent.Action.PUBLISHED,
+                action=RecordEvent.Action.PUBLISHED,
                 note="Made immediately available as a custom tag.",
                 details={**details, "approved_by": "system"},
                 caused_by=approval_event,
@@ -184,7 +184,7 @@ def promote_tag_official(tag_id, *, curator: Account, display_color: str) -> Tag
         kind="tag",
         record=tag,
         actor=curator,
-        action=ModerationEvent.Action.PROMOTED_OFFICIAL,
+        action=RecordEvent.Action.PROMOTED_OFFICIAL,
         note="Promoted this term into the official vocabulary.",
         details={
             "policy_version": POLICY_VERSION,
@@ -240,7 +240,7 @@ def deprecate_tag(tag_id, *, curator: Account, canonical_tag_id) -> Tag:
         kind="tag",
         record=tag,
         actor=curator,
-        action=ModerationEvent.Action.DEPRECATED,
+        action=RecordEvent.Action.DEPRECATED,
         note="Deprecated this vocabulary term.",
         details={
             "policy_version": POLICY_VERSION,
@@ -253,7 +253,7 @@ def deprecate_tag(tag_id, *, curator: Account, canonical_tag_id) -> Tag:
         kind="tag",
         record=tag,
         actor=curator,
-        action=ModerationEvent.Action.MERGED,
+        action=RecordEvent.Action.MERGED,
         note="Mapped this term permanently to its canonical replacement.",
         details={
             "policy_version": POLICY_VERSION,
@@ -302,9 +302,7 @@ def submit_noise_model(
                     raise TaxonomyStateError(
                         "A predecessor must be published or withdrawn history."
                     )
-                if NoiseModel.objects.filter(
-                    supersedes_noise_model=locked_predecessor
-                ).exists():
+                if NoiseModel.objects.filter(predecessor=locked_predecessor).exists():
                     raise TaxonomyConflictError(
                         "That exact noise model already has a successor."
                     )
@@ -327,7 +325,7 @@ def submit_noise_model(
                 short_description=short_description,
                 paper_url=paper_url,
                 randomises_priors=bool(randomises_priors),
-                supersedes_noise_model=locked_predecessor,
+                predecessor=locked_predecessor,
                 curation_status=NoiseModel.CurationStatus.COMMUNITY,
                 submitted_by=submitter,
                 state=initial_state,
@@ -339,7 +337,7 @@ def submit_noise_model(
                     kind="noise_model",
                     record=noise_model,
                     actor=submitter,
-                    action=ModerationEvent.Action.REVISION_CREATED,
+                    action=RecordEvent.Action.REVISION_CREATED,
                     note="Created a successor noise-model revision.",
                     details={
                         "policy_version": POLICY_VERSION,
@@ -362,9 +360,9 @@ def submit_noise_model(
                 record=noise_model,
                 actor=submitter,
                 action=(
-                    ModerationEvent.Action.RESUBMITTED
+                    RecordEvent.Action.RESUBMITTED
                     if initial_state == "pending_reapproval"
-                    else ModerationEvent.Action.SUBMITTED
+                    else RecordEvent.Action.SUBMITTED
                 ),
                 note=(
                     "Submitted a successor community noise model for reapproval."
@@ -397,9 +395,9 @@ def approve_and_publish_noise_model(noise_model_id, *, reviewer: Account) -> Noi
         raise TaxonomyStateError(
             "A submitted noise model must remain community-curated until publication."
         )
-    if noise_model.supersedes_noise_model_id is not None:
+    if noise_model.predecessor_id is not None:
         predecessor = NoiseModel.objects.select_for_update().get(
-            id=noise_model.supersedes_noise_model_id
+            id=noise_model.predecessor_id
         )
         if predecessor.state not in PUBLIC_NOISE_MODEL_STATES:
             raise TaxonomyStateError(
@@ -417,7 +415,7 @@ def approve_and_publish_noise_model(noise_model_id, *, reviewer: Account) -> Noi
         kind="noise_model",
         record=noise_model,
         actor=reviewer,
-        action=ModerationEvent.Action.APPROVED,
+        action=RecordEvent.Action.APPROVED,
         note="Approved this community noise model after admin review.",
         details=details,
         caused_by=latest_snapshot_event("noise_model", noise_model),
@@ -426,7 +424,7 @@ def approve_and_publish_noise_model(noise_model_id, *, reviewer: Account) -> Noi
         kind="noise_model",
         record=noise_model,
         actor=reviewer,
-        action=ModerationEvent.Action.PUBLISHED,
+        action=RecordEvent.Action.PUBLISHED,
         note="Published this approved community noise model.",
         details=details,
         caused_by=approval_event,
@@ -456,7 +454,7 @@ def promote_noise_model_official(noise_model_id, *, curator: Account) -> NoiseMo
         kind="noise_model",
         record=noise_model,
         actor=curator,
-        action=ModerationEvent.Action.PROMOTED_OFFICIAL,
+        action=RecordEvent.Action.PROMOTED_OFFICIAL,
         note="Promoted this published community noise model to official status.",
         details={
             "policy_version": POLICY_VERSION,
@@ -486,7 +484,7 @@ def deprecate_noise_model(
         kind="noise_model",
         record=noise_model,
         actor=curator,
-        action=ModerationEvent.Action.DEPRECATED,
+        action=RecordEvent.Action.DEPRECATED,
         note=note.strip() or "Deprecated this noise model.",
         details={
             "policy_version": POLICY_VERSION,

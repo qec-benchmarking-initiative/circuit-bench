@@ -4,6 +4,7 @@ import pytest
 from django.http import Http404
 from django.test import RequestFactory
 from django.utils import timezone
+from django.utils.html import strip_tags
 
 from registry.demo import seed_demo_data
 from registry.models import ArtifactAttachment, ExternalLink, Result
@@ -31,6 +32,7 @@ def test_exact_result_renders_auditable_provenance_counts_scores_and_timing(
 
     assert response.status_code == 200
     content = response.content.decode()
+    text = " ".join(strip_tags(content).split())
     assert demo_result.decoder_version.name in content
     assert str(demo_result.decoder_version_id) in content
     assert demo_result.circuit_revision.name in content
@@ -39,20 +41,21 @@ def test_exact_result_renders_auditable_provenance_counts_scores_and_timing(
     assert str(demo_result.evaluator_version_id) in content
     assert demo_result.machine.slug in content
     assert str(demo_result.machine_id) in content
-    assert "9.88e4 successful +" in content
-    assert "1000 logical failure +" in content
-    assert "150 timeout +" in content
-    assert "50 decoder error =" in content
-    assert "1e5 = 1e5 total shots" in content
+    assert "98,800 successful +" in text
+    assert "1,000 logical failure +" in text
+    assert "150 timeout +" in text
+    assert "50 decoder error =" in text
+    assert "100,000 = 100,000 total shots" in text
     assert "Failure-probability eligible shots" in content
     assert "Latency eligible shots" in content
-    assert "2.5e7 ns" in content
-    assert "0.25 s" in content
+    assert "2.5" in content
+    assert "10<sup>7</sup>" in content
+    assert "0.25 s" in text
     assert "Brier loss upper 95% bound" in content
     assert "LER upper 95% bound at 5% acceptance" in content
-    assert "2.3e-2" in content
+    assert "10<sup>-2</sup>" in content
     assert "0.15" in content
-    assert "02300000000000000000" not in content
+    assert "02300000000000000000" not in text
     assert "Definition version" in content
     assert "Immutable definition" in content
     assert "Confidence level" in content

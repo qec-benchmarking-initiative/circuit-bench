@@ -18,7 +18,7 @@ from registry.models import (
     CircuitRevision,
     Credit,
     DecoderVersion,
-    ModerationEvent,
+    RecordEvent,
     Result,
     SchemaRelease,
 )
@@ -119,7 +119,7 @@ def create_benchmark_submission(
                 "Only the uploader or an administrator may revise this benchmark."
             )
         try:
-            previous.next_revision
+            previous.successor
         except ObjectDoesNotExist:
             pass
         else:
@@ -155,7 +155,7 @@ def create_benchmark_submission(
         slug=payload["slug"],
         name=payload["name"],
         version=payload["version"],
-        previous_revision=previous,
+        predecessor=previous,
         description=payload["description"],
         revision_description=payload["revision_description"],
         recognition_status=BenchmarkRevision.RecognitionStatus.COMMUNITY_SUBMITTED,
@@ -184,7 +184,7 @@ def create_benchmark_submission(
             kind="benchmark",
             record=benchmark,
             actor=submitter,
-            action=ModerationEvent.Action.REVISION_CREATED,
+            action=RecordEvent.Action.REVISION_CREATED,
             note="Created this exact benchmark revision as a successor.",
             details={"policy_version": "0.1", "predecessor_id": str(previous.id)},
         )
@@ -194,9 +194,9 @@ def create_benchmark_submission(
         record=benchmark,
         actor=submitter,
         action=(
-            ModerationEvent.Action.RESUBMITTED
+            RecordEvent.Action.RESUBMITTED
             if state == "pending_reapproval"
-            else ModerationEvent.Action.SUBMITTED
+            else RecordEvent.Action.SUBMITTED
         ),
         note="Submitted a benchmark revision for administrator review.",
         details={
@@ -237,7 +237,7 @@ def approve_benchmark_submission(
         kind="benchmark",
         record=benchmark,
         actor=reviewer,
-        action=ModerationEvent.Action.APPROVED,
+        action=RecordEvent.Action.APPROVED,
         note="Approved the benchmark revision after manifest revalidation.",
         details=details,
         caused_by=latest_snapshot_event("benchmark", benchmark),
@@ -246,7 +246,7 @@ def approve_benchmark_submission(
         kind="benchmark",
         record=benchmark,
         actor=reviewer,
-        action=ModerationEvent.Action.PUBLISHED,
+        action=RecordEvent.Action.PUBLISHED,
         note="Published the administrator-approved benchmark revision.",
         details=details,
         caused_by=approval,
@@ -295,7 +295,7 @@ def promote_benchmark_official(
         kind="benchmark",
         record=benchmark,
         actor=reviewer,
-        action=ModerationEvent.Action.PROMOTED_OFFICIAL,
+        action=RecordEvent.Action.PROMOTED_OFFICIAL,
         note=note,
         details={"policy_version": "0.1", "previous_status": previous_status},
     )
@@ -403,7 +403,7 @@ def create_benchmark_attempt(
         kind="benchmark_attempt",
         record=attempt,
         actor=submitter,
-        action=ModerationEvent.Action.SUBMITTED,
+        action=RecordEvent.Action.SUBMITTED,
         note="Submitted a benchmark attempt for administrator review.",
         details={
             "policy_version": "0.1",
@@ -456,7 +456,7 @@ def approve_benchmark_attempt(attempt_id, *, reviewer: Account) -> BenchmarkAtte
         kind="benchmark_attempt",
         record=attempt,
         actor=reviewer,
-        action=ModerationEvent.Action.APPROVED,
+        action=RecordEvent.Action.APPROVED,
         note="Approved the benchmark attempt after publication-time revalidation.",
         details=details,
         caused_by=latest_snapshot_event("benchmark_attempt", attempt),
@@ -465,7 +465,7 @@ def approve_benchmark_attempt(attempt_id, *, reviewer: Account) -> BenchmarkAtte
         kind="benchmark_attempt",
         record=attempt,
         actor=reviewer,
-        action=ModerationEvent.Action.PUBLISHED,
+        action=RecordEvent.Action.PUBLISHED,
         note="Published the administrator-approved benchmark attempt.",
         details=details,
         caused_by=approval,

@@ -11,8 +11,8 @@
   <figcaption id="{{ plot.id }}-caption">
     <strong>{{ plot.title }}</strong>
     <span>
-      {{ plot.plotted_count|human_number }} of {{ plot.total_count|human_number }} results plotted{% if plot.omitted_count %};
-      {{ plot.omitted_count|human_number }} omitted{% if plot.omitted_explanation %} ({{ plot.omitted_explanation }}){% endif %}{% endif %}.
+      {% scientific_number plot.plotted_count "count" %} of {% scientific_number plot.total_count "count" %} results plotted{% if plot.omitted_count %};
+      {% scientific_number plot.omitted_count "count" %} omitted{% if plot.omitted_explanation %} ({{ plot.omitted_explanation }}){% endif %}{% endif %}.
     </span>
   </figcaption>
 
@@ -74,12 +74,12 @@
       {% for tick in plot.x_axis.major_ticks %}
         {% if plot.major_gridlines %}<line x1="{{ tick.position }}" y1="{{ plot.plot_bottom }}" x2="{{ tick.position }}" y2="{{ plot.plot_top }}" class="plot-grid-line plot-grid-line-major" data-plot-x="{{ tick.position }}" />{% endif %}
         <line x1="{{ tick.position }}" y1="{{ plot.plot_bottom }}" x2="{{ tick.position }}" y2="{{ plot.plot_bottom|add:'5' }}" class="plot-tick-mark" data-plot-x="{{ tick.position }}" />
-        <text x="{{ tick.position }}" y="{{ plot.plot_bottom|add:'22' }}" text-anchor="middle" class="plot-tick-label" data-plot-x="{{ tick.position }}">{{ tick.label }}</text>
+        <text x="{{ tick.position }}" y="{{ plot.plot_bottom|add:'22' }}" text-anchor="middle" class="plot-tick-label" data-plot-x="{{ tick.position }}">{% if tick.number.scientific %}{{ tick.number.mantissa }} · 10<tspan baseline-shift="super" font-size="70%">{{ tick.number.exponent }}</tspan>{% else %}{{ tick.number.text }}{% endif %}</text>
       {% endfor %}
       {% for tick in plot.y_axis.major_ticks %}
         {% if plot.major_gridlines %}<line x1="{{ plot.plot_left }}" y1="{{ tick.position }}" x2="{{ plot.plot_right }}" y2="{{ tick.position }}" class="plot-grid-line plot-grid-line-major" data-plot-extends-right />{% endif %}
         <line x1="{{ plot.plot_left|add:'-5' }}" y1="{{ tick.position }}" x2="{{ plot.plot_left }}" y2="{{ tick.position }}" class="plot-tick-mark" />
-        <text x="{{ plot.plot_left|add:'-10' }}" y="{{ tick.position }}" dy="0.35em" text-anchor="end" class="plot-tick-label">{{ tick.label }}</text>
+        <text x="{{ plot.plot_left|add:'-10' }}" y="{{ tick.position }}" dy="0.35em" text-anchor="end" class="plot-tick-label">{% if tick.number.scientific %}{{ tick.number.mantissa }} · 10<tspan baseline-shift="super" font-size="70%">{{ tick.number.exponent }}</tspan>{% else %}{{ tick.number.text }}{% endif %}</text>
       {% endfor %}
 
       <text x="{{ plot.plot_centre_x }}" y="{{ plot.height|add:'-30' }}" text-anchor="middle" class="plot-axis-label" data-plot-centre-x>{{ plot.x_axis.label }}</text>
@@ -190,11 +190,11 @@
           <h4>{{ point.label }}</h4>
           <dl class="compact-technical-metadata">
             {% for item in point.summary_items %}
-              <div><dt>{{ item.label }}</dt><dd>{% if item.technical %}<code>{{ item.value|default:"—" }}</code>{% else %}{{ item.value|default:"—" }}{% endif %}</dd></div>
+              <div><dt>{{ item.label }}</dt><dd>{% if item.technical %}<code>{{ item.value|default:"—" }}</code>{% elif item.value == None %}—{% elif item.numeric %}{% scientific_number item.value profile=item.number_profile %}{% else %}{{ item.value }}{% endif %}</dd></div>
             {% endfor %}
-            <div><dt>{{ plot.x_axis.label_with_unit }}</dt><dd>{{ point.x_display }}</dd></div>
+            <div><dt>{{ plot.x_axis.label_with_unit }}</dt><dd>{% scientific_number point.x_value profile=plot.x_axis.number_profile unit=plot.x_axis.unit %}</dd></div>
             {% if point.x_interval %}<div><dt>x stored interval{% if point.x_interval.confidence_display %} ({{ point.x_interval.confidence_display }}){% endif %}</dt><dd>{{ point.x_interval.lower_display }}–{{ point.x_interval.upper_display }}</dd></div>{% endif %}
-            <div><dt>{{ plot.y_axis.label_with_unit }}</dt><dd>{{ point.y_display }}</dd></div>
+            <div><dt>{{ plot.y_axis.label_with_unit }}</dt><dd>{% scientific_number point.y_value profile=plot.y_axis.number_profile unit=plot.y_axis.unit %}</dd></div>
             {% if point.y_interval %}<div><dt>y stored interval{% if point.y_interval.confidence_display %} ({{ point.y_interval.confidence_display }}){% endif %}</dt><dd>{{ point.y_interval.lower_display }}–{{ point.y_interval.upper_display }}</dd></div>{% endif %}
           </dl>
           {% if point.link_url != point.result_url %}<p><a href="{{ point.result_url }}">Open exact result record</a></p>{% endif %}
@@ -221,7 +221,7 @@
       </div>
       <div>
         <dt>uncertainty</dt>
-        <dd>{{ plot.uncertainty.label }}. {{ plot.uncertainty.x_interval_count|human_number }} x-axis and {{ plot.uncertainty.y_interval_count|human_number }} y-axis stored intervals are available in this plotted population. {{ plot.uncertainty.explanation }}</dd>
+        <dd>{{ plot.uncertainty.label }}. {% scientific_number plot.uncertainty.x_interval_count "count" %} x-axis and {% scientific_number plot.uncertainty.y_interval_count "count" %} y-axis stored intervals are available in this plotted population. {{ plot.uncertainty.explanation }}</dd>
       </div>
       </dl>
     </div>
@@ -237,7 +237,7 @@
       </nav>
     </header>
     <details>
-      <summary>Tabular data for this plot ({{ plot.plotted_count|human_number }} rows)</summary>
+      <summary>Tabular data for this plot ({% scientific_number plot.plotted_count "count" %} rows)</summary>
       <div class="table-scroll">
         <table class="data-table">
           <caption>{{ plot.title }}; omitted points are reported above.</caption>
@@ -254,8 +254,8 @@
               <tr data-result-id="{{ point.id }}">
                 <td><a href="{{ point.link_url }}">{{ point.label }}</a></td>
                 <th scope="row"><a href="{{ point.result_url }}"><code>{{ point.id }}</code></a></th>
-                <td class="numeric" data-raw-value="{{ point.x_value }}">{{ point.x_display }}</td>
-                <td class="numeric" data-raw-value="{{ point.y_value }}">{{ point.y_display }}</td>
+                <td class="numeric" data-raw-value="{{ point.x_value }}">{% scientific_number point.x_value profile=plot.x_axis.number_profile unit=plot.x_axis.unit %}</td>
+                <td class="numeric" data-raw-value="{{ point.y_value }}">{% scientific_number point.y_value profile=plot.y_axis.number_profile unit=plot.y_axis.unit %}</td>
               </tr>
             {% empty %}
               <tr><td colspan="4">No results have plottable values on both axes.</td></tr>

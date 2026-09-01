@@ -113,7 +113,7 @@ def _approval_label(record):
     events = getattr(record, "approval_events", None)
     if events is None:
         event = (
-            record.moderation_events.filter(action="approved")
+            record.record_events.filter(action="approved")
             .select_related("actor_account")
             .order_by("-sequence", "-id")
             .first()
@@ -127,9 +127,7 @@ def _latest_review(record):
     events = getattr(record, "review_decision_events", None)
     if events is None:
         event = (
-            record.moderation_events.filter(
-                action__in=("requested_changes", "rejected")
-            )
+            record.record_events.filter(action__in=("requested_changes", "rejected"))
             .select_related("actor_account")
             .order_by("-sequence", "-id")
             .first()

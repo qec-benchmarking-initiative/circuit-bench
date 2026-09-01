@@ -14,10 +14,10 @@ flowchart LR
     SchemaRelease --> Result[Result]
     SchemaRelease --> BenchmarkRevision[Benchmark revision]
 
-    DecoderVersion -->|unique previous-version link| DecoderVersion
+    DecoderVersion -->|unique predecessor link| DecoderVersion
     DecoderVersion -->|algorithm tags| Tag
 
-    CircuitRevision -->|unique previous-revision link| CircuitRevision
+    CircuitRevision -->|unique predecessor link| CircuitRevision
     CircuitRevision -->|code + experiment tags| Tag
     CircuitRevision --> NoiseModel
     CircuitRevision -->|frozen circuit, DEM, manifest| Artifact[Artifact store]
@@ -32,7 +32,7 @@ flowchart LR
     Result --> ResultScore[Result score]
     ScoreDefinition --> ResultScore
 
-    BenchmarkRevision -->|unique previous-revision link| BenchmarkRevision
+    BenchmarkRevision -->|unique predecessor link| BenchmarkRevision
     BenchmarkRevision -->|ordered items| CircuitRevision
     BenchmarkRevision --> BenchmarkAttempt[Benchmark attempt]
     BenchmarkAttempt -->|groups, never combines| Result
@@ -76,7 +76,7 @@ does not settle the scientific choice of future headline metrics.
 4. Published scientific content is immutable. Corrections create a replacement
    record and an explicit predecessor or supersession link. Withdrawal never
    deletes the old record.
-5. Decoder, circuit, and benchmark histories have no separate family rows. The
+5. Revision histories have no separate family rows. The
    root revision is the lineage identity, the unique leaf is current, and the
    linear history is derived only from predecessor links.
 6. A lineage root has a general description. Later descriptions are optional.
@@ -137,7 +137,7 @@ For the shared four-state lifecycle:
 | Noise and circuits | `noise_model`, `circuit_revision` |
 | Evaluation | `machine`, `evaluator_release`, `score_definition`, `result`, `result_score`, `result_author_approval_event` |
 | Benchmarks | `benchmark_revision`, `benchmark_revision_item`, `benchmark_attempt`, `benchmark_attempt_result` |
-| Governance | `moderation_event` |
+| Governance | `record_history`, `record_event` |
 
 ## 4. Identity
 
@@ -280,7 +280,7 @@ additionally bound to its exact immutable `score_definition`, which supplies
 the numeric meaning as well as the result schema supplying its storage shape.
 
 Accounts, authentication identities, credits and claims, external links,
-moderation events, and object-storage bookkeeping are operational,
+record events, and object-storage bookkeeping are operational,
 attribution, or audit data rather than scientific content. Django migrations
 still define and version their database shape, but they do not receive
 scientific `schema_release` records.
@@ -400,7 +400,7 @@ Application rules:
 
 - `name_credit_id` must be a visible name-string credit;
 - the normal reviewer is the `submitted_by_id` of the subject record; an admin
-  override is allowed and recorded in `moderation_event`;
+  override is allowed and recorded in `record_event`;
 - approval creates a new account credit on the same subject;
 - if `retain_name_credit=false`, approval sets the old credit's `hidden_at` and
   gives the new account credit its former position;
@@ -467,7 +467,7 @@ plain foreign key cannot express it across tables.
 ### 8.1 `decoder_version`
 
 There is no decoder-family table. A root version has
-`previous_version_id = NULL`; its `id` is the stable identity of the derived
+`predecessor_id = NULL`; its `id` is the stable identity of the derived
 lineage. Following predecessor links reaches the root, and following the unique
 child reaches the current leaf.
 
@@ -475,10 +475,11 @@ child reaches the current leaf.
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Exact decoder-version identity |
 | `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `decoder` |
+| `history_id` | UUID | no | FK → `record_history.id` | Shared linear history |
 | `slug` | TEXT | no | unique, slug format | Direct-link slug for this exact version only |
 | `name` | TEXT | no | 1–200 chars | Public name at this version |
 | `version` | TEXT | no | 1–100 chars | Contributor version label |
-| `previous_version_id` | UUID | yes | unique self-FK | Direct predecessor; null only at a root |
+| `predecessor_id` | UUID | yes | unique self-FK | Direct predecessor; null only at a root |
 | `description` | TEXT | yes | 1–10,000 chars | Optional replacement general description |
 | `revision_description` | TEXT | no | 1–10,000 chars | What this exact version introduced/changed |
 | `circuit_skeleton_preparation` | TEXT | no | `required` or `not_required` | Decoder-level preparation capability |
@@ -495,7 +496,7 @@ child reaches the current leaf.
 Constraints and publication rules:
 
 - `slug` is globally unique but does not identify or group a lineage;
-- unique `previous_version_id` where non-null, so a predecessor has at most one
+- unique `predecessor_id` where non-null, so a predecessor has at most one
   child and branching is impossible;
 - predecessor is not self and the history is acyclic;
 - version labels are unique within the lineage, checked by walking the chain;
@@ -536,12 +537,13 @@ DEM artifacts.
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Exact entry identity |
 | `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `noise_model` |
+| `history_id` | UUID | no | FK → `record_history.id` | Shared linear history |
 | `slug` | TEXT | no | unique | Stable public slug |
 | `name` | TEXT | no | 1–200 chars | |
 | `short_description` | TEXT | no | 1–2,000 chars | Human summary |
 | `paper_url` | TEXT | no | | Primary paper/specification link |
 | `randomises_priors` | BOOLEAN | no | | Whether this noise construction randomises exact priors |
-| `supersedes_noise_model_id` | UUID | yes | self-FK | Semantic correction/replacement |
+| `predecessor_id` | UUID | yes | unique self-FK | Semantic correction/replacement |
 | `curation_status` | TEXT | no | `community`, `official`, or `deprecated` | Governance status |
 | `submitted_by_id` | UUID | no | FK → `account.id` | Uploader |
 | `state` | TEXT | no | lifecycle | Publication state |
@@ -551,12 +553,13 @@ DEM artifacts.
 
 Constraints and behaviour:
 
-- the superseded entry is not self;
+- a predecessor has at most one child; the link stays within one history, is
+  not self, and the history is acyclic;
 - at least one visible credit is required;
 - admins may promote `community` to `official` without changing scientific
   meaning or ID; this action is audited;
 - changing the description's scientific meaning or `randomises_priors`
-  creates a new entry and uses `supersedes_noise_model_id`;
+  creates a new entry and uses `predecessor_id`;
 - there is no license field and no attempt to encode the full noise model in
   relational columns.
 
@@ -570,9 +573,10 @@ table; the root revision is the stable lineage identity.
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Exact revision identity |
 | `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `circuit` |
+| `history_id` | UUID | no | FK → `record_history.id` | Shared linear history |
 | `slug` | TEXT | no | unique, slug format | Direct-link slug for this exact revision only |
 | `name` | TEXT | no | 1–200 chars | Public name at this revision |
-| `previous_revision_id` | UUID | yes | unique self-FK | Direct predecessor; null only at a root |
+| `predecessor_id` | UUID | yes | unique self-FK | Direct predecessor; null only at a root |
 | `description` | TEXT | yes | max 10,000 chars | Optional replacement general description |
 | `revision_description` | TEXT | no | 1–10,000 chars | What changed or was introduced |
 | `noise_model_id` | UUID | no | FK → `noise_model.id` | Exact registry entry |
@@ -605,10 +609,10 @@ table; the root revision is the stable lineage identity.
 Constraints and publication rules:
 
 - `slug` is globally unique but does not identify or group a lineage;
-- unique `previous_revision_id` where non-null, so branching is impossible;
+- unique `predecessor_id` where non-null, so branching is impossible;
 - each required artifact role is distinct unless byte identity is explicitly
   valid and accepted by the schema;
-- `previous_revision_id` is not self and the history is acyclic;
+- `predecessor_id` is not self and the history is acyclic;
 - the root is the lineage identity and has a non-null description;
 - later descriptions are optional; the lineage page is derived from the unique
   leaf and shows the newest non-null description, the leaf's mandatory
@@ -650,19 +654,21 @@ result reports timing or another machine-dependent score.
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Exact machine record |
 | `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `machine` |
+| `history_id` | UUID | no | FK → `record_history.id` | Shared linear history |
 | `slug` | TEXT | no | unique | Public slug |
 | `class` | TEXT | no | `cpu`, `gpu`, `fpga`, `asic`, or `hybrid` | Leaderboard partition |
 | `description` | TEXT | no | 1–2,000 chars | Exact device/resources used |
 | `status` | TEXT | no | `physical`, `simulated`, or `estimated` | Evidence type |
-| `supersedes_machine_id` | UUID | yes | self-FK | Corrected description |
+| `predecessor_id` | UUID | yes | unique self-FK | Corrected description |
 | `submitted_by_id` | UUID | no | FK → `account.id` | |
 | `state` | TEXT | no | lifecycle | |
 | `created_at` | TIMESTAMPTZ | no | server default | |
 | `published_at` | TIMESTAMPTZ | yes | | |
 | `withdrawn_at` | TIMESTAMPTZ | yes | | |
 
-A published machine record is immutable. Machine classes are never normalized
-into one universal performance ranking.
+A published machine record is immutable. A predecessor has at most one child;
+the link stays within one history, is not self, and the history is acyclic.
+Machine classes are never normalized into one universal performance ranking.
 
 ## 11. Evaluators and generic scores
 
@@ -757,6 +763,7 @@ one declared set of attempted shots.
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Result identity |
 | `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `result` |
+| `history_id` | UUID | no | FK → `record_history.id` | Shared linear history |
 | `decoder_version_id` | UUID | no | FK → `decoder_version.id` | Exact decoder version |
 | `circuit_revision_id` | UUID | no | FK → `circuit_revision.id` | Exact circuit revision |
 | `evaluator_version_id` | UUID | no | FK → `evaluator_release.id` | Exact evaluator version; name fixed by result contract |
@@ -775,7 +782,7 @@ one declared set of attempted shots.
 | `training_workload_description` | TEXT | yes | max 20,000 chars | Optional result-specific training/preparation detail |
 | `software_environment` | TEXT | yes | max 20,000 chars | Optional versions/build/runtime description |
 | `t_1000_ns` | BIGINT | yes | check > 0 | Optional finite-burst time until the 1,000th correction returns |
-| `supersedes_result_id` | UUID | yes | self-FK, unique when non-null | Corrected result |
+| `predecessor_id` | UUID | yes | self-FK, unique when non-null | Corrected result |
 | `reproduction_status` | TEXT | no | server managed | `independent_reproduction` or `decoder_author_verified` |
 | `submitted_by_id` | UUID | no | FK → `account.id` | Uploader |
 | `state` | TEXT | no | lifecycle | |
@@ -895,10 +902,11 @@ is no benchmark-family table; the root revision is the stable lineage identity.
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | Exact benchmark revision |
 | `schema_release_id` | UUID | no | FK → `schema_release.id` | Must govern `benchmark` |
+| `history_id` | UUID | no | FK → `record_history.id` | Shared linear history |
 | `slug` | TEXT | no | unique, slug format | Direct-link slug for this exact revision only |
 | `name` | TEXT | no | 1–200 chars | Public name at this revision |
 | `version` | TEXT | no | | Contributor version label |
-| `previous_revision_id` | UUID | yes | unique self-FK | Direct predecessor; null only at a root |
+| `predecessor_id` | UUID | yes | unique self-FK | Direct predecessor; null only at a root |
 | `description` | TEXT | yes | 1–10,000 chars | Optional replacement scope/purpose description |
 | `revision_description` | TEXT | no | 1–10,000 chars | What this revision introduced or changed |
 | `recognition_status` | TEXT | no | `community_submitted`, `admin_approved`, `official`, or `deprecated` | Governance standing |
@@ -912,7 +920,7 @@ is no benchmark-family table; the root revision is the stable lineage identity.
 Constraints and behaviour:
 
 - `slug` is globally unique but does not identify or group a lineage;
-- unique `previous_revision_id` where non-null, so branching is impossible;
+- unique `predecessor_id` where non-null, so branching is impossible;
 - predecessor is not self and the history is acyclic;
 - version labels are unique within the derived lineage;
 - the root has a description; later descriptions are optional;
@@ -922,7 +930,7 @@ Constraints and behaviour:
   later forms provide no default;
 - publication requires `admin_approved` or `official`;
 - admin approval does not imply official status;
-- a transition to `official` is a separate admin action and moderation event;
+- a transition to `official` is a separate admin action and record event;
 - changing membership or meaning creates a new revision;
 - no aggregate benchmark score is present in v0.1.
 
@@ -976,15 +984,33 @@ Publication verifies that:
 
 ## 14. Governance audit
 
-### 14.1 `moderation_event`
+### 14.1 `record_history`
 
-Append-only human governance history for actions not already completely
-captured by claim or approval event tables.
+One stable container for a root and all of its exact successor records.
+
+| Column | Type | Null | Key/default | Meaning |
+|---|---:|:---:|---|---|
+| `id` | UUID | no | PK | Stable history identity |
+| `record_kind` | TEXT | no | controlled vocabulary | Exact-record table used by this history |
+| `created_at` | TIMESTAMPTZ | no | server default | |
+
+The exact records carry the lineage edges: every supported revision table has
+the same nullable, unique `predecessor_id` self-FK. The root has null; every
+other record points to the immediately preceding record in this same history.
+
+### 14.2 `record_event`
+
+Append-only record history for submission, editing, review, publication,
+withdrawal, revision creation, curation, and system actions.
 
 | Column | Type | Null | Key/default | Meaning |
 |---|---:|:---:|---|---|
 | `id` | UUID | no | PK | |
-| `actor_account_id` | UUID | no | FK → `account.id` | Administrator/reviewer |
+| `history_id` | UUID | no | FK → `record_history.id` | Owning history |
+| `sequence` | INTEGER | no | unique with `history_id`, check ≥ 1 | Strict history order |
+| `actor_type` | TEXT | no | `account` or `system` | Actor discriminator |
+| `actor_account_id` | UUID | yes | FK → `account.id` | Account actor |
+| `actor_system` | TEXT | yes | | Named system actor |
 | `decoder_version_id` | UUID | yes | FK | Subject option |
 | `noise_model_id` | UUID | yes | FK | Subject option |
 | `circuit_revision_id` | UUID | yes | FK | Subject option |
@@ -992,16 +1018,22 @@ captured by claim or approval event tables.
 | `result_id` | UUID | yes | FK | Subject option |
 | `tag_id` | UUID | yes | FK | Subject option |
 | `benchmark_revision_id` | UUID | yes | FK | Subject option |
+| `benchmark_attempt_id` | UUID | yes | FK | Subject option |
 | `evaluator_release_id` | UUID | yes | FK | Subject option |
 | `action` | TEXT | no | controlled vocabulary | |
 | `note` | TEXT | no | | Human reason |
 | `details` | JSONB | no | default `{}` | Structured before/after references |
-| `created_at` | TIMESTAMPTZ | no | server default | |
+| `event_schema_version` | TEXT | no | default `0.1` | Event payload contract |
+| `payload_snapshot` | JSONB | yes | | Exact submitted/edited payload |
+| `caused_by_id` | UUID | yes | self-FK | Earlier event which caused this event |
+| `visibility` | TEXT | no | `public`, `uploader`, or `admin` | Event-level access |
+| `occurred_at` | TIMESTAMPTZ | no | server default | |
 
-Exactly one subject FK is non-null. Initial actions include `submitted`,
+Exactly one subject FK is non-null. Exactly one actor representation is
+present. The controlled actions are `submitted`, `edited`, `resubmitted`,
 `requested_changes`, `approved`, `rejected`, `published`, `withdrawn`,
-`promoted_official`, `deprecated`, `merged`, and `admin_credit_claim_override`.
-Events are immutable.
+`restored`, `revision_created`, `promoted_official`, `deprecated`, `merged`,
+and `admin_credit_claim_override`. Events are immutable.
 
 ## 15. Publication transaction
 
@@ -1014,7 +1046,7 @@ database constraints plus the following cross-row rules:
 3. Every referenced scientific record is already published and not withdrawn,
    unless a contract explicitly permits otherwise.
 4. Required visible credits exist.
-5. Decoder, circuit, and benchmark histories are acyclic and strictly linear:
+5. Revision histories are acyclic and strictly linear:
    every record has at most one predecessor, every predecessor has at most one
    child, and each root has a general description.
 6. Decoder hyperparameter schemas and result hyperparameter objects pass all
@@ -1075,7 +1107,7 @@ for the initial query patterns:
 | `idx_result_decoder_state` | (`decoder_version_id`, `state`, `created_at DESC`) | Decoder results |
 | `idx_result_machine` | (`machine_id`, `state`) where `machine_id IS NOT NULL` | Timing partitions |
 | `idx_result_score_ranking` | (`score_definition_id`, `value`, `result_id`) | Score leaderboard |
-| `idx_result_supersedes` | unique (`supersedes_result_id`) where non-null | One direct correction |
+| `idx_result_predecessor` | unique (`predecessor_id`) where non-null | One direct correction |
 | `idx_credit_account` | (`account_id`) where non-null and `hidden_at IS NULL` | Authenticated authorship/claims |
 | `idx_benchmark_item_position` | (`benchmark_revision_id`, `position`) | Ordered gamut |
 

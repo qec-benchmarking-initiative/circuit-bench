@@ -26,7 +26,7 @@ def test_demo_data_is_complete_and_idempotent():
     )
     decoder = DecoderVersion.objects.get(slug="clear-matcher-0-2")
     assert decoder.description is None
-    assert decoder.previous_version.description.startswith("A compact matching")
+    assert decoder.predecessor.description.startswith("A compact matching")
 
     result = Result.objects.get()
     assert result.shots_total == (

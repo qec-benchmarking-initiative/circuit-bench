@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import strip_tags
 
 from registry.demo import seed_demo_data
 from registry.models import (
@@ -50,9 +51,10 @@ def test_catalogue_is_searchable_compact_and_deterministic(client, demo_benchmar
         "attempts",
     ]
     content = response.content.decode()
+    text = " ".join(strip_tags(content).split())
     assert "Admin approved" in content
     assert "Table view options (5/7)" in content
-    assert "1 exact published benchmark revision" in content
+    assert "1 exact published benchmark revision" in text
 
 
 def test_catalogue_never_discovers_nonpublished_revisions(client, demo_benchmark):
@@ -98,7 +100,8 @@ def test_attempt_links_exactly_one_result_for_each_required_circuit(
     assert summary.required_result_count == 1
     assert summary.items[0].membership == membership
     content = response.content.decode()
-    assert "1 of 1 required circuits have exactly one matching public result" in content
+    text = " ".join(strip_tags(content).split())
+    assert "1 of 1 required circuits have exactly one matching public result" in text
     assert str(membership.result_id) in content
     assert "does not pool" in content
     assert "Best score" not in content

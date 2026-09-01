@@ -26,7 +26,7 @@
     {% include "components/filters/related_record_picker.html" with cell=cell only %}
   </div>
 {% elif cell.type == "range" %}
-  <div class="filter-grid-cell filter-grid-range-cell{% if cell.filtered %} is-filtered{% endif %}" data-filter-grid-cell data-filter-range-cell data-filter-key="{{ cell.key }}" data-domain-min="{{ cell.histogram.domain_min }}" data-domain-max="{{ cell.histogram.domain_max }}" data-histogram-counts="{{ cell.histogram.counts|join:',' }}" data-histogram-label="{{ cell.histogram_label }}">
+  <div class="filter-grid-cell filter-grid-range-cell{% if cell.filtered %} is-filtered{% endif %}" data-filter-grid-cell data-filter-range-cell data-filter-key="{{ cell.key }}" data-domain-min="{{ cell.histogram.domain_min }}" data-domain-max="{{ cell.histogram.domain_max }}" data-histogram-counts="{{ cell.histogram.counts|join:',' }}" data-histogram-label="{{ cell.histogram_label }}" data-number-profile="{{ cell.number_profile|default:'count' }}">
     {% include "components/filters/clear_button.html" with cell=cell only %}
     <button class="filter-grid-trigger" type="button" data-filter-range-trigger aria-expanded="false">
       <span class="filter-grid-cell-title">{{ cell.label }}</span>
