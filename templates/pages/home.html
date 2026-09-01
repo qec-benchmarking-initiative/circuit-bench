@@ -1,12 +1,11 @@
 {% extends "base.html" %}
-{% load static %}
 
 {% block title %}Circuit Bench — QEC evidence{% endblock %}
 
 {% block content %}
   <section class="hero">
     <div class="home-title">
-      <img class="home-title-logo" src="{% static 'images/circuit-bench-logo.svg' %}" alt="" aria-hidden="true">
+      <span class="home-title-logo" aria-hidden="true"></span>
       <h1>Circuit Bench</h1>
     </div>
     <form class="site-search" role="search" action="{% url 'pages:search' %}" method="get">
