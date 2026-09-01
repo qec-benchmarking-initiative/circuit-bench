@@ -7,11 +7,15 @@ from django.core.management.base import CommandError
 
 def test_staging_banner_is_controlled_centrally(client, settings):
     settings.DEPLOYMENT_ENVIRONMENT = "staging"
+    settings.DEPLOYMENT_GIT_COMMIT = "0123456789abcdef"
+    settings.DEPLOYMENT_GIT_MESSAGE = "Show deployment identity in staging banner"
 
     response = client.get("/")
 
     assert response.status_code == 200
     assert b"Staging installation" in response.content
+    assert b"0123456" in response.content
+    assert b"Show deployment identity in staging banner" in response.content
 
 
 def test_staging_seed_is_disabled_without_explicit_setting(settings):

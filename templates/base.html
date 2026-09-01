@@ -14,6 +14,9 @@
     {% if is_staging %}
       <div class="staging-banner" role="status">
         Staging installation · synthetic data · not a permanent scientific record
+        {% if deployment_git_commit_short %}
+          · {{ deployment_git_commit_short }}{% if deployment_git_message %} · {{ deployment_git_message|truncatechars:72 }}{% endif %}
+        {% endif %}
       </div>
     {% endif %}
     <header class="site-header">
