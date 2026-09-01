@@ -152,16 +152,55 @@ class BaseHistoryValidator:
         published_event = None
         withdrawn_event = None
         published_seen = False
+        rejected_seen = False
         for event in events:
+            if rejected_seen:
+                self._error(
+                    history,
+                    f"rejected record {record.id} has a later {event.action} event",
+                )
             if event.action in {
                 ModerationEvent.Action.SUBMITTED,
                 ModerationEvent.Action.RESUBMITTED,
             }:
+                if (
+                    event.action == ModerationEvent.Action.RESUBMITTED
+                    and event.details.get("previous_state")
+                    and event.details["previous_state"] != "changes_requested"
+                ):
+                    self._error(
+                        history,
+                        f"resubmission event {event.id} has an invalid previous state",
+                    )
                 expected_state = event.details.get("projected_state") or (
                     "pending_reapproval"
                     if event.action == ModerationEvent.Action.RESUBMITTED
                     else "pending_review"
                 )
+            elif event.action == ModerationEvent.Action.REQUESTED_CHANGES:
+                if expected_state not in {"pending_review", "pending_reapproval"}:
+                    self._error(
+                        history,
+                        (
+                            f"changes-request event {event.id} did not follow a "
+                            "review queue"
+                        ),
+                    )
+                if not event.note.strip():
+                    self._error(
+                        history, f"changes-request event {event.id} has no note"
+                    )
+                expected_state = "changes_requested"
+            elif event.action == ModerationEvent.Action.REJECTED:
+                if expected_state not in {"pending_review", "pending_reapproval"}:
+                    self._error(
+                        history,
+                        f"rejection event {event.id} did not follow a review queue",
+                    )
+                if not event.note.strip():
+                    self._error(history, f"rejection event {event.id} has no note")
+                expected_state = "rejected"
+                rejected_seen = True
             elif event.action == ModerationEvent.Action.PUBLISHED:
                 expected_state = "published"
                 published_event = event

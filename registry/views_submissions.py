@@ -30,6 +30,7 @@ from registry.models.common import (
     EDITABLE_CANDIDATE_STATES,
     PROFILE_PENDING_STATES,
     REVIEW_QUEUE_STATES,
+    LifecycleState,
 )
 from registry.services.artifacts import ArtifactError, store_uploaded_artifact
 from registry.services.submissions import (
@@ -38,6 +39,7 @@ from registry.services.submissions import (
     SubmissionStateError,
     SubmissionValidationError,
     approve_submission,
+    candidate_lineage_is_locked,
     create_submission,
     create_successor_submission,
     record_label,
@@ -420,6 +422,14 @@ def profile(request):
         kind_filter=controls["kind"],
         sort=controls["sort"],
     )
+    rejected = collect_submission_rows(
+        states=["rejected"],
+        actor=request.user,
+        owner=request.user,
+        query=controls["query"],
+        kind_filter=controls["kind"],
+        sort=controls["sort"],
+    )
     return render(
         request,
         "submissions/profile.html",
@@ -428,9 +438,13 @@ def profile(request):
             "sort_choices": SORT_CHOICES,
             "sort_links": _sort_links(request, controls["sort"]),
             "kind_choices": _kind_choices(),
+            "pending_state_choices": _pending_state_choices(
+                PROFILE_PENDING_STATES
+            ),
             "pending": _page_context(request, pending, "pending_page"),
             "published_sections": published_sections,
             "withdrawn": _page_context(request, withdrawn, "withdrawn_page"),
+            "rejected": _page_context(request, rejected, "rejected_page"),
         },
     )
 
@@ -471,7 +485,9 @@ def submission_record(request, kind, record_id):
 def review_dashboard(request):
     if not request.user.is_admin:
         raise PermissionDenied
-    controls = normalise_collection_controls(request)
+    controls = normalise_collection_controls(
+        request, pending_states=REVIEW_QUEUE_STATES
+    )
     pending_states = (
         [controls["pending_state"]]
         if controls["pending_state"]
@@ -501,6 +517,7 @@ def review_dashboard(request):
             "sort_choices": SORT_CHOICES,
             "sort_links": _sort_links(request, controls["sort"]),
             "kind_choices": _kind_choices(),
+            "pending_state_choices": _pending_state_choices(REVIEW_QUEUE_STATES),
             "pending": _page_context(request, pending, "pending_page"),
             "recently_withdrawn": _page_context(
                 request, recently_withdrawn, "withdrawn_page"
@@ -648,12 +665,17 @@ def _manageable_record(request, kind, record_id):
 
 def _force_lineage(kind, record, operation, payload):
     locked = operation == "successor" or (
-        operation == "edit" and record.state == "pending_reapproval"
+        operation == "edit" and candidate_lineage_is_locked(kind, record)
     )
     if not locked:
         return payload
     payload = dict(payload)
-    payload[LINEAGE_FIELD_BY_KIND[kind]] = str(record.id)
+    lineage_id = (
+        record.id
+        if operation == "successor"
+        else getattr(record, f"{LINEAGE_FIELD_BY_KIND[kind]}_id")
+    )
+    payload[LINEAGE_FIELD_BY_KIND[kind]] = str(lineage_id)
     return payload
 
 
@@ -661,7 +683,7 @@ def _lock_lineage_field(form, kind, operation, record):
     if record is None:
         return
     if operation == "successor" or (
-        operation == "edit" and record.state == "pending_reapproval"
+        operation == "edit" and candidate_lineage_is_locked(kind, record)
     ):
         field = form.fields[LINEAGE_FIELD_BY_KIND[kind]]
         field.disabled = True
@@ -737,6 +759,10 @@ def _kind_choices():
         (kind.value, get_submission_spec(kind).label.title())
         for kind in ENABLED_SUBMISSION_KINDS
     ]
+
+
+def _pending_state_choices(states):
+    return [(state, LifecycleState(state).label) for state in states]
 
 
 def _page_context(request, rows, parameter, *, per_page=25):

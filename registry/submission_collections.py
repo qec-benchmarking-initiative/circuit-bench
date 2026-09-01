@@ -58,18 +58,30 @@ def collect_submission_rows(
                 .select_related("actor_account")
                 .order_by("-sequence", "-id"),
                 to_attr="approval_events",
-            )
+            ),
+            Prefetch(
+                "moderation_events",
+                queryset=ModerationEvent.objects.filter(
+                    action__in=(
+                        ModerationEvent.Action.REQUESTED_CHANGES,
+                        ModerationEvent.Action.REJECTED,
+                    )
+                )
+                .select_related("actor_account")
+                .order_by("-sequence", "-id"),
+                to_attr="review_decision_events",
+            ),
         )
         rows.extend(submission_rows(kind, queryset, admin=admin, actor=actor))
     return sorted(rows, key=lambda row: _sort_key(row, sort), reverse=_reverse(sort))
 
 
-def normalise_collection_controls(request):
+def normalise_collection_controls(request, *, pending_states=PROFILE_PENDING_STATES):
     kind = request.GET.get("kind", "").strip()
     if kind not in {"", *(item.value for item in ENABLED_SUBMISSION_KINDS)}:
         kind = ""
     state = request.GET.get("pending_state", "").strip()
-    if state not in {"", *PROFILE_PENDING_STATES}:
+    if state not in {"", *pending_states}:
         state = ""
     sort = request.GET.get("sort", "-submitted").strip()
     if sort not in VALID_SORTS:

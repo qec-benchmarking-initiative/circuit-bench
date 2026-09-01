@@ -1,7 +1,7 @@
 <form class="submission-collection-controls" method="get" role="search">
   <label>Search<input type="search" name="q" value="{{ controls.query }}" placeholder="Record name, slug, decoder, circuit…"></label>
   <label>Kind<select name="kind"><option value="">All kinds</option>{% for value, label in kind_choices %}<option value="{{ value }}"{% if controls.kind == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-  <label>Pending state<select name="pending_state"><option value="">All pending states</option><option value="pending_review"{% if controls.pending_state == "pending_review" %} selected{% endif %}>Pending review</option><option value="pending_reapproval"{% if controls.pending_state == "pending_reapproval" %} selected{% endif %}>Pending reapproval</option><option value="changes_requested"{% if controls.pending_state == "changes_requested" %} selected{% endif %}>Changes requested</option></select></label>
+  <label>Pending state<select name="pending_state"><option value="">All pending states</option>{% for value, label in pending_state_choices %}<option value="{{ value }}"{% if controls.pending_state == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
   <label>Sort<select name="sort">{% for value, label in sort_choices %}<option value="{{ value }}"{% if controls.sort == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
   <div class="submission-collection-actions"><button class="button button-compact" type="submit">Apply</button><a class="button button-secondary button-compact" href="{{ reset_url }}">Reset</a></div>
 </form>

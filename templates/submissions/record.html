@@ -23,9 +23,11 @@
       {% if user.is_admin %}<a class="button button-secondary" href="{% url 'submissions:review' %}">Back to admin queue</a>{% else %}<a class="button button-secondary" href="{% url 'submissions:profile' %}">Back to profile</a>{% endif %}
       {% if public_url %}<a class="button" href="{{ public_url }}">Open public data page</a>{% endif %}
       {% if can_edit %}<a class="button" href="{% url 'submissions:edit' kind=kind record_id=record.id %}">Edit</a>{% endif %}
+      {% if record.state == "changes_requested" %}<a class="button" href="{% url 'review-decisions:resubmit' kind=kind record_id=record.id %}">Resubmit for review</a>{% endif %}
       {% if can_create_successor %}<a class="button" href="{% url 'submissions:successor' kind=kind record_id=record.id %}">{% if record.state == "withdrawn" %}Revise and resubmit{% else %}Edit / new revision{% endif %}</a>{% endif %}
       {% if can_withdraw %}<a class="button button-danger" href="{% url 'submissions:withdraw' kind=kind record_id=record.id %}">Withdraw…</a>{% endif %}
       {% if can_approve %}<form method="post" action="{% url 'submissions:approve' kind=kind record_id=record.id %}">{% csrf_token %}<button class="button" type="submit">Approve and publish</button></form>{% endif %}
+      {% if user.is_admin and can_approve %}<a class="table-action" href="{% url 'review-decisions:request-changes' kind=kind record_id=record.id %}">Request changes</a><a class="table-action table-action-danger" href="{% url 'review-decisions:reject' kind=kind record_id=record.id %}">Reject</a>{% endif %}
     </div>
 
     {% submission_history record kind %}

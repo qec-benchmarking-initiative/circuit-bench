@@ -25,7 +25,11 @@ from registry.models import (
     ResultScore,
     SchemaRelease,
 )
-from registry.models.common import EDITABLE_CANDIDATE_STATES, REVIEW_QUEUE_STATES
+from registry.models.common import (
+    EDITABLE_CANDIDATE_STATES,
+    REVIEW_QUEUE_STATES,
+    LifecycleState,
+)
 from registry.services.histories import (
     append_history_event,
     history_for_new_record,
@@ -325,6 +329,54 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
     }
 
 
+def candidate_review_route(kind: SubmissionKind | str, record) -> LifecycleState:
+    """Recover the review queue a mutable candidate must return to.
+
+    A changes-requested state deliberately does not erase whether the exact
+    candidate was awaiting first approval or reapproval after withdrawal.
+    """
+
+    kind = SubmissionKind(kind)
+    if record.state == LifecycleState.PENDING_REAPPROVAL:
+        return LifecycleState.PENDING_REAPPROVAL
+    latest_transition = (
+        record.moderation_events.filter(
+            action__in=(
+                ModerationEvent.Action.SUBMITTED,
+                ModerationEvent.Action.RESUBMITTED,
+                ModerationEvent.Action.REQUESTED_CHANGES,
+            )
+        )
+        .order_by("-sequence", "-id")
+        .first()
+    )
+    if latest_transition is not None:
+        key = (
+            "previous_state"
+            if latest_transition.action == ModerationEvent.Action.REQUESTED_CHANGES
+            else "projected_state"
+        )
+        projected = latest_transition.details.get(key)
+        if projected in REVIEW_QUEUE_STATES:
+            return LifecycleState(projected)
+    predecessor_id = getattr(record, f"{LINEAGE_FIELD_BY_KIND[kind]}_id")
+    if predecessor_id is not None:
+        predecessor = getattr(record, LINEAGE_FIELD_BY_KIND[kind])
+        if predecessor.state == LifecycleState.WITHDRAWN:
+            return LifecycleState.PENDING_REAPPROVAL
+    return LifecycleState.PENDING_REVIEW
+
+
+def candidate_lineage_is_locked(kind: SubmissionKind | str, record) -> bool:
+    """Return whether an in-place edit must retain its predecessor exactly."""
+
+    kind = SubmissionKind(kind)
+    return bool(
+        getattr(record, f"{LINEAGE_FIELD_BY_KIND[kind]}_id")
+        and candidate_review_route(kind, record) == LifecycleState.PENDING_REAPPROVAL
+    )
+
+
 @transaction.atomic
 def update_pending_submission(
     kind: SubmissionKind | str,
@@ -343,7 +395,7 @@ def update_pending_submission(
             "be edited in place."
         )
 
-    if record.state == "pending_reapproval":
+    if candidate_lineage_is_locked(kind, record):
         payload = dict(payload)
         source = getattr(record, f"{LINEAGE_FIELD_BY_KIND[kind]}_id")
         payload[LINEAGE_FIELD_BY_KIND[kind]] = _id_or_none(source)

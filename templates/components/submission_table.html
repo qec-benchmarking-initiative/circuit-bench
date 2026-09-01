@@ -9,6 +9,7 @@
         <th scope="col">{% if sort_links %}<a href="{{ sort_links.submitted.url }}">Submitted {{ sort_links.submitted.indicator }}</a>{% else %}Submitted{% endif %}</th>
         {% if show_approver %}<th scope="col">Approved by</th>{% endif %}
         {% if show_withdrawn %}<th scope="col">{% if sort_links %}<a href="{{ sort_links.withdrawn.url }}">Withdrawn {{ sort_links.withdrawn.indicator }}</a>{% else %}Withdrawn{% endif %}</th>{% endif %}
+        {% if show_review_note %}<th scope="col">Latest review note</th>{% endif %}
         {% if allow_review %}<th scope="col">Review</th>{% endif %}
         {% if show_actions %}<th scope="col">Actions</th>{% endif %}
       </tr>
@@ -23,12 +24,16 @@
           <td>{{ row.created_at|date:"Y-m-d H:i" }} UTC</td>
           {% if show_approver %}<td>{{ row.approved_by|default:"—" }}</td>{% endif %}
           {% if show_withdrawn %}<td>{% if row.withdrawn_at %}{{ row.withdrawn_at|date:"Y-m-d H:i" }} UTC{% else %}<span class="null-value">—</span>{% endif %}</td>{% endif %}
+          {% if show_review_note %}
+            <td>{% if row.latest_review %}<strong>{{ row.latest_review.action_label }}</strong> by {{ row.latest_review.actor }}<br>{{ row.latest_review.note }}{% else %}<span class="null-value">—</span>{% endif %}</td>
+          {% endif %}
           {% if allow_review %}
             <td>
               {% if row.can_approve %}
                 <form method="post" action="{% url 'submissions:approve' kind=row.kind record_id=row.id %}">
                   {% csrf_token %}<button class="table-action" type="submit">Approve and publish</button>
                 </form>
+                {% for action in row.review_actions %}{% if not forloop.first %} · {% endif %}<a class="table-action{% if action.danger %} table-action-danger{% endif %}" href="{{ action.url }}">{{ action.label }}</a>{% endfor %}
               {% else %}<span class="null-value">—</span>{% endif %}
             </td>
           {% endif %}

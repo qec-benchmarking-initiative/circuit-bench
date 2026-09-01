@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Resubmit · {{ record_label }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <p class="eyebrow">Submission review</p>
+      <h1>Resubmit {{ record_label }}</h1>
+    </header>
+
+    <form method="post" class="submission-form-sections">
+      {% csrf_token %}
+      <section class="submission-form-section">
+        <p>Resubmission records a complete snapshot of the current candidate and returns it to the appropriate review queue.</p>
+        {{ form.non_field_errors }}
+        {{ form.confirm.errors }}
+        <label for="{{ form.confirm.id_for_label }}">{{ form.confirm }} {{ form.confirm.label }}</label>
+      </section>
+      <div class="submission-actions">
+        <button class="table-action" type="submit">Resubmit for review</button>
+        <a class="table-action" href="{% url 'submissions:record' kind=kind record_id=record.id %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
