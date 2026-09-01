@@ -5,9 +5,10 @@
 {% block explorer_name %}Results{% endblock %}
 
 {% block explorer_query %}
+  {% for name, value in plot_control_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
   <div class="explorer-search-line">
     <label class="visually-hidden" for="result-query">Search results</label>
-    <input id="result-query" type="search" name="q" value="{{ query }}" placeholder="Search decoder, circuit, noise model, machine, or evaluator">
+    <input id="result-query" type="search" name="q" value="{{ query }}" placeholder="Search decoder, circuit, noise model, machine, or evaluator" autofocus>
     <button class="button-compact" type="submit">Search</button>
     {% if query or filters_active %}<a class="button-link" href="{% url 'results:list' %}">Clear</a>{% endif %}
   </div>
@@ -30,7 +31,7 @@
 
 {% block collection_results %}
   <nav class="result-format-links" aria-label="Machine-readable formats">
-    Same population: <a href="{{ json_url }}">JSON</a> · <a href="{{ csv_url }}">CSV</a> · <a href="{% url 'results:api-schema' %}">field schema</a>
+    Same population: <a href="{{ json_url }}">JSON</a> · <a href="{{ csv_url }}">CSV</a> · <a href="{% url 'results:api-schema' %}" title="Machine-readable field names, types, units and definition links; this is metadata, not result data.">Field definitions (JSON)</a>
   </nav>
   {% include "components/result_comparison.html" with result_plot=result_plot only %}
   {% include "components/explorer_toolbar.html" with explorer_id="results" %}
@@ -39,5 +40,6 @@
 
 {% block extra_scripts %}
   {{ block.super }}
-  <script src="{% static 'js/result-plot.js' %}" defer></script>
+  <script src="{% static 'js/plot-settings.js' %}?v=0.1.20260831k" defer></script>
+<script src="{% static 'js/result-plot.js' %}?v=0.1.20260831o" defer></script>
 {% endblock %}

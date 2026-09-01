@@ -1,4 +1,5 @@
 {% extends "layouts/entity_detail.html" %}
+{% load scientific submission_history %}
 
 {% block title %}{{ noise_model.name }} — Circuit Bench{% endblock %}
 
@@ -12,6 +13,7 @@
     <p>{{ noise_model.short_description }}</p>
     <p><a href="{{ noise_model.paper_url }}">Read the defining paper</a></p>
   </section>
+  {% submission_history noise_model "noise_model" %}
 {% endblock %}
 
 {% block entity_aside %}
@@ -34,8 +36,8 @@
           {% for circuit in circuits %}
             <tr>
               <td><a href="{% url 'circuits:detail' circuit.slug %}">{{ circuit.name }}</a></td>
-              <td class="numeric">{{ circuit.num_detectors }}</td>
-              <td class="numeric">{{ circuit.num_errors }}</td>
+              <td class="numeric">{{ circuit.num_detectors|human_number }}</td>
+              <td class="numeric">{{ circuit.num_errors|human_number }}</td>
             </tr>
           {% endfor %}
         </tbody>

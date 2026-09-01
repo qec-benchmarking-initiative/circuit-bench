@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 
 from registry.demo import seed_demo_data
-from registry.models import Artifact, DecoderVersion, Tag
+from registry.models import Artifact, DecoderVersion, RecordHistory, Tag
 
 pytestmark = pytest.mark.django_db
 
@@ -75,12 +75,14 @@ def test_tag_picker_includes_unused_official_but_not_unused_custom_tags(
         "submitted_by": source.submitted_by,
     }
     Tag.objects.create(
+        history=RecordHistory.objects.create(record_kind="tag"),
         **shared,
         slug="unused-official",
         label="Unused official",
         status="official",
     )
     Tag.objects.create(
+        history=RecordHistory.objects.create(record_kind="tag"),
         **shared,
         slug="unused-custom",
         label="Unused custom",
@@ -118,7 +120,7 @@ def test_catalogue_table_state_is_reproducible_in_the_url(client, demo_decoders)
     assert 'aria-current="page"' in content
     assert 'id="decoder-algorithm-filters"' in content
     assert 'class="filter-grid"' in content
-    assert "selected values shown in the theme colour" in content
+    assert "selected values shown in the theme colour" not in content
     assert 'data-filter-range-cell data-filter-key="result_count"' in content
     assert ">active<" not in content
 

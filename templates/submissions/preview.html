@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Preview {{ spec.label }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <p class="eyebrow">{% if operation == "edit" %}Edit preview{% elif operation == "successor" %}Successor preview{% else %}Submission preview{% endif %}</p>
+      <h1>Check this {{ spec.label }}</h1>
+      <p>{% if operation == "edit" %}The stored candidate has not changed yet.{% else %}No successor record has been created yet.{% endif %} Review the canonical values below.</p>
+      <p class="submission-policy"><strong>On submit:</strong> {{ decision.explanation }}</p>
+      {% if revision_control %}<p class="submission-policy"><strong>Existing revision:</strong> {% if revision_mode == "replace" %}{{ revision_control.source_label }} will be withdrawn and this successor will enter pending reapproval.{% else %}Existing published revisions remain published alongside this successor.{% endif %}</p>{% endif %}
+    </header>
+
+    <section class="submission-preview">
+      <div class="submission-form-sections submission-preview-sections">
+        {% for section in preview_sections %}
+          <section class="submission-form-section">
+            <header><h3>{{ section.title }}</h3><p>{{ section.description }}</p></header>
+            {% for group in section.groups %}
+              <div class="submission-field-group submission-field-group-{{ group.layout }}">
+                {% for item in group.fields %}
+                  <div class="submission-field submission-preview-field">
+                    <span class="submission-preview-label">{{ item.label }}</span>
+                    <div class="submission-preview-value">{% if item.preformatted %}<pre><code>{{ item.value }}</code></pre>{% else %}{{ item.value|linebreaksbr }}{% endif %}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endfor %}
+          </section>
+        {% endfor %}
+      </div>
+      <details class="record-disclosure">
+        <summary><span>Canonical JSON that will be submitted</span></summary>
+        <pre><code>{{ payload_json }}</code></pre>
+      </details>
+    </section>
+    <div class="submission-actions submission-preview-actions">
+      <a class="button button-secondary" href="{{ back_url }}">Back and edit</a>
+      <form method="post" action="{% url 'submissions:commit' preview_id=preview_id %}">{% csrf_token %}<button class="button" type="submit">{% if operation == "edit" %}Save pending candidate{% elif operation == "successor" %}Submit successor{% else %}Submit {{ spec.label }}{% endif %}</button></form>
+    </div>
+  </div>
+{% endblock %}

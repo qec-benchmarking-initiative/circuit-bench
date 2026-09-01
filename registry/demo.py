@@ -25,14 +25,15 @@ from registry.models import (
     EvaluatorRelease,
     ExternalLink,
     Machine,
-    ModerationEvent,
     NoiseModel,
+    RecordHistory,
     Result,
     ResultScore,
     SchemaRelease,
     ScoreDefinition,
     Tag,
 )
+from registry.services.histories import append_history_event, submission_snapshot
 
 DEMO_NAMESPACE = uuid.UUID("f333b191-09a8-4631-8775-3cb6fc51426e")
 DEMO_ACCOUNT_ID = uuid.uuid5(DEMO_NAMESPACE, "account/uploader")
@@ -40,6 +41,16 @@ DEMO_ACCOUNT_ID = uuid.uuid5(DEMO_NAMESPACE, "account/uploader")
 
 def demo_id(name: str) -> uuid.UUID:
     return uuid.uuid5(DEMO_NAMESPACE, name)
+
+
+def _demo_history(name: str, kind: str) -> RecordHistory:
+    history, _created = RecordHistory.objects.get_or_create(
+        id=demo_id(f"history/{name}"),
+        defaults={"record_kind": kind},
+    )
+    if history.record_kind != kind:
+        raise ValueError(f"Demo history {name} has the wrong record kind.")
+    return history
 
 
 @transaction.atomic
@@ -100,6 +111,7 @@ def seed_demo_data() -> dict[str, int]:
     matching = Tag.objects.create(
         id=demo_id("tag/algorithm/matching"),
         schema_release=releases["tag"],
+        history=_demo_history("tag/algorithm/matching", "tag"),
         namespace="algorithm",
         slug="matching",
         label="Matching",
@@ -113,6 +125,7 @@ def seed_demo_data() -> dict[str, int]:
     belief_propagation = Tag.objects.create(
         id=demo_id("tag/algorithm/belief-propagation"),
         schema_release=releases["tag"],
+        history=_demo_history("tag/algorithm/belief-propagation", "tag"),
         namespace="algorithm",
         slug="belief-propagation",
         label="Belief propagation",
@@ -123,6 +136,7 @@ def seed_demo_data() -> dict[str, int]:
     rotated_surface = Tag.objects.create(
         id=demo_id("tag/code/rotated-surface-code"),
         schema_release=releases["tag"],
+        history=_demo_history("tag/code/rotated-surface-code", "tag"),
         namespace="code",
         slug="rotated-surface-code",
         label="Rotated surface code",
@@ -136,6 +150,7 @@ def seed_demo_data() -> dict[str, int]:
     memory = Tag.objects.create(
         id=demo_id("tag/experiment/memory"),
         schema_release=releases["tag"],
+        history=_demo_history("tag/experiment/memory", "tag"),
         namespace="experiment",
         slug="memory",
         label="Memory",
@@ -150,6 +165,7 @@ def seed_demo_data() -> dict[str, int]:
     fixed_noise = NoiseModel.objects.create(
         id=demo_id("noise/fixed-phenomenological"),
         schema_release=releases["noise_model"],
+        history=_demo_history("noise/fixed-phenomenological", "noise_model"),
         slug="fixed-phenomenological",
         name="Fixed phenomenological noise",
         short_description="A simple fixed-prior phenomenological noise model.",
@@ -160,9 +176,10 @@ def seed_demo_data() -> dict[str, int]:
         state="published",
         published_at=published_at,
     )
-    NoiseModel.objects.create(
+    randomised_noise = NoiseModel.objects.create(
         id=demo_id("noise/randomised-phenomenological"),
         schema_release=releases["noise_model"],
+        history=_demo_history("noise/randomised-phenomenological", "noise_model"),
         slug="randomised-phenomenological",
         name="Randomised phenomenological noise",
         short_description="Draws exact priors before freezing each circuit instance.",
@@ -174,9 +191,11 @@ def seed_demo_data() -> dict[str, int]:
         published_at=published_at,
     )
 
+    decoder_history = _demo_history("decoder/clear-matcher", "decoder")
     decoder_root = DecoderVersion.objects.create(
         id=demo_id("decoder/clear-matcher/0.1"),
         schema_release=releases["decoder"],
+        history=decoder_history,
         slug="clear-matcher-0-1",
         name="Clear Matcher",
         version="0.1",
@@ -193,6 +212,7 @@ def seed_demo_data() -> dict[str, int]:
     decoder = DecoderVersion.objects.create(
         id=demo_id("decoder/clear-matcher/0.2"),
         schema_release=releases["decoder"],
+        history=decoder_history,
         slug="clear-matcher-0-2",
         name="Clear Matcher",
         version="0.2",
@@ -242,6 +262,7 @@ def seed_demo_data() -> dict[str, int]:
     circuit = CircuitRevision.objects.create(
         id=demo_id("circuit/rotated-memory-d5"),
         schema_release=releases["circuit"],
+        history=_demo_history("circuit/rotated-memory-d5", "circuit"),
         slug="rotated-memory-d5",
         name="Rotated surface-code memory d=5",
         description="A small synthetic memory circuit for interface development.",
@@ -276,6 +297,7 @@ def seed_demo_data() -> dict[str, int]:
     machine = Machine.objects.create(
         id=demo_id("machine/demo-cpu"),
         schema_release=releases["machine"],
+        history=_demo_history("machine/demo-cpu", "machine"),
         slug="demo-eight-core-cpu",
         machine_class="cpu",
         description="Synthetic eight-core CPU environment for UI development.",
@@ -294,6 +316,7 @@ def seed_demo_data() -> dict[str, int]:
     evaluator = EvaluatorRelease.objects.create(
         id=demo_id("evaluator/0.1"),
         schema_release=releases["evaluator"],
+        history=_demo_history("evaluator/0.1", "evaluator"),
         version="0.1",
         source_url="https://example.org/circuit-bench/evaluator",
         source_revision="0000000000000000000000000000000000000001",
@@ -339,6 +362,7 @@ def seed_demo_data() -> dict[str, int]:
     result = Result.objects.create(
         id=demo_id("result/clear-matcher-rotated-memory"),
         schema_release=releases["result"],
+        history=_demo_history("result/clear-matcher-rotated-memory", "result"),
         decoder_version=decoder,
         circuit_revision=circuit,
         evaluator_version=evaluator,
@@ -401,6 +425,7 @@ def seed_demo_data() -> dict[str, int]:
     benchmark = BenchmarkRevision.objects.create(
         id=demo_id("benchmark/memory-smoke-test/0.1"),
         schema_release=releases["benchmark"],
+        history=_demo_history("benchmark/memory-smoke-test", "benchmark"),
         slug="memory-smoke-test-0-1",
         name="Memory smoke test",
         version="0.1",
@@ -494,16 +519,103 @@ def seed_demo_data() -> dict[str, int]:
         label="Source repository",
         position=1,
     )
-    ModerationEvent.objects.create(
-        id=demo_id("moderation/benchmark/approved"),
-        actor_account=uploader,
-        benchmark_revision=benchmark,
-        action="approved",
-        note="Approved as deterministic development data.",
-        details={"fixture": True},
+    _ensure_demo_history_events(
+        (
+            matching,
+            belief_propagation,
+            rotated_surface,
+            memory,
+            fixed_noise,
+            randomised_noise,
+            decoder_root,
+            decoder,
+            circuit,
+            machine,
+            evaluator,
+            result,
+            benchmark,
+        )
     )
 
     return demo_counts()
+
+
+def _ensure_demo_history_events(records) -> None:
+    """Give seed records valid histories when they are created after migrations."""
+
+    configurations = {
+        Tag: ("tag", None),
+        NoiseModel: ("noise_model", "supersedes_noise_model_id"),
+        DecoderVersion: ("decoder", "previous_version_id"),
+        CircuitRevision: ("circuit", "previous_revision_id"),
+        Machine: ("machine", "supersedes_machine_id"),
+        EvaluatorRelease: ("evaluator", None),
+        Result: ("result", "supersedes_result_id"),
+        BenchmarkRevision: ("benchmark", "previous_revision_id"),
+    }
+    for record in records:
+        if record.moderation_events.exists():
+            continue
+        kind, predecessor_field = configurations[type(record)]
+        model = type(record)
+        actor = getattr(record, "submitted_by", None)
+        predecessor_id = (
+            getattr(record, predecessor_field) if predecessor_field else None
+        )
+        if predecessor_id:
+            append_history_event(
+                kind=kind,
+                record=record,
+                actor=actor,
+                action="revision_created",
+                note="Deterministic development-data revision relationship.",
+                details={
+                    "fixture": True,
+                    "predecessor_id": str(predecessor_id),
+                },
+            )
+        submitted = append_history_event(
+            kind=kind,
+            record=record,
+            actor=actor,
+            action="submitted",
+            note="Deterministic development-data submission.",
+            details={
+                "fixture": True,
+                "projected_state": getattr(record, "state", None),
+            },
+            payload_snapshot=submission_snapshot(
+                kind,
+                {"fixture": True, "record_id": str(record.id)},
+            ),
+        )
+        if getattr(record, "state", None) != "published":
+            continue
+        approved = append_history_event(
+            kind=kind,
+            record=record,
+            actor_system="demo_seed",
+            action="approved",
+            note="Approved as deterministic development data.",
+            details={
+                "fixture": True,
+                "approval_route": "deterministic_development_data",
+            },
+            caused_by=submitted,
+        )
+        published = append_history_event(
+            kind=kind,
+            record=record,
+            actor_system="demo_seed",
+            action="published",
+            note="Published as deterministic development data.",
+            details={
+                "fixture": True,
+                "approval_route": "deterministic_development_data",
+            },
+            caused_by=approved,
+        )
+        model.objects.filter(id=record.id).update(published_at=published.occurred_at)
 
 
 def _refresh_demo_presentation() -> None:

@@ -17,6 +17,7 @@
   const cloneRecords = (records) => records.map((record) => ({ ...record }));
 
   pickers.forEach((picker) => {
+    picker.dataset.enhanced = "true";
     const dialog = picker.querySelector("[data-related-record-dialog]");
     const opener = picker.querySelector("[data-related-record-open]");
     const search = picker.querySelector("[data-related-record-search]");
@@ -28,6 +29,9 @@
     const inputArea = picker.querySelector("[data-related-record-inputs]");
     const summary = picker.querySelector("[data-related-record-summary]");
     const gridCell = picker.closest("[data-filter-related-record-cell]");
+    const maximumSelections = Number(picker.dataset.maximumSelections || "0");
+    const selectionRequired = picker.dataset.selectionRequired === "true";
+    const emptyLabel = picker.dataset.emptyLabel || "Any";
     const initial = [...picker.querySelectorAll("[data-record-identifier]")]
       .map(recordFromDataset);
     let committed = cloneRecords(initial);
@@ -51,10 +55,15 @@
 
     const renderSelected = () => {
       selectedArea.replaceChildren();
+      picker.querySelector("[data-related-record-apply]").disabled = (
+        selectionRequired && !working.length
+      );
       if (!working.length) {
         const empty = document.createElement("span");
         empty.className = "muted";
-        empty.textContent = `No ${picker.dataset.pluralLabel} selected; all are permitted.`;
+        empty.textContent = selectionRequired
+          ? `Choose one ${picker.dataset.singularLabel}.`
+          : `No ${picker.dataset.singularLabel} selected.`;
         selectedArea.append(empty);
         return;
       }
@@ -113,7 +122,10 @@
           if (!grouped.has(key)) grouped.set(key, []);
           grouped.get(key).push(record);
         });
-        ["official", "community", "deprecated"].forEach((groupKey) => {
+        [...grouped.keys()].sort((left, right) => {
+          const order = { official: 0, published: 1, community: 2, withdrawn: 3, deprecated: 4 };
+          return (order[left] ?? 10) - (order[right] ?? 10) || left.localeCompare(right);
+        }).forEach((groupKey) => {
           const records = grouped.get(groupKey);
           if (!records?.length) return;
           const section = document.createElement("section");
@@ -141,7 +153,7 @@
         input.value = record.identifier;
         inputArea.append(input);
       });
-      let text = "Any";
+      let text = emptyLabel;
       if (committed.length) {
         text = committed[0].label;
         if (committed.length > 1) text += ` +${committed.length - 1}`;
@@ -149,10 +161,10 @@
       summary.textContent = text;
       const fullSelection = committed.length
         ? committed.map((record) => record.label).join(", ")
-        : "Any";
+        : emptyLabel;
       opener.title = fullSelection;
       opener.setAttribute("aria-label", `${picker.dataset.pluralLabel}: ${fullSelection}`);
-      gridCell.classList.toggle("is-filtered", committed.length > 0);
+      gridCell?.classList.toggle("is-filtered", committed.length > 0);
     };
 
     const loadResults = async () => {
@@ -172,7 +184,7 @@
         currentResults = payload.results;
         page = payload.pagination.page;
         pages = payload.pagination.pages;
-        status.textContent = `${currentResults.length} ${currentResults.length === 1 ? picker.dataset.singularLabel : picker.dataset.pluralLabel} on this page; official records are listed first.`;
+        status.textContent = `${currentResults.length} ${currentResults.length === 1 ? picker.dataset.singularLabel : picker.dataset.pluralLabel} on this page.`;
         renderResults();
       } catch (error) {
         if (error.name === "AbortError") return;
@@ -233,6 +245,9 @@
       if (index >= 0) {
         working.splice(index, 1);
       } else {
+        if (maximumSelections > 0 && working.length >= maximumSelections) {
+          working = [];
+        }
         working.push({ ...record });
       }
       renderSelected();
@@ -250,6 +265,7 @@
       button.addEventListener("click", cancel);
     });
     picker.querySelector("[data-related-record-apply]").addEventListener("click", () => {
+      if (selectionRequired && !working.length) return;
       committed = cloneRecords(working);
       renderSummary();
       dialog.close();

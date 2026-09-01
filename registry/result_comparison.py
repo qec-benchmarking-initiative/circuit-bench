@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
 from django.http import QueryDict
 from django.urls import NoReverseMatch, reverse
 
 from registry.explorer import ColumnSpec, SortKey, parse_sort, table_context
+from registry.plot_controls import (
+    MARKER_COLOURS,
+    MARKER_STYLES,
+    UNCERTAINTY_STYLES,
+    plot_control_grids,
+)
 from registry.result_plots import (
     DEFAULT_X_FIELD,
     DEFAULT_Y_FIELD,
@@ -31,10 +38,20 @@ ODATA_OPTIONS = (
     "$count",
 )
 PLOT_PARAMETER_ORDER = (
+    "plot_controls",
     "plot_x",
     "plot_y",
     "plot_x_scale",
     "plot_y_scale",
+    "plot_x_min",
+    "plot_x_max",
+    "plot_y_min",
+    "plot_y_max",
+    "plot_major_grid",
+    "plot_minor_grid",
+    "plot_uncertainty",
+    "plot_marker_style",
+    "plot_marker_colour",
     "plot_open",
 )
 PLOT_PARAMETER_NAMES = set(PLOT_PARAMETER_ORDER)
@@ -143,34 +160,59 @@ def result_comparison_context(
         sort_keys,
         clear_on_sort=("odata", "last_odata", *ODATA_OPTIONS),
     )
-    x_field, y_field, x_scale, y_scale, plot_configuration_error = _plot_options(
-        request.GET
-    )
+    plot_options = _plot_options(request.GET)
     json_url, csv_url = _api_urls(api_parameters, scripted_query.canonical)
     plot = build_result_scatter_plot(
         results,
-        x_field=x_field,
-        y_field=y_field,
-        x_scale=x_scale,
-        y_scale=y_scale,
+        x_field=plot_options["x_field"],
+        y_field=plot_options["y_field"],
+        x_scale=plot_options["x_scale"],
+        y_scale=plot_options["y_scale"],
+        x_min=plot_options["x_minimum"],
+        x_max=plot_options["x_maximum"],
+        y_min=plot_options["y_minimum"],
+        y_max=plot_options["y_maximum"],
+        uncertainty_style=plot_options["uncertainty_style"],
         plot_id=plot_id,
         point_context=point_context,
     )
+    main_controls, advanced_controls = plot_control_grids(
+        plot_id=plot_id,
+        results=results,
+        numeric_fields=NUMERIC_PLOT_FIELDS,
+        x_field=plot_options["x_field"],
+        y_field=plot_options["y_field"],
+        x_scale=plot_options["x_scale"],
+        y_scale=plot_options["y_scale"],
+        x_minimum=plot_options["x_minimum"],
+        x_maximum=plot_options["x_maximum"],
+        y_minimum=plot_options["y_minimum"],
+        y_maximum=plot_options["y_maximum"],
+        major_gridlines=plot_options["major_gridlines"],
+        minor_gridlines=plot_options["minor_gridlines"],
+        marker_style=plot_options["marker_style"],
+        marker_colour=plot_options["marker_colour"],
+        uncertainty_style=plot_options["uncertainty_style"],
+    )
     plot.update(
         {
-            "axis_options": [
-                {
-                    "name": field.name,
-                    "label": field.label,
-                    "unit": field.unit,
-                }
-                for field in NUMERIC_PLOT_FIELDS
-            ],
-            "selected_x_field": x_field,
-            "selected_y_field": y_field,
-            "selected_x_scale": x_scale,
-            "selected_y_scale": y_scale,
-            "configuration_error": plot_configuration_error,
+            "main_controls": main_controls,
+            "advanced_controls": advanced_controls,
+            "major_gridlines": plot_options["major_gridlines"],
+            "minor_gridlines": plot_options["minor_gridlines"],
+            "marker_style": plot_options["marker_style"],
+            "marker_colour": plot_options["marker_colour"],
+            "uncertainty_style": plot_options["uncertainty_style"],
+            "axes_are_explicit": any(
+                plot_options[name]
+                for name in (
+                    "x_minimum",
+                    "x_maximum",
+                    "y_minimum",
+                    "y_maximum",
+                )
+            ),
+            "configuration_error": plot_options["configuration_error"],
             "json_url": json_url,
             "csv_url": csv_url,
             "schema_url": _reverse_or_default(
@@ -178,10 +220,7 @@ def result_comparison_context(
             ),
             "action_url": request.path,
             "preserved_parameters": _preserved_plot_parameters(request.GET),
-            "is_open": bool(
-                request.GET.get("plot_open")
-                or any(name in request.GET for name in PLOT_PARAMETER_NAMES)
-            ),
+            "is_open": True,
             "download_filename": f"circuit-bench-{plot_id}.svg",
         }
     )
@@ -300,7 +339,80 @@ def _plot_options(parameters):
     if y_scale not in {"linear", "log"}:
         error_messages.append(f"Unknown y-axis scale: {y_scale}")
         y_scale = "linear"
-    return x_field, y_field, x_scale, y_scale, "; ".join(error_messages)
+    x_minimum = _axis_bound(
+        parameters, "plot_x_min", "x-axis minimum", x_scale, error_messages
+    )
+    x_maximum = _axis_bound(
+        parameters, "plot_x_max", "x-axis maximum", x_scale, error_messages
+    )
+    y_minimum = _axis_bound(
+        parameters, "plot_y_min", "y-axis minimum", y_scale, error_messages
+    )
+    y_maximum = _axis_bound(
+        parameters, "plot_y_max", "y-axis maximum", y_scale, error_messages
+    )
+    if x_minimum and x_maximum and Decimal(x_minimum) >= Decimal(x_maximum):
+        error_messages.append("The x-axis minimum must be less than its maximum")
+        x_minimum = x_maximum = ""
+    if y_minimum and y_maximum and Decimal(y_minimum) >= Decimal(y_maximum):
+        error_messages.append("The y-axis minimum must be less than its maximum")
+        y_minimum = y_maximum = ""
+
+    marker_styles = {value for value, _label in MARKER_STYLES}
+    marker_colours = {value for value, _label in MARKER_COLOURS}
+    uncertainty_styles = {value for value, _label in UNCERTAINTY_STYLES}
+    marker_style = parameters.get("plot_marker_style", "circle").strip().lower()
+    marker_colour = parameters.get("plot_marker_colour", "theme").strip().lower()
+    uncertainty_style = parameters.get("plot_uncertainty", "bars").strip().lower()
+    if marker_style not in marker_styles:
+        error_messages.append(f"Unknown marker style: {marker_style}")
+        marker_style = "circle"
+    if marker_colour not in marker_colours:
+        error_messages.append(f"Unknown marker colour: {marker_colour}")
+        marker_colour = "theme"
+    if uncertainty_style not in uncertainty_styles:
+        error_messages.append(f"Unknown uncertainty display: {uncertainty_style}")
+        uncertainty_style = "bars"
+    return {
+        "x_field": x_field,
+        "y_field": y_field,
+        "x_scale": x_scale,
+        "y_scale": y_scale,
+        "x_minimum": x_minimum,
+        "x_maximum": x_maximum,
+        "y_minimum": y_minimum,
+        "y_maximum": y_maximum,
+        "major_gridlines": _plot_boolean(parameters, "plot_major_grid", default=True),
+        "minor_gridlines": _plot_boolean(parameters, "plot_minor_grid", default=True),
+        "marker_style": marker_style,
+        "marker_colour": marker_colour,
+        "uncertainty_style": uncertainty_style,
+        "configuration_error": "; ".join(error_messages),
+    }
+
+
+def _axis_bound(parameters, name, label, scale, error_messages):
+    raw_value = parameters.get(name, "").strip()
+    if not raw_value:
+        return ""
+    try:
+        value = Decimal(raw_value)
+    except (InvalidOperation, ValueError):
+        error_messages.append(f"The {label} must be a finite number")
+        return ""
+    if not value.is_finite():
+        error_messages.append(f"The {label} must be a finite number")
+        return ""
+    if scale == "log" and value <= 0:
+        error_messages.append(f"The {label} must be positive")
+        return ""
+    return str(value)
+
+
+def _plot_boolean(parameters, name, *, default):
+    if name not in parameters:
+        return False if "plot_controls" in parameters else default
+    return parameters.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _api_urls(parameters, canonical):

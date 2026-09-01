@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Withdraw {{ record_label }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <p class="eyebrow">Withdrawal confirmation</p>
+      <h1>Withdraw {{ record_label }}?</h1>
+      <p>The exact record and its history remain available with a withdrawn label. A revised successor can later be submitted for admin reapproval.</p>
+    </header>
+    <section class="submission-entry-panel submission-withdraw-panel">
+      <form method="post" novalidate>
+        {% include "components/submission_form.html" with form=form csrf_token=csrf_token only %}
+        <div class="submission-actions">
+          <button class="button button-danger" type="submit">Confirm withdrawal</button>
+          <a class="button button-secondary" href="{% url 'submissions:profile' %}">Cancel</a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

@@ -4,6 +4,11 @@ from . import views
 
 urlpatterns = [
     path("login/", views.login, name="account_login"),
+    path(
+        "development-login/<uuid:account_id>/",
+        views.development_login,
+        name="account-development-login",
+    ),
     path("", views.identity_list, name="account-identity-list"),
     path(
         "identities/<uuid:identity_id>/unlink/",

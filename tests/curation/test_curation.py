@@ -15,7 +15,7 @@ from registry.curation import (
     select_catalogue_ordering,
 )
 from registry.demo import seed_demo_data
-from registry.models import DecoderVersion, NoiseModel
+from registry.models import DecoderVersion, NoiseModel, RecordHistory
 from registry.services.benchmarks import public_benchmark_catalogue
 from registry.services.circuits import circuit_catalogue, noise_model_catalogue
 from registry.services.decoders import public_decoder_catalogue
@@ -122,8 +122,18 @@ def test_featured_ties_end_in_stable_uuid_order(demo_catalogues):
     }
     later_id = UUID("00000000-0000-0000-0000-000000000002")
     earlier_id = UUID("00000000-0000-0000-0000-000000000001")
-    DecoderVersion.objects.create(id=later_id, slug="tied-decoder-b", **shared)
-    DecoderVersion.objects.create(id=earlier_id, slug="tied-decoder-a", **shared)
+    DecoderVersion.objects.create(
+        id=later_id,
+        slug="tied-decoder-b",
+        history=RecordHistory.objects.create(record_kind="decoder"),
+        **shared,
+    )
+    DecoderVersion.objects.create(
+        id=earlier_id,
+        slug="tied-decoder-a",
+        history=RecordHistory.objects.create(record_kind="decoder"),
+        **shared,
+    )
 
     tied = apply_featured_ordering(
         public_decoder_catalogue(query="Tied decoder"),

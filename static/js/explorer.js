@@ -132,7 +132,9 @@
       ? "All available tags are selected."
       : "No matching tags.";
     picker.querySelectorAll("[data-tag-apply]").forEach((button) => {
-      button.disabled = selected.length === 0;
+      button.disabled = (
+        button.dataset.tagApply !== "selection" && selected.length === 0
+      );
     });
     picker.dispatchEvent(new CustomEvent("filtergrid:tags-changed", {
       bubbles: true,
@@ -151,14 +153,14 @@
       choices.forEach((checkbox, index) => {
         checkbox.checked = selectionSnapshot[index];
       });
-      matchInput.value = matchSnapshot;
+      if (matchInput) matchInput.value = matchSnapshot;
       search.value = "";
       updateTagPicker(picker);
     };
 
     picker.querySelector("[data-tag-dialog-open]").addEventListener("click", () => {
       selectionSnapshot = choices.map((checkbox) => checkbox.checked);
-      matchSnapshot = matchInput.value || "all";
+      matchSnapshot = matchInput?.value || "all";
       search.value = "";
       updateTagPicker(picker);
       dialog.showModal();
@@ -195,7 +197,7 @@
     });
     picker.querySelectorAll("[data-tag-apply]").forEach((button) => {
       button.addEventListener("click", () => {
-        matchInput.value = button.dataset.tagApply;
+        if (matchInput) matchInput.value = button.dataset.tagApply;
         search.value = "";
         updateTagPicker(picker);
         dialog.close();

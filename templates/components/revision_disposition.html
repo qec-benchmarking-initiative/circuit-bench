@@ -1,0 +1,18 @@
+{% if revision_control %}
+  <section class="submission-form-section revision-disposition">
+    <header>
+      <h3>Publication relationship</h3>
+      <p>Choose whether the existing exact revision remains published while this successor is reviewed.</p>
+    </header>
+    <div class="revision-disposition-options">
+      <label>
+        <input type="radio" name="revision_mode" value="alongside"{% if revision_control.selected != "replace" %} checked{% endif %}>
+        <span><strong>Submit alongside existing published revisions</strong><small>{{ revision_control.published_labels }}</small></span>
+      </label>
+      <label>
+        <input type="radio" name="revision_mode" value="replace"{% if revision_control.selected == "replace" %} checked{% endif %}>
+        <span><strong>Withdraw {{ revision_control.source_label }} and submit</strong><small>The old exact revision is withdrawn immediately; the successor enters pending reapproval.</small></span>
+      </label>
+    </div>
+  </section>
+{% endif %}

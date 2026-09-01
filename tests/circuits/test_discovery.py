@@ -2,7 +2,7 @@ import pytest
 from django.urls import reverse
 
 from registry.demo import seed_demo_data
-from registry.models import CircuitRevision, Machine, NoiseModel
+from registry.models import CircuitRevision, Machine, NoiseModel, RecordHistory
 
 
 @pytest.fixture
@@ -149,9 +149,9 @@ def test_circuit_leaderboard_uses_reusable_algorithm_and_machine_grids(
     assert 'id="circuit-result-algorithm-filters"' in content
     assert 'id="circuit-result-machine-filters"' in content
     assert content.count('class="filter-grid"') == 2
-    assert "Algorithm filters" in content
+    assert "Decoding algorithm filters" in content
     assert "Machine filters" in content
-    assert content.count("selected values shown in the theme colour") == 2
+    assert "selected values shown in the theme colour" not in content
     assert ">active<" not in content
     assert "Table view options (11/15)" in content
     assert "LER upper 95% @ 5%" in content
@@ -207,6 +207,7 @@ def test_circuit_tag_filter_keeps_namespace(client, demo_registry):
         schema_release=circuit.code_tags.get(
             slug="rotated-surface-code"
         ).schema_release,
+        history=RecordHistory.objects.create(record_kind="tag"),
         namespace="code",
         slug="memory",
         label="Memory code",

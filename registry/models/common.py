@@ -6,6 +6,7 @@ from django.db import models
 class LifecycleState(models.TextChoices):
     DRAFT = "draft", "Draft"
     PENDING_REVIEW = "pending_review", "Pending review"
+    PENDING_REAPPROVAL = "pending_reapproval", "Pending reapproval"
     PUBLISHED = "published", "Published"
     WITHDRAWN = "withdrawn", "Withdrawn"
 
@@ -29,6 +30,7 @@ class PublishedLifecycleModel(models.Model):
                         state__in=[
                             LifecycleState.DRAFT,
                             LifecycleState.PENDING_REVIEW,
+                            LifecycleState.PENDING_REAPPROVAL,
                         ],
                         published_at__isnull=True,
                         withdrawn_at__isnull=True,
@@ -65,4 +67,3 @@ def exactly_one_not_null(*field_names: str) -> models.Q:
                 branch &= models.Q(**{f"{other}__isnull": True})
         condition |= branch
     return condition
-

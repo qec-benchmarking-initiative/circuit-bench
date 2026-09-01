@@ -145,7 +145,9 @@
   const clearRangeCell = (source) => {
     source.querySelector("[data-filter-range-min]").value = "";
     source.querySelector("[data-filter-range-max]").value = "";
-    source.querySelector("[data-filter-cell-value]").textContent = "0–∞";
+    source.querySelector("[data-filter-cell-value]").textContent = (
+      source.dataset.rangeDefaultDisplay || "0–∞"
+    );
     source.classList.remove("is-filtered");
     updateAppliedCount(source.closest("[data-filter-grid]"));
   };
@@ -267,15 +269,22 @@
     });
   };
 
-  const makeRangeField = (labelText, value, placeholder, key) => {
+  const makeRangeField = (
+    labelText,
+    value,
+    placeholder,
+    key,
+    step = "1",
+    allowNegative = false,
+  ) => {
     const label = document.createElement("label");
     label.className = "filter-range-field";
     const title = document.createElement("span");
     title.textContent = labelText;
     const input = document.createElement("input");
     input.type = "number";
-    input.min = "0";
-    input.step = "1";
+    if (!allowNegative) input.min = "0";
+    input.step = step;
     input.value = value;
     input.placeholder = placeholder;
     input.dataset[key] = "true";
@@ -295,12 +304,32 @@
   };
 
   const rangeValues = (overlay) => {
-    const minimum = Math.max(0, Number(overlay.minimumEditor.value || 0));
-    const maximum = overlay.maximumEditor.value === ""
+    const minimumBlank = overlay.minimumEditor.value.trim() === "";
+    const maximumBlank = overlay.maximumEditor.value.trim() === "";
+    const minimum = minimumBlank
+      ? overlay.domainMinimum
+      : Math.max(
+        overlay.allowNegative ? -Infinity : 0,
+        Number(overlay.minimumEditor.value),
+      );
+    const maximum = maximumBlank
       ? null
-      : Math.max(0, Number(overlay.maximumEditor.value));
-    return { maximum, minimum };
+      : Math.max(
+        overlay.allowNegative ? -Infinity : 0,
+        Number(overlay.maximumEditor.value),
+      );
+    return { maximum, maximumBlank, minimum, minimumBlank };
   };
+
+  const displayRangeNumber = (value) => {
+    if (!Number.isFinite(value)) return "auto";
+    return globalThis.CircuitBenchNumber?.format(value) ?? String(value);
+  };
+
+  const rangeChanged = (overlay) => (
+    overlay.minimumEditor.value.trim() !== overlay.originalMinimumValue
+    || overlay.maximumEditor.value.trim() !== overlay.originalMaximumValue
+  );
 
   const setHandle = (handle, percent, label, edge) => {
     handle.style.left = `${percent}%`;
@@ -311,7 +340,7 @@
   };
 
   const updateRangeOverlay = (overlay) => {
-    let { maximum, minimum } = rangeValues(overlay);
+    let { maximum, maximumBlank, minimum, minimumBlank } = rangeValues(overlay);
     if (maximum !== null && minimum > maximum) {
       if (document.activeElement === overlay.minimumEditor || overlay.dragging === "min") {
         minimum = maximum;
@@ -321,7 +350,10 @@
         overlay.maximumEditor.value = String(maximum);
       }
     }
-    const domainSpan = Math.max(overlay.domainMaximum - overlay.domainMinimum, 1);
+    const domainSpan = Math.max(
+      overlay.domainMaximum - overlay.domainMinimum,
+      Number.EPSILON,
+    );
     const minimumPercent = Math.max(0, Math.min(
       100,
       ((minimum - overlay.domainMinimum) / domainSpan) * 100
@@ -339,38 +371,47 @@
     setHandle(
       overlay.minimumHandle,
       minimumPercent,
-      `min ${minimum}`,
+      `min ${minimumBlank && overlay.autoEmpty
+        ? (overlay.source.dataset.rangeEmptyMinimumLabel || "auto")
+        : displayRangeNumber(minimum)}`,
       minimumPercent < 8 ? "left" : ""
     );
     setHandle(
       overlay.maximumHandle,
       maximumPercent,
-      `max ${maximum === null ? "∞" : maximum}`,
+      `max ${maximumBlank
+        ? (overlay.autoEmpty
+          ? (overlay.source.dataset.rangeEmptyMaximumLabel || "auto")
+          : "∞")
+        : displayRangeNumber(maximum)}`,
       maximumPercent > 92 ? "right" : ""
     );
-    const changed = (
-      minimum !== overlay.originalMinimum
-      || maximum !== overlay.originalMaximum
-    );
-    overlay.confirm.hidden = !changed;
+    overlay.confirm.hidden = !rangeChanged(overlay);
   };
 
-  const commitRangeOverlay = (overlay) => {
-    const { maximum, minimum } = rangeValues(overlay);
-    const changed = (
-      minimum !== overlay.originalMinimum
-      || maximum !== overlay.originalMaximum
-    );
-    if (!changed) return;
-    overlay.minimumInput.value = minimum > 0 ? String(minimum) : "";
-    overlay.maximumInput.value = maximum === null ? "" : String(maximum);
-    overlay.source.querySelector("[data-filter-cell-value]").textContent = (
-      `${minimum}–${maximum === null ? "∞" : maximum}`
-    );
-    overlay.source.classList.toggle("is-filtered", minimum > 0 || maximum !== null);
+  const commitRangeOverlay = (overlay, { immediate = false } = {}) => {
+    const { maximum, maximumBlank, minimum, minimumBlank } = rangeValues(overlay);
+    if (!rangeChanged(overlay)) return;
+    overlay.minimumInput.value = overlay.autoEmpty
+      ? (minimumBlank ? "" : String(minimum))
+      : (minimum > 0 ? String(minimum) : "");
+    overlay.maximumInput.value = maximumBlank ? "" : String(maximum);
+    const isDefault = !overlay.minimumInput.value && !overlay.maximumInput.value;
+    overlay.source.querySelector("[data-filter-cell-value]").textContent = isDefault
+      ? (overlay.source.dataset.rangeDefaultDisplay || "0–∞")
+      : `${minimumBlank
+        ? (overlay.source.dataset.rangeEmptyMinimumLabel || "auto")
+        : displayRangeNumber(minimum)}–${
+        maximumBlank
+          ? (overlay.autoEmpty
+            ? (overlay.source.dataset.rangeEmptyMaximumLabel || "auto")
+            : "∞")
+          : displayRangeNumber(maximum)
+      }`;
+    overlay.source.classList.toggle("is-filtered", !isDefault);
     updateAppliedCount(overlay.grid);
     const source = overlay.source;
-    closeOverlay({ restoreFocus: true });
+    closeOverlay({ immediate, restoreFocus: true });
     notifyFilterChange(source);
   };
 
@@ -384,6 +425,9 @@
     const minimumInput = source.querySelector("[data-filter-range-min]");
     const maximumInput = source.querySelector("[data-filter-range-max]");
     const trigger = source.querySelector("[data-filter-range-trigger]");
+    const autoEmpty = source.dataset.rangeAutoEmpty === "true";
+    const allowNegative = source.dataset.rangeAllowNegative === "true";
+    const rangeStep = source.dataset.rangeStep || "1";
     trigger.setAttribute("aria-expanded", "true");
 
     const editor = document.createElement("section");
@@ -395,15 +439,19 @@
 
     const minimumEditor = makeRangeField(
       "Minimum",
-      minimumInput.value || "0",
-      "0",
-      "filterRangeMinimumEditor"
+      autoEmpty ? minimumInput.value : (minimumInput.value || "0"),
+      autoEmpty ? (source.dataset.rangeEmptyMinimumLabel || "auto") : "0",
+      "filterRangeMinimumEditor",
+      rangeStep,
+      allowNegative,
     );
     const maximumEditor = makeRangeField(
       "Maximum",
       maximumInput.value,
-      "∞",
-      "filterRangeMaximumEditor"
+      autoEmpty ? (source.dataset.rangeEmptyMaximumLabel || "auto") : "∞",
+      "filterRangeMaximumEditor",
+      rangeStep,
+      allowNegative,
     );
     const histogram = document.createElement("section");
     histogram.className = "filter-range-histogram-cell";
@@ -414,7 +462,7 @@
     reset.type = "button";
     reset.className = "filter-range-reset";
     reset.dataset.filterRangeReset = "true";
-    reset.textContent = "Reset limits";
+    reset.textContent = source.dataset.rangeResetLabel || "Reset limits";
     const cancel = document.createElement("button");
     cancel.type = "button";
     cancel.className = "filter-range-cancel";
@@ -447,19 +495,41 @@
       bar.style.height = `${Math.round((count / largestCount) * 100)}%`;
       bars.appendChild(bar);
     });
+    const axisLabels = document.createElement("div");
+    axisLabels.className = "filter-range-axis-labels";
+    const domainMinimum = Number(source.dataset.domainMin);
+    const domainMaximum = Number(source.dataset.domainMax);
+    [0, 0.25, 0.5, 0.75, 1].forEach((fraction) => {
+      const label = document.createElement("span");
+      label.style.left = `${fraction * 100}%`;
+      label.dataset.edge = fraction === 0 ? "start" : (fraction === 1 ? "end" : "");
+      label.textContent = displayRangeNumber(
+        domainMinimum + fraction * (domainMaximum - domainMinimum)
+      );
+      axisLabels.appendChild(label);
+    });
     const leftShade = document.createElement("span");
     leftShade.className = "filter-range-shade filter-range-shade-left";
     const rightShade = document.createElement("span");
     rightShade.className = "filter-range-shade filter-range-shade-right";
     const minimumHandle = makeRangeHandle("min");
     const maximumHandle = makeRangeHandle("max");
-    plot.append(bars, leftShade, rightShade, minimumHandle, maximumHandle);
+    plot.append(
+      bars,
+      leftShade,
+      rightShade,
+      axisLabels,
+      minimumHandle,
+      maximumHandle,
+    );
     histogram.append(histogramHead, plot);
     editor.append(minimumEditor, maximumEditor, histogram);
     const lockedCells = lockBaseLayout(layout);
     gridCells.appendChild(editor);
 
     activeOverlay = {
+      allowNegative,
+      autoEmpty,
       domainMaximum: Number(source.dataset.domainMax),
       domainMinimum: Number(source.dataset.domainMin),
       dragging: null,
@@ -477,10 +547,8 @@
       minimumEditor: minimumEditor.querySelector("input"),
       minimumHandle,
       minimumInput,
-      originalMaximum: maximumInput.value === ""
-        ? null
-        : Math.max(0, Number(maximumInput.value)),
-      originalMinimum: Math.max(0, Number(minimumInput.value || 0)),
+      originalMaximumValue: maximumInput.value.trim(),
+      originalMinimumValue: minimumInput.value.trim(),
       plot,
       rightShade,
       source,
@@ -499,10 +567,14 @@
     if (!overlay || overlay.type !== "range" || !overlay.dragging) return;
     const bounds = overlay.plot.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
-    const value = Math.round(
+    const unrounded = (
       overlay.domainMinimum
       + ratio * (overlay.domainMaximum - overlay.domainMinimum)
     );
+    const configuredStep = overlay.source.dataset.rangeStep || "1";
+    const value = configuredStep === "any"
+      ? Number(unrounded.toPrecision(5))
+      : Math.round(unrounded / Number(configuredStep)) * Number(configuredStep);
     const values = rangeValues(overlay);
     if (overlay.dragging === "min") {
       const ceiling = values.maximum ?? overlay.domainMaximum;
@@ -615,13 +687,13 @@
       }
       const reset = event.target.closest("[data-filter-range-reset]");
       if (reset && activeOverlay?.type === "range") {
-        activeOverlay.minimumEditor.value = "0";
+        activeOverlay.minimumEditor.value = activeOverlay.autoEmpty ? "" : "0";
         activeOverlay.maximumEditor.value = "";
         updateRangeOverlay(activeOverlay);
         if (activeOverlay.confirm.hidden) {
-          closeOverlay({ restoreFocus: true });
+          closeOverlay({ immediate: true, restoreFocus: true });
         } else {
-          commitRangeOverlay(activeOverlay);
+          commitRangeOverlay(activeOverlay, { immediate: true });
         }
         return;
       }
@@ -708,12 +780,19 @@
     ) return;
     event.preventDefault();
     const direction = event.key === "ArrowLeft" ? -1 : 1;
-    const step = event.shiftKey ? 5 : 1;
+    const configuredStep = activeOverlay.source.dataset.rangeStep || "1";
+    const baseStep = configuredStep === "any"
+      ? Math.max(
+        (activeOverlay.domainMaximum - activeOverlay.domainMinimum) / 100,
+        Number.EPSILON,
+      )
+      : Number(configuredStep);
+    const step = baseStep * (event.shiftKey ? 10 : 1);
     const values = rangeValues(activeOverlay);
     if (handle.dataset.filterRangeHandle === "min") {
       const ceiling = values.maximum ?? activeOverlay.domainMaximum;
       activeOverlay.minimumEditor.value = String(Math.max(
-        0,
+        activeOverlay.allowNegative ? activeOverlay.domainMinimum : 0,
         Math.min(ceiling, values.minimum + direction * step)
       ));
     } else {

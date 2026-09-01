@@ -39,11 +39,11 @@ def test_exact_result_renders_auditable_provenance_counts_scores_and_timing(
     assert str(demo_result.evaluator_version_id) in content
     assert demo_result.machine.slug in content
     assert str(demo_result.machine_id) in content
-    assert "98800 successful +" in content
+    assert "9.88e4 successful +" in content
     assert "1000 logical failure +" in content
     assert "150 timeout +" in content
     assert "50 decoder error =" in content
-    assert "100000 = 100000 total shots" in content
+    assert "1e5 = 1e5 total shots" in content
     assert "Failure-probability eligible shots" in content
     assert "Latency eligible shots" in content
     assert "2.5e7 ns" in content

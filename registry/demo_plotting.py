@@ -7,7 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
 
-from registry.demo import _artifact, demo_id, seed_demo_data
+from registry.demo import _artifact, _demo_history, demo_id, seed_demo_data
 from registry.models import (
     CircuitRevision,
     CircuitRevisionCodeTag,
@@ -299,6 +299,7 @@ def _seed_tags(schema_release, uploader, published_at):
             id=demo_id(f"tag/{namespace}/{slug}"),
             defaults={
                 "schema_release": schema_release,
+                "history": _demo_history(f"tag/{namespace}/{slug}", "tag"),
                 "namespace": namespace,
                 "slug": slug,
                 "label": label,
@@ -335,6 +336,7 @@ def _seed_machines(schema_release, uploader, published_at):
             id=demo_id(f"machine/{slug}"),
             defaults={
                 "schema_release": schema_release,
+                "history": _demo_history(f"machine/{slug}", "machine"),
                 "slug": slug,
                 "machine_class": machine_class,
                 "description": description,
@@ -363,6 +365,7 @@ def _seed_decoders(schema_release, uploader, published_at, tags):
             id=demo_id(f"decoder/{spec['key']}/0.1"),
             defaults={
                 "schema_release": schema_release,
+                "history": _demo_history(f"decoder/{spec['key']}", "decoder"),
                 "slug": spec["slug"],
                 "name": spec["name"],
                 "version": "0.1",
@@ -448,6 +451,7 @@ def _seed_circuits(schema_release, contributor, published_at, tags, noises):
             circuit = CircuitRevision.objects.create(
                 id=circuit_id,
                 schema_release=schema_release,
+                history=_demo_history(f"circuit/{spec['key']}", "circuit"),
                 slug=spec["slug"],
                 name=spec["name"],
                 description=(
@@ -523,8 +527,10 @@ def _seed_results(
             result_key = f"result/{decoder_key}/{circuit_key}"
             if decoder_key == "clear-matcher" and circuit_key == "rotated-memory-d5":
                 result_id = demo_id("result/clear-matcher-rotated-memory")
+                history_key = "result/clear-matcher-rotated-memory"
             else:
                 result_id = demo_id(result_key)
+                history_key = result_key
             ler_value = _quantise_probability(
                 circuit["ler_base"] * decoder["ler_factor"]
             )
@@ -549,6 +555,7 @@ def _seed_results(
                 id=result_id,
                 defaults={
                     "schema_release": schema_release,
+                    "history": _demo_history(history_key, "result"),
                     "decoder_version": decoder["record"],
                     "circuit_revision": circuit["record"],
                     "evaluator_version": evaluator,

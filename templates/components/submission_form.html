@@ -1,0 +1,12 @@
+{% csrf_token %}
+{% if form.non_field_errors %}<div class="submission-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+<div class="submission-field-grid">
+  {% for field in form %}
+    <div class="submission-field{% if field.errors %} submission-field-error{% endif %}{% if field.field.widget.input_type == 'checkbox' %} submission-field-checkbox{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-label="required">*</span>{% endif %}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="field-help">{{ field.help_text }}</p>{% endif %}
+      {% if field.errors %}<div class="field-errors" role="alert">{{ field.errors }}</div>{% endif %}
+    </div>
+  {% endfor %}
+</div>

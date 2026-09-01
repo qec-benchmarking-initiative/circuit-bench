@@ -1,3 +1,4 @@
+import pytest
 from django.urls import reverse
 
 
@@ -6,6 +7,26 @@ def test_home_page_uses_shared_shell(client):
     assert response.status_code == 200
     assert b"Circuit Bench" in response.content
     assert b"Search the registry" in response.content
+    assert b"Copyright Stasiu Wolanski 2026" in response.content
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("route_name", "search_id"),
+    [
+        ("pages:home", "site-search"),
+        ("circuits:list", "circuit-search"),
+        ("decoders:list", "decoder-search"),
+        ("benchmarks:list", "benchmark-search"),
+        ("noise-models:list", "noise-search"),
+        ("results:list", "result-query"),
+    ],
+)
+def test_primary_search_is_autofocused(client, route_name, search_id):
+    content = client.get(reverse(route_name)).content.decode()
+    search_input = content.split(f'id="{search_id}"', 1)[1].split(">", 1)[0]
+
+    assert "autofocus" in search_input
 
 
 def test_primary_navigation_has_the_reference_work_order(client, db):

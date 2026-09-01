@@ -1,5 +1,5 @@
 {% extends "layouts/entity_detail.html" %}
-{% load static %}
+{% load static submission_history %}
 
 {% block title %}{{ machine.slug }} · Circuit Bench{% endblock %}
 
@@ -21,6 +21,7 @@
       </p>
     </section>
   </div>
+  {% submission_history machine "machine" %}
 {% endblock %}
 
 {% block entity_aside %}
@@ -52,9 +53,10 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'js/filter-grid.js' %}" defer></script>
+  <script src="{% static 'js/filter-grid.js' %}?v=0.1.20260831k" defer></script>
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
   <script src="{% static 'js/filter-query.js' %}" defer></script>
   <script src="{% static 'js/explorer.js' %}" defer></script>
-  <script src="{% static 'js/result-plot.js' %}" defer></script>
+  <script src="{% static 'js/plot-settings.js' %}?v=0.1.20260831k" defer></script>
+<script src="{% static 'js/result-plot.js' %}?v=0.1.20260831o" defer></script>
 {% endblock %}

@@ -13,5 +13,6 @@ urlpatterns = [
     path("noise-models/", include("registry.urls_noise_models")),
     path("pickers/", include("registry.urls_pickers")),
     path("results/", include("registry.urls_results")),
+    path("", include("registry.urls_submissions")),
     path("", include("pages.urls")),
 ]

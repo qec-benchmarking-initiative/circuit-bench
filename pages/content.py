@@ -17,6 +17,7 @@ DEFINITION_ROOT = Path(settings.BASE_DIR) / "definitions"
 PAGE_FILES = {
     "about": "about.md",
     "query-syntax": "query-syntax.md",
+    "submission-policy": "submission-policy.md",
 }
 
 _INLINE_PATTERN = re.compile(r"`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)")

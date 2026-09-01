@@ -590,7 +590,7 @@ table; the root revision is the stable lineage identity.
 | `dem_decompose_errors` | BOOLEAN | no | | Exact passed value, including default |
 | `dem_flatten_loops` | BOOLEAN | no | | Exact passed value, including default |
 | `dem_allow_gauge_detectors` | BOOLEAN | no | | Exact passed value, including default |
-| `dem_approximate_disjoint_errors` | JSONB | no | boolean or number in `[0,1]` | Exact passed union-typed value |
+| `dem_approximate_disjoint_errors` | boolean | no | — | Exact boolean argument passed to Stim |
 | `dem_ignore_decomposition_failures` | BOOLEAN | no | | Exact passed value, including default |
 | `dem_block_decomposition_from_introducing_remnant_edges` | BOOLEAN | no | | Exact passed value, including default |
 | `sampling_circuit_artifact_id` | UUID | no | FK → `artifact.id` | Frozen Stim circuit |

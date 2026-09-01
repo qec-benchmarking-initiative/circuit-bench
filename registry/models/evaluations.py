@@ -23,6 +23,11 @@ class Machine(UUIDModel, PublishedLifecycleModel):
         on_delete=models.PROTECT,
         related_name="machines",
     )
+    history = models.ForeignKey(
+        "registry.RecordHistory",
+        on_delete=models.PROTECT,
+        related_name="machines",
+    )
     slug = models.SlugField(max_length=200, unique=True)
     machine_class = models.CharField(
         db_column="class",
@@ -79,6 +84,11 @@ class EvaluatorRelease(UUIDModel):
 
     schema_release = models.ForeignKey(
         SchemaRelease,
+        on_delete=models.PROTECT,
+        related_name="evaluator_releases",
+    )
+    history = models.ForeignKey(
+        "registry.RecordHistory",
         on_delete=models.PROTECT,
         related_name="evaluator_releases",
     )
@@ -212,6 +222,11 @@ class Result(UUIDModel, PublishedLifecycleModel):
 
     schema_release = models.ForeignKey(
         SchemaRelease,
+        on_delete=models.PROTECT,
+        related_name="results",
+    )
+    history = models.ForeignKey(
+        "registry.RecordHistory",
         on_delete=models.PROTECT,
         related_name="results",
     )

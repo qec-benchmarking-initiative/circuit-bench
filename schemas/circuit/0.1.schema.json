@@ -202,16 +202,7 @@
       "type": "boolean"
     },
     "dem_approximate_disjoint_errors": {
-      "oneOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        }
-      ]
+      "type": "boolean"
     },
     "dem_ignore_decomposition_failures": {
       "type": "boolean"
@@ -244,7 +235,7 @@
       }
     },
     "state": {
-      "enum": ["draft", "pending_review", "published", "withdrawn"]
+      "enum": ["draft", "pending_review", "pending_reapproval", "published", "withdrawn"]
     },
     "submitted_by": {
       "type": "string",

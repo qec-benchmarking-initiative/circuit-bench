@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Profile: {{ user.display_name }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <p class="eyebrow">Account profile</p>
+      <h1>{{ user.display_name }}</h1>
+      <p><a href="{% url 'pages:static-reference' slug='submission-policy' %}">Submission, revision, and withdrawal policy</a></p>
+      <p class="profile-header-actions"><a class="button" href="{% url 'submissions:hub' %}">Submit data</a> <a class="button button-secondary" href="/accounts/">Settings</a></p>
+    </header>
+
+    {% include "components/submission_collection_controls.html" with reset_url=request.path controls=controls kind_choices=kind_choices sort_choices=sort_choices only %}
+
+    <section class="submission-table-section" id="pending">
+      <h2>Pending items</h2>
+      {% include "components/submission_table.html" with rows=pending.page.object_list show_kind=True show_actions=True table_label="Your pending submissions" empty_message="No pending items match these controls." csrf_token=csrf_token sort_links=sort_links only %}
+      {% include "components/pagination.html" with page=pending.page page_prefix=pending.page_prefix page_parameter=pending.page_parameter label="Pending items" only %}
+    </section>
+
+    {% for section in published_sections %}
+      <section class="submission-table-section" id="published-{{ section.kind }}">
+        <h2>Published {{ section.spec.plural_label }}</h2>
+        {% include "components/submission_table.html" with rows=section.page.object_list show_approver=True show_actions=True table_label=section.spec.plural_label empty_message="No published records in this category match these controls." csrf_token=csrf_token sort_links=sort_links only %}
+        {% include "components/pagination.html" with page=section.page page_prefix=section.page_prefix page_parameter=section.page_parameter label=section.spec.plural_label only %}
+      </section>
+    {% endfor %}
+
+    <section class="submission-table-section" id="withdrawn">
+      <h2>Withdrawn history</h2>
+      {% include "components/submission_table.html" with rows=withdrawn.page.object_list show_kind=True show_approver=True show_withdrawn=True show_actions=True table_label="Your withdrawn records" empty_message="No withdrawn records match these controls." csrf_token=csrf_token sort_links=sort_links only %}
+      {% include "components/pagination.html" with page=withdrawn.page page_prefix=withdrawn.page_prefix page_parameter=withdrawn.page_parameter label="Withdrawn history" only %}
+    </section>
+  </div>
+{% endblock %}

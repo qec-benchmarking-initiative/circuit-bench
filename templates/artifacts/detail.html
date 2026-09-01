@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load scientific %}
 
 {% block title %}{{ artifact.original_filename }} — Circuit Bench{% endblock %}
 
@@ -18,7 +19,7 @@
       <h2>Stored metadata</h2>
       <dl class="metadata-list">
         <div><dt>Artifact ID</dt><dd>{{ artifact.id }}</dd></div>
-        <div><dt>Bytes</dt><dd>{{ artifact.byte_size }}</dd></div>
+        <div><dt>Bytes</dt><dd>{{ artifact.byte_size|human_number }}</dd></div>
         <div><dt>Media type</dt><dd>{{ artifact.media_type }}</dd></div>
         <div><dt>Backend</dt><dd>{{ artifact.get_storage_backend_display }}</dd></div>
         <div><dt>SHA-256</dt><dd><code>{{ artifact.sha256 }}</code></dd></div>

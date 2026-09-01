@@ -345,14 +345,28 @@ not label it “best” and do not mix it with scientific leaderboard ordering.
 User verification: an unfiltered overview shows labelled featured entries;
 searching replaces them with relevance-ranked matches.
 
-## Later submission and governance waves
+## Submission and governance waves — editing/withdrawal slice complete
 
-After read paths and contracts are stable, separately implement submission
-drafts, publication transactions, credit claims, author approvals, moderation,
-tag curation, benchmark approval, evaluator-summary ingestion and account
-recovery. These workflows modify immutable scientific state and should not be
-parallelised until their service boundaries and audit events have focused
-tests.
+The first write-side slice is implemented and specified in
+`docs/submission-governance-0.1.md`: decoder, circuit, result and machine entry
+through either a structured form or strict JSON; session-bound preview/back;
+searchable and paginated profile tables; a staff-only review work queue; private
+exact candidate-record views; transactional publication and moderation events;
+and deterministic workflow fixtures. Pending candidates can be edited in place.
+Published edits create immutable successors, withdrawal requires confirmation,
+and successors to withdrawn records enter `pending_reapproval`. The admin page
+contains only items waiting for review plus records withdrawn in the preceding
+seven days. Approval attribution names the reviewing account or the reserved
+`System` actor for policy-driven publication. Policy 0.1 sends
+decoder/circuit/result records to admin review even when an admin submits them,
+while ordinary machines publish immediately after validation. Result references
+must already be published at submission and are rechecked at approval.
+
+Later slices remain separate: rejection/requested changes, credit claims,
+author approvals, tag and noise-model curation, benchmark
+approval, evaluator-summary ingestion, notification and account recovery. They
+modify immutable scientific state and should retain focused service boundaries
+and audit-event tests.
 
 ## Integration discipline for parallel agents
 

@@ -5,11 +5,12 @@ decoders.
 
 The project has a complete `0.1` relational model and a working local
 development foundation. Provider-only accounts, immutable local artifacts,
-and read-only decoder/circuit/noise-model discovery are implemented. Scientific
-submission workflows and comparison queries are not implemented yet.
+scientific discovery/comparison views, and the first moderated submission
+workflow are implemented.
 
 - [Complete relational data model 0.1](docs/data-model-0.1.md)
 - [Development plan](docs/development-plan.md)
+- [Submission and approval policy 0.1](docs/submission-governance-0.1.md)
 - [Physical Django model mapping](docs/physical-model-mapping.md)
 - [Deferred GitHub/ORCID application setup](docs/oauth-application-setup.md)
 - [Decoder record schema 0.1](schemas/decoder/0.1.schema.json)
@@ -47,6 +48,8 @@ Python 3.11 and all dependencies are locked with `uv`:
 uv sync --frozen
 uv run python manage.py migrate
 uv run python manage.py seed_demo --reset
+uv run python manage.py seed_plot_demo
+uv run python manage.py seed_submission_demo
 uv run python manage.py runserver
 ```
 
@@ -57,9 +60,18 @@ health response is at `/health/`, and the Django admin is at `/admin/`.
 The current review surfaces are:
 
 - `/accounts/login/` for the provider-only sign-in controls;
-- `/accounts/` for linked identities after sign-in;
+- `/accounts/` for account settings, currently sign-in identities;
 - `/artifacts/` for development-only artifact/schema inspection;
 - `/decoders/`, `/circuits/`, and `/noise-models/` for public discovery.
+- `/submit/` for structured or JSON record entry and preview;
+- `/profile/` for pending, published, and withdrawn records, including edit,
+  successor, withdrawal, search, sort, and pagination controls;
+- `/review/` for the staff-only review work queue and the seven-day withdrawal
+  audit table.
+
+With `DEBUG=True`, the sign-in page also offers the two deterministic mock
+accounts created by `seed_demo`; no GitHub or ORCID application is required to
+exercise the local permissions workflow.
 
 Load complete checked-in schema/definition pairs into an otherwise unoccupied
 database as draft releases with:

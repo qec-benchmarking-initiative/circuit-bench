@@ -1,3 +1,4 @@
+{% load scientific %}
 <figure
   class="result-plot"
   id="{{ plot.id }}"
@@ -5,108 +6,182 @@
   data-result-record-schema="{{ plot.schema_version }}"
   data-total-results="{{ plot.total_count }}"
   data-plotted-results="{{ plot.plotted_count }}"
+  data-marker-colour="{{ plot.marker_colour|default:'theme' }}"
 >
   <figcaption id="{{ plot.id }}-caption">
     <strong>{{ plot.title }}</strong>
     <span>
-      {{ plot.plotted_count }} of {{ plot.total_count }} results plotted{% if plot.omitted_count %};
-      {{ plot.omitted_count }} omitted{% if plot.omitted_explanation %} ({{ plot.omitted_explanation }}){% endif %}{% endif %}.
+      {{ plot.plotted_count|human_number }} of {{ plot.total_count|human_number }} results plotted{% if plot.omitted_count %};
+      {{ plot.omitted_count|human_number }} omitted{% if plot.omitted_explanation %} ({{ plot.omitted_explanation }}){% endif %}{% endif %}.
     </span>
   </figcaption>
 
-  <form class="result-plot-controls" method="get" action="{{ plot.action_url }}#{{ plot.id }}">
+  <form class="result-plot-controls" method="get" action="{{ plot.action_url }}" data-plot-controls data-autoupdate-default="true">
     {% for name, value in plot.preserved_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
     <input type="hidden" name="plot_open" value="1">
-    <label>
-      <span>x-axis</span>
-      <select name="plot_x">
-        {% for option in plot.axis_options %}
-          <option value="{{ option.name }}"{% if option.name == plot.selected_x_field %} selected{% endif %}>{{ option.label }}{% if option.unit %} ({{ option.unit }}){% endif %}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>
-      <span>x-scale</span>
-      <select name="plot_x_scale">
-        <option value="linear"{% if plot.selected_x_scale == "linear" %} selected{% endif %}>Linear</option>
-        <option value="log"{% if plot.selected_x_scale == "log" %} selected{% endif %}>Logarithmic</option>
-      </select>
-    </label>
-    <label>
-      <span>y-axis</span>
-      <select name="plot_y">
-        {% for option in plot.axis_options %}
-          <option value="{{ option.name }}"{% if option.name == plot.selected_y_field %} selected{% endif %}>{{ option.label }}{% if option.unit %} ({{ option.unit }}){% endif %}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>
-      <span>y-scale</span>
-      <select name="plot_y_scale">
-        <option value="linear"{% if plot.selected_y_scale == "linear" %} selected{% endif %}>Linear</option>
-        <option value="log"{% if plot.selected_y_scale == "log" %} selected{% endif %}>Logarithmic</option>
-      </select>
-    </label>
-    <button class="button-compact" type="submit">Update plot</button>
-    <button class="button-compact" type="button" data-download-plot data-filename="{{ plot.download_filename }}">Download SVG</button>
-    {% if plot.configuration_error %}<span class="query-status-error" role="alert">{{ plot.configuration_error }}</span>{% endif %}
+    <input type="hidden" name="plot_controls" value="1">
+    {% if plot.main_controls %}{% include "components/controls/grid.html" with grid=plot.main_controls only %}{% endif %}
+    {% if plot.advanced_controls %}{% include "components/controls/grid.html" with grid=plot.advanced_controls only %}{% endif %}
+    <div class="result-plot-control-actions">
+      <label class="autoquery-toggle">
+        <input type="checkbox" data-plot-autoupdate-toggle>
+        <span>Auto-update</span>
+      </label>
+      <button class="button-compact" type="submit" data-plot-update data-manual-label="Update plot">Update plot</button>
+      <button class="button-compact" type="button" data-reset-plot-axes{% if not plot.axes_are_explicit %} disabled{% endif %}>Reset axes</button>
+      <button class="button-compact" type="button" data-download-plot data-filename="{{ plot.download_filename }}">Download SVG</button>
+      {% if plot.configuration_error %}<span class="query-status-error" role="alert">{{ plot.configuration_error }}</span>{% endif %}
+    </div>
   </form>
 
   <div class="result-plot-graphic">
     <svg
       class="result-plot-svg"
       viewBox="{{ plot.viewbox }}"
+      style="--result-plot-height: {{ plot.height }}px"
+      data-plot-width="{{ plot.width }}"
+      data-plot-height="{{ plot.height }}"
+      data-plot-left="{{ plot.plot_left }}"
+      data-plot-right="{{ plot.plot_right }}"
+      data-plot-top="{{ plot.plot_top }}"
+      data-plot-bottom="{{ plot.plot_bottom }}"
+      data-plot-x-minimum="{{ plot.x_axis.minimum }}"
+      data-plot-x-maximum="{{ plot.x_axis.maximum }}"
+      data-plot-x-scale="{{ plot.x_axis.scale }}"
+      data-plot-x-unit="{{ plot.x_axis.unit|default:'' }}"
+      data-plot-y-minimum="{{ plot.y_axis.minimum }}"
+      data-plot-y-maximum="{{ plot.y_axis.maximum }}"
+      data-plot-y-scale="{{ plot.y_axis.scale }}"
+      data-plot-y-unit="{{ plot.y_axis.unit|default:'' }}"
       role="img"
-      aria-labelledby="{{ plot.id }}-svg-title {{ plot.id }}-svg-description"
+      aria-label="{{ plot.title }}"
+      aria-describedby="{{ plot.id }}-svg-description"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <title id="{{ plot.id }}-svg-title">{{ plot.title }}</title>
-      <desc id="{{ plot.id }}-svg-description">{{ plot.description }} {{ plot.plotted_count }} of {{ plot.total_count }} results have plottable axis values.</desc>
+      <desc id="{{ plot.id }}-svg-description">{{ plot.description }} {{ plot.plotted_count|human_number }} of {{ plot.total_count|human_number }} results have plottable axis values.</desc>
       <style>
-        .plot-background{fill:#fffdf8}.plot-axis{stroke:#241e18;stroke-width:1.3}.plot-grid-line{stroke:#d8cdbf;stroke-width:.7}.plot-tick-label,.plot-axis-label{fill:#241e18;font-family:ui-monospace,monospace;font-size:12px}.plot-axis-label{font-weight:700}.result-plot-point{fill:#8a4f24;stroke:#fffdf8;stroke-width:1.5}
+        .plot-background{fill:var(--surface,#fffdf8)}.plot-axis,.plot-tick-mark{stroke:var(--ink,#241e18)}.plot-axis{stroke-width:1.3}.plot-tick-mark{stroke-width:1}.plot-grid-line{stroke:var(--line,#d8cdbf)}.plot-grid-line-major{stroke-width:.8}.plot-grid-line-minor{stroke-width:.45;opacity:.58}.plot-axis,.plot-tick-mark,.plot-grid-line,.result-plot-point{vector-effect:non-scaling-stroke}.plot-tick-label,.plot-axis-label{fill:var(--ink,#241e18);font-family:ui-monospace,monospace;font-size:12px}.plot-axis-label{font-weight:700}.result-plot-point{color:var(--plot-marker,var(--accent,#8a4f24));fill:currentColor;stroke:var(--surface,#fffdf8);stroke-width:1.5}.result-plot-point.marker-cross{fill:none;stroke:currentColor;stroke-width:2}
       </style>
-      <rect class="plot-background" width="{{ plot.width }}" height="{{ plot.height }}" />
+      <rect class="plot-background" width="{{ plot.width }}" height="{{ plot.height }}" data-plot-background />
 
-      <line x1="{{ plot.plot_left }}" y1="{{ plot.plot_bottom }}" x2="{{ plot.plot_right }}" y2="{{ plot.plot_bottom }}" class="plot-axis" />
+      <line x1="{{ plot.plot_left }}" y1="{{ plot.plot_bottom }}" x2="{{ plot.plot_right }}" y2="{{ plot.plot_bottom }}" class="plot-axis" data-plot-extends-right />
       <line x1="{{ plot.plot_left }}" y1="{{ plot.plot_top }}" x2="{{ plot.plot_left }}" y2="{{ plot.plot_bottom }}" class="plot-axis" />
 
-      {% for tick in plot.x_axis.ticks %}
-        <line x1="{{ tick.position }}" y1="{{ plot.plot_bottom }}" x2="{{ tick.position }}" y2="{{ plot.plot_top }}" class="plot-grid-line" />
-        <text x="{{ tick.position }}" y="{{ plot.plot_bottom|add:'22' }}" text-anchor="middle" class="plot-tick-label"><title>{{ tick.value }}</title>{{ tick.label }}</text>
+      {% if plot.minor_gridlines %}
+        {% for tick in plot.x_axis.minor_ticks %}<line x1="{{ tick.position }}" y1="{{ plot.plot_bottom }}" x2="{{ tick.position }}" y2="{{ plot.plot_top }}" class="plot-grid-line plot-grid-line-minor" data-plot-x="{{ tick.position }}" />{% endfor %}
+        {% for tick in plot.y_axis.minor_ticks %}<line x1="{{ plot.plot_left }}" y1="{{ tick.position }}" x2="{{ plot.plot_right }}" y2="{{ tick.position }}" class="plot-grid-line plot-grid-line-minor" data-plot-extends-right />{% endfor %}
+      {% endif %}
+      {% for tick in plot.x_axis.major_ticks %}
+        {% if plot.major_gridlines %}<line x1="{{ tick.position }}" y1="{{ plot.plot_bottom }}" x2="{{ tick.position }}" y2="{{ plot.plot_top }}" class="plot-grid-line plot-grid-line-major" data-plot-x="{{ tick.position }}" />{% endif %}
+        <line x1="{{ tick.position }}" y1="{{ plot.plot_bottom }}" x2="{{ tick.position }}" y2="{{ plot.plot_bottom|add:'5' }}" class="plot-tick-mark" data-plot-x="{{ tick.position }}" />
+        <text x="{{ tick.position }}" y="{{ plot.plot_bottom|add:'22' }}" text-anchor="middle" class="plot-tick-label" data-plot-x="{{ tick.position }}">{{ tick.label }}</text>
       {% endfor %}
-      {% for tick in plot.y_axis.ticks %}
-        <line x1="{{ plot.plot_left }}" y1="{{ tick.position }}" x2="{{ plot.plot_right }}" y2="{{ tick.position }}" class="plot-grid-line" />
-        <text x="{{ plot.plot_left|add:'-10' }}" y="{{ tick.position }}" dy="0.35em" text-anchor="end" class="plot-tick-label"><title>{{ tick.value }}</title>{{ tick.label }}</text>
+      {% for tick in plot.y_axis.major_ticks %}
+        {% if plot.major_gridlines %}<line x1="{{ plot.plot_left }}" y1="{{ tick.position }}" x2="{{ plot.plot_right }}" y2="{{ tick.position }}" class="plot-grid-line plot-grid-line-major" data-plot-extends-right />{% endif %}
+        <line x1="{{ plot.plot_left|add:'-5' }}" y1="{{ tick.position }}" x2="{{ plot.plot_left }}" y2="{{ tick.position }}" class="plot-tick-mark" />
+        <text x="{{ plot.plot_left|add:'-10' }}" y="{{ tick.position }}" dy="0.35em" text-anchor="end" class="plot-tick-label">{{ tick.label }}</text>
       {% endfor %}
 
-      <text x="{{ plot.plot_centre_x }}" y="{{ plot.height|add:'-20' }}" text-anchor="middle" class="plot-axis-label">{{ plot.x_axis.label_with_unit }} · {{ plot.x_axis.scale }}</text>
-      <text x="20" y="{{ plot.plot_centre_y }}" text-anchor="middle" transform="rotate(-90 20 {{ plot.plot_centre_y }})" class="plot-axis-label">{{ plot.y_axis.label_with_unit }} · {{ plot.y_axis.scale }}</text>
+      <text x="{{ plot.plot_centre_x }}" y="{{ plot.height|add:'-30' }}" text-anchor="middle" class="plot-axis-label" data-plot-centre-x>{{ plot.x_axis.label }}</text>
+      <text x="{{ plot.plot_centre_x }}" y="{{ plot.height|add:'-14' }}" text-anchor="middle" class="plot-axis-label plot-axis-label-secondary" data-plot-centre-x>{% if plot.x_axis.unit %}{{ plot.x_axis.unit }} · {% endif %}{{ plot.x_axis.scale }}</text>
+      <g transform="translate(18 {{ plot.plot_centre_y }}) rotate(-90)" class="plot-axis-title-y">
+        <text x="0" y="0" text-anchor="middle" class="plot-axis-label">{{ plot.y_axis.label }}</text>
+        <text x="0" y="14" text-anchor="middle" class="plot-axis-label plot-axis-label-secondary">{% if plot.y_axis.unit %}{{ plot.y_axis.unit }} · {% endif %}{{ plot.y_axis.scale }}</text>
+      </g>
+
+      {% if plot.uncertainty_style == "bars" %}
+        <g class="plot-uncertainty plot-uncertainty-bars" aria-hidden="true">
+          {% for point in plot.points %}
+            {% if point.x_interval %}
+              <g class="plot-error-bar plot-error-bar-x">
+                <line x1="{{ point.x_interval.start }}" y1="{{ point.y }}" x2="{{ point.x_interval.end }}" y2="{{ point.y }}" data-plot-x-start="{{ point.x_interval.start }}" data-plot-x-end="{{ point.x_interval.end }}" />
+                <line x1="{{ point.x_interval.start }}" y1="{{ point.y|add:'-5' }}" x2="{{ point.x_interval.start }}" y2="{{ point.y|add:'5' }}" data-plot-x="{{ point.x_interval.start }}" />
+                <line x1="{{ point.x_interval.end }}" y1="{{ point.y|add:'-5' }}" x2="{{ point.x_interval.end }}" y2="{{ point.y|add:'5' }}" data-plot-x="{{ point.x_interval.end }}" />
+              </g>
+            {% endif %}
+            {% if point.y_interval %}
+              <g class="plot-error-bar plot-error-bar-y" transform="translate({{ point.x }} 0)" data-plot-x="{{ point.x }}" data-plot-y="0">
+                <line x1="0" y1="{{ point.y_interval.start }}" x2="0" y2="{{ point.y_interval.end }}" />
+                <line x1="-5" y1="{{ point.y_interval.start }}" x2="5" y2="{{ point.y_interval.start }}" />
+                <line x1="-5" y1="{{ point.y_interval.end }}" x2="5" y2="{{ point.y_interval.end }}" />
+              </g>
+            {% endif %}
+          {% endfor %}
+        </g>
+      {% elif plot.uncertainty_style == "areas" %}
+        <g class="plot-uncertainty plot-uncertainty-areas" aria-hidden="true">
+          {% for point in plot.points %}
+            {% if point.x_interval and point.y_interval %}
+              <rect x="{{ point.x_interval.start }}" y="{{ point.y_interval.start }}" width="{{ point.x_interval.size }}" height="{{ point.y_interval.size }}" data-plot-x-start="{{ point.x_interval.start }}" data-plot-x-end="{{ point.x_interval.end }}" />
+            {% elif point.x_interval %}
+              <g transform="translate(0 {{ point.y }})">
+                <rect x="{{ point.x_interval.start }}" y="-5" width="{{ point.x_interval.size }}" height="10" data-plot-x-start="{{ point.x_interval.start }}" data-plot-x-end="{{ point.x_interval.end }}" />
+              </g>
+            {% elif point.y_interval %}
+              <g transform="translate({{ point.x }} 0)" data-plot-x="{{ point.x }}" data-plot-y="0">
+                <rect x="-5" y="{{ point.y_interval.start }}" width="10" height="{{ point.y_interval.size }}" />
+              </g>
+            {% endif %}
+          {% endfor %}
+        </g>
+      {% endif %}
 
       {% for point in plot.points %}
-        <circle
+        <g
           id="{{ plot.id }}-point-{{ point.id }}"
           data-result-id="{{ point.id }}"
+          data-plot-x="{{ point.x }}"
+          data-plot-y="{{ point.y }}"
+          data-plot-x-value="{{ point.x_value }}"
+          data-plot-y-value="{{ point.y_value }}"
           data-hover-label="{{ point.label }}"
           data-summary-id="{{ plot.id }}-summary-{{ point.id }}"
-          cx="{{ point.x }}"
-          cy="{{ point.y }}"
-          r="4"
+          transform="translate({{ point.x }} {{ point.y }})"
           tabindex="0"
           role="button"
           aria-label="{{ point.label }}; {{ plot.x_axis.label }} {{ point.x_display }}; {{ plot.y_axis.label }} {{ point.y_display }}"
-          class="result-plot-point"
+          class="result-plot-point marker-{{ plot.marker_style|default:'circle' }}"
         >
-          <title>{{ point.label }}: {{ plot.x_axis.label }} {{ point.x_display }}; {{ plot.y_axis.label }} {{ point.y_display }}</title>
-        </circle>
+          {% if plot.marker_style == "square" %}
+            <rect x="-4" y="-4" width="8" height="8" />
+          {% elif plot.marker_style == "diamond" %}
+            <path d="M 0 -5 L 5 0 L 0 5 L -5 0 Z" />
+          {% elif plot.marker_style == "cross" %}
+            <path d="M -5 0 L 5 0 M 0 -5 L 0 5" />
+          {% else %}
+            <circle r="4" />
+          {% endif %}
+        </g>
       {% empty %}
-        <text x="{{ plot.plot_centre_x }}" y="{{ plot.plot_centre_y }}" text-anchor="middle" class="plot-tick-label">No results have plottable values on both axes.</text>
+        <text x="{{ plot.plot_centre_x }}" y="{{ plot.plot_centre_y }}" text-anchor="middle" class="plot-tick-label" data-plot-centre-x>No results have plottable values on both axes.</text>
       {% endfor %}
+
+      <rect class="plot-zoom-box" data-plot-zoom-box data-plot-export-exclude hidden />
+      <g class="plot-selection-guides" data-plot-selection-guides data-plot-export-exclude aria-hidden="true">
+        <g class="plot-selection-guide-halo" aria-hidden="true">
+          <line data-plot-selection-halo-x />
+          <line data-plot-selection-halo-y />
+        </g>
+        <g class="plot-selection-guide-stroke">
+          <line data-plot-selection-x />
+          <line data-plot-selection-y />
+        </g>
+      </g>
+      <g class="plot-crosshair" data-plot-crosshair data-plot-export-exclude hidden>
+        <line class="plot-crosshair-line" data-plot-crosshair-x />
+        <line class="plot-crosshair-line" data-plot-crosshair-y />
+        <g class="plot-crosshair-readout" data-plot-crosshair-readout>
+          <rect width="176" height="38" rx="1" />
+          <text x="7" y="14"><tspan data-plot-crosshair-x-value>x: —</tspan><tspan x="7" dy="15" data-plot-crosshair-y-value>y: —</tspan><tspan x="7" dy="15" data-plot-crosshair-point-value></tspan></text>
+        </g>
+      </g>
     </svg>
-    <output class="result-plot-tooltip" data-plot-tooltip hidden></output>
   </div>
 
-  <aside class="result-plot-sidebar" aria-label="Plot definitions and selected point">
-    <section class="result-plot-selection" aria-live="polite">
+  <details class="result-plot-sidebar" id="{{ plot.id }}-sidebar" data-ui-state-key="{{ plot.id }}-sidebar" aria-label="Plot definitions and selected point" open>
+    <summary>Point details and field definitions</summary>
+    <div class="result-plot-sidebar-body">
+      <section class="result-plot-selection" aria-live="polite">
       <h3>Selected point</h3>
       <p data-plot-selection-empty>Select a point to inspect its exact result.</p>
       {% for point in plot.points %}
@@ -118,14 +193,16 @@
               <div><dt>{{ item.label }}</dt><dd>{% if item.technical %}<code>{{ item.value|default:"—" }}</code>{% else %}{{ item.value|default:"—" }}{% endif %}</dd></div>
             {% endfor %}
             <div><dt>{{ plot.x_axis.label_with_unit }}</dt><dd>{{ point.x_display }}</dd></div>
+            {% if point.x_interval %}<div><dt>x stored interval{% if point.x_interval.confidence_display %} ({{ point.x_interval.confidence_display }}){% endif %}</dt><dd>{{ point.x_interval.lower_display }}–{{ point.x_interval.upper_display }}</dd></div>{% endif %}
             <div><dt>{{ plot.y_axis.label_with_unit }}</dt><dd>{{ point.y_display }}</dd></div>
+            {% if point.y_interval %}<div><dt>y stored interval{% if point.y_interval.confidence_display %} ({{ point.y_interval.confidence_display }}){% endif %}</dt><dd>{{ point.y_interval.lower_display }}–{{ point.y_interval.upper_display }}</dd></div>{% endif %}
           </dl>
           {% if point.link_url != point.result_url %}<p><a href="{{ point.result_url }}">Open exact result record</a></p>{% endif %}
         </article>
       {% endfor %}
-    </section>
+      </section>
 
-    <dl class="result-plot-definitions">
+      <dl class="result-plot-definitions">
       <div>
         <dt>x-axis</dt>
         <dd>
@@ -142,8 +219,13 @@
           {% if plot.y_axis.definition %}<a href="{{ plot.y_axis.definition }}">Definition</a>{% endif %}
         </dd>
       </div>
-    </dl>
-  </aside>
+      <div>
+        <dt>uncertainty</dt>
+        <dd>{{ plot.uncertainty.label }}. {{ plot.uncertainty.x_interval_count|human_number }} x-axis and {{ plot.uncertainty.y_interval_count|human_number }} y-axis stored intervals are available in this plotted population. {{ plot.uncertainty.explanation }}</dd>
+      </div>
+      </dl>
+    </div>
+  </details>
 
   <section class="result-plot-data">
     <header class="result-plot-data-heading">
@@ -151,11 +233,11 @@
       <nav aria-label="Plot data formats">
         <a href="{{ plot.json_url }}">JSON</a> ·
         <a href="{{ plot.csv_url }}">CSV</a> ·
-        <a href="{{ plot.schema_url }}">field schema</a>
+        <a href="{{ plot.schema_url }}">Field definitions (JSON)</a>
       </nav>
     </header>
     <details>
-      <summary>Tabular data for this plot ({{ plot.plotted_count }} rows)</summary>
+      <summary>Tabular data for this plot ({{ plot.plotted_count|human_number }} rows)</summary>
       <div class="table-scroll">
         <table class="data-table">
           <caption>{{ plot.title }}; omitted points are reported above.</caption>

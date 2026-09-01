@@ -1,11 +1,12 @@
 {% extends "layouts/collection.html" %}
+{% load scientific %}
 
 {% block title %}Circuits · Circuit Bench{% endblock %}
 {% block explorer_name %}Circuits{% endblock %}
 
 {% block explorer_query %}
   <label class="visually-hidden" for="circuit-search">Search circuits</label>
-  <input id="circuit-search" name="q" type="search" value="{{ query }}" placeholder="Search circuit name, slug, code, or experiment">
+  <input id="circuit-search" name="q" type="search" value="{{ query }}" placeholder="Search circuit name, slug, code, or experiment" autofocus>
   {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
   {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
   <button class="button-compact" type="submit">Run</button>
@@ -13,7 +14,7 @@
   <span class="query-mode">Plain-text search · scripted query syntax is not enabled yet</span>
 {% endblock %}
 
-{% block explorer_status %}Plain-text mode · {{ result_count }} exact published circuit revision{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
+{% block explorer_status %}Plain-text mode · {{ result_count|human_number }} exact published circuit revision{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
 
 {% block explorer_filters %}
   {% url 'circuits:list' as circuit_reset_url %}

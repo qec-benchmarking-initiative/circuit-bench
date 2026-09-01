@@ -1,0 +1,46 @@
+<div class="table-scroll" tabindex="0" aria-label="{{ table_label|default:'Submissions' }}">
+  <table class="data-table submission-table">
+    <thead>
+      <tr>
+        {% if show_kind %}<th scope="col">{% if sort_links %}<a href="{{ sort_links.kind.url }}">Kind {{ sort_links.kind.indicator }}</a>{% else %}Kind{% endif %}</th>{% endif %}
+        <th scope="col">{% if sort_links %}<a href="{{ sort_links.record.url }}">Record {{ sort_links.record.indicator }}</a>{% else %}Record{% endif %}</th>
+        <th scope="col">{% if sort_links %}<a href="{{ sort_links.state.url }}">State {{ sort_links.state.indicator }}</a>{% else %}State{% endif %}</th>
+        {% if show_submitter %}<th scope="col">Submitted by</th>{% endif %}
+        <th scope="col">{% if sort_links %}<a href="{{ sort_links.submitted.url }}">Submitted {{ sort_links.submitted.indicator }}</a>{% else %}Submitted{% endif %}</th>
+        {% if show_approver %}<th scope="col">Approved by</th>{% endif %}
+        {% if show_withdrawn %}<th scope="col">{% if sort_links %}<a href="{{ sort_links.withdrawn.url }}">Withdrawn {{ sort_links.withdrawn.indicator }}</a>{% else %}Withdrawn{% endif %}</th>{% endif %}
+        {% if allow_review %}<th scope="col">Review</th>{% endif %}
+        {% if show_actions %}<th scope="col">Actions</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          {% if show_kind %}<td>{{ row.kind_label }}</td>{% endif %}
+          <td>{% if row.url %}<a href="{{ row.url }}">{% endif %}{{ row.label }}{% if row.url %}</a>{% endif %}</td>
+          <td><span class="status-badge status-{{ row.state }}">{{ row.state_label }}</span></td>
+          {% if show_submitter %}<td>{{ row.submitted_by }}</td>{% endif %}
+          <td>{{ row.created_at|date:"Y-m-d H:i" }} UTC</td>
+          {% if show_approver %}<td>{{ row.approved_by|default:"—" }}</td>{% endif %}
+          {% if show_withdrawn %}<td>{% if row.withdrawn_at %}{{ row.withdrawn_at|date:"Y-m-d H:i" }} UTC{% else %}<span class="null-value">—</span>{% endif %}</td>{% endif %}
+          {% if allow_review %}
+            <td>
+              {% if row.can_approve %}
+                <form method="post" action="{% url 'submissions:approve' kind=row.kind record_id=row.id %}">
+                  {% csrf_token %}<button class="table-action" type="submit">Approve and publish</button>
+                </form>
+              {% else %}<span class="null-value">—</span>{% endif %}
+            </td>
+          {% endif %}
+          {% if show_actions %}
+            <td class="submission-row-actions">
+              {% for action in row.actions %}<a class="table-action{% if action.danger %} table-action-danger{% endif %}" href="{{ action.url }}">{{ action.label }}</a>{% empty %}<span class="null-value">—</span>{% endfor %}
+            </td>
+          {% endif %}
+        </tr>
+      {% empty %}
+        <tr><td class="table-empty" colspan="10">{{ empty_message|default:"No records." }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

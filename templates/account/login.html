@@ -28,4 +28,18 @@
       identifier and public profile link, but not the OAuth access token.
     </p>
   </section>
+
+  {% if demo_accounts %}
+    <section class="panel flow" aria-labelledby="development-heading">
+      <h2 id="development-heading">Local prototype accounts</h2>
+      <p class="supporting-text">Development mode only. These controls exercise permissions without registering live OAuth applications.</p>
+      {% for account in demo_accounts %}
+        <form method="post" action="{% url 'account-development-login' account_id=account.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.GET.next }}">
+          <button type="submit">Continue as {{ account.display_name }}{% if account.is_admin %} (admin){% endif %}</button>
+        </form>
+      {% endfor %}
+    </section>
+  {% endif %}
 {% endblock %}

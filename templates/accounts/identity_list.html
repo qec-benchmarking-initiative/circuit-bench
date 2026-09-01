@@ -1,12 +1,16 @@
 {% extends "base.html" %}
 {% load socialaccount %}
 
-{% block title %}Sign-in identities · Circuit Bench{% endblock %}
+{% block title %}Settings · Circuit Bench{% endblock %}
 
 {% block content %}
   <section class="page-intro flow">
     <p class="eyebrow">Account</p>
-    <h1>Sign-in identities</h1>
+    <h1>Settings</h1>
+  </section>
+
+  <section class="flow" aria-labelledby="identities-heading">
+    <h2 id="identities-heading">Sign-in identities</h2>
     <p class="lede">
       These public provider identities can be used to sign in as
       {{ request.user.display_name }}. Circuit Bench stores no password.
@@ -14,7 +18,7 @@
   </section>
 
   <section class="panel flow" aria-labelledby="linked-heading">
-    <h2 id="linked-heading">Linked identities</h2>
+    <h3 id="linked-heading">Linked identities</h3>
     {% if identities %}
       <ul class="flow">
         {% for identity in identities %}
@@ -49,7 +53,7 @@
 
   {% if missing_providers %}
     <section class="panel flow" aria-labelledby="link-heading">
-      <h2 id="link-heading">Link another provider</h2>
+      <h3 id="link-heading">Link another provider</h3>
       {% for provider in missing_providers %}
         <form
           method="post"

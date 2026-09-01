@@ -11,6 +11,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from hashlib import sha256
 from typing import Any, Literal
 from uuid import UUID
 
@@ -204,6 +205,12 @@ RESULT_FIELDS = (
 FIELD_BY_NAME = {field.name: field for field in RESULT_FIELDS}
 DEFAULT_SELECT = tuple(field.name for field in RESULT_FIELDS if field.selectable)
 DEFAULT_ORDER = (("published_at", "desc"),)
+METRIC_INTERVAL_COMPONENTS = (
+    "point_estimate",
+    "lower_bound",
+    "upper_bound",
+    "confidence_level",
+)
 
 
 class ResultQueryError(ValueError):
@@ -360,17 +367,38 @@ def annotate_result_metrics(queryset: QuerySet[Result]) -> QuerySet[Result]:
     for field in RESULT_FIELDS:
         if not field.is_metric:
             continue
-        score = ResultScore.objects.filter(
+        scores = ResultScore.objects.filter(
             result_id=OuterRef("pk"),
             evaluator_version__version=field.evaluator_version,
             score_definition__key=field.score_key,
             score_definition__version=field.score_version,
-        ).values("value")[:1]
+        )
+        score = scores.values("value")[:1]
         annotations[field.orm_name] = Subquery(
             score,
             output_field=DecimalField(max_digits=38, decimal_places=20),
         )
+        for component in METRIC_INTERVAL_COMPONENTS:
+            annotations[metric_component_annotation(field, component)] = Subquery(
+                scores.values(component)[:1],
+                output_field=DecimalField(max_digits=38, decimal_places=20),
+            )
     return queryset.annotate(**annotations)
+
+
+def metric_component_annotation(field: ResultField, component: str) -> str:
+    """Return the private plot annotation for a stored metric component."""
+
+    if component not in METRIC_INTERVAL_COMPONENTS:
+        raise ValueError(f"Unknown metric interval component: {component}")
+    field_key = sha256(field.name.encode("utf-8")).hexdigest()[:12]
+    component_key = {
+        "point_estimate": "estimate",
+        "lower_bound": "lower",
+        "upper_bound": "upper",
+        "confidence_level": "confidence",
+    }[component]
+    return f"_plot_{field_key}_{component_key}"
 
 
 def result_record(result: Result, fields: tuple[str, ...]) -> dict[str, Any]:

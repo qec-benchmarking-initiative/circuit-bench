@@ -1,4 +1,11 @@
-<details class="comparison-plot"{% if result_plot.is_open %} open{% endif %}>
-  <summary>Plot this exact result population ({{ result_plot.plotted_count }}/{{ result_plot.total_count }} points)</summary>
+{% load scientific %}
+<details class="comparison-plot" id="{{ result_plot.id }}-panel" data-ui-state-key="{{ result_plot.id }}-panel"{% if result_plot.is_open %} open{% endif %}>
+  <summary>
+    <span class="comparison-plot-action">
+      <span class="comparison-plot-action-show">Show plotter</span>
+      <span class="comparison-plot-action-hide">Hide plotter</span>
+    </span>
+    <span>{{ result_plot.plotted_count|human_number }}/{{ result_plot.total_count|human_number }} points</span>
+  </summary>
   {% include "components/result_plot.html" with plot=result_plot only %}
 </details>

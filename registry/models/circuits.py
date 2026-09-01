@@ -16,6 +16,11 @@ class NoiseModel(UUIDModel, PublishedLifecycleModel):
         on_delete=models.PROTECT,
         related_name="noise_models",
     )
+    history = models.ForeignKey(
+        "registry.RecordHistory",
+        on_delete=models.PROTECT,
+        related_name="noise_models",
+    )
     slug = models.SlugField(max_length=200, unique=True)
     name = models.CharField(max_length=200)
     short_description = models.TextField()
@@ -64,6 +69,11 @@ class CircuitRevision(UUIDModel, PublishedLifecycleModel):
         on_delete=models.PROTECT,
         related_name="circuit_revisions",
     )
+    history = models.ForeignKey(
+        "registry.RecordHistory",
+        on_delete=models.PROTECT,
+        related_name="circuit_revisions",
+    )
     slug = models.SlugField(max_length=200, unique=True)
     name = models.CharField(max_length=200)
     previous_revision = models.OneToOneField(
@@ -96,7 +106,7 @@ class CircuitRevision(UUIDModel, PublishedLifecycleModel):
     dem_decompose_errors = models.BooleanField()
     dem_flatten_loops = models.BooleanField()
     dem_allow_gauge_detectors = models.BooleanField()
-    dem_approximate_disjoint_errors = models.JSONField()
+    dem_approximate_disjoint_errors = models.BooleanField()
     dem_ignore_decomposition_failures = models.BooleanField()
     dem_block_decomposition_from_introducing_remnant_edges = models.BooleanField()
     sampling_circuit_artifact = models.ForeignKey(

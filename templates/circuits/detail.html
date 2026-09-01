@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static scientific submission_history %}
 
 {% block title %}{{ circuit.name }} — Circuit Bench{% endblock %}
 
@@ -19,12 +19,12 @@
       <dl class="circuit-facts">
         <div class="circuit-fact-wide"><dt>Noise model</dt><dd><a href="{% url 'noise-models:detail' circuit.noise_model.slug %}">{{ circuit.noise_model.name }}</a></dd></div>
         <div><dt>Priors randomised</dt><dd>{{ circuit.noise_model.randomises_priors|yesno:"Yes,No" }}</dd></div>
-        <div><dt>Code distance upper bound</dt><dd>{{ circuit.code_distance_upper_bound|default:"—" }}</dd></div>
-        <div><dt>Circuit distance upper bound</dt><dd>{{ circuit.circuit_distance_upper_bound|default:"—" }}</dd></div>
-        <div><dt>Rounds</dt><dd>{{ circuit.rounds|default:"—" }}</dd></div>
-        <div><dt>Detectors</dt><dd>{{ circuit.num_detectors }}</dd></div>
-        <div><dt>Errors</dt><dd>{{ circuit.num_errors }}</dd></div>
-        <div><dt>Observables</dt><dd>{{ circuit.num_observables }}</dd></div>
+        <div><dt>Code distance upper bound</dt><dd>{% if circuit.code_distance_upper_bound != None %}{{ circuit.code_distance_upper_bound|human_number }}{% else %}—{% endif %}</dd></div>
+        <div><dt>Circuit distance upper bound</dt><dd>{% if circuit.circuit_distance_upper_bound != None %}{{ circuit.circuit_distance_upper_bound|human_number }}{% else %}—{% endif %}</dd></div>
+        <div><dt>Rounds</dt><dd>{% if circuit.rounds != None %}{{ circuit.rounds|human_number }}{% else %}—{% endif %}</dd></div>
+        <div><dt>Detectors</dt><dd>{{ circuit.num_detectors|human_number }}</dd></div>
+        <div><dt>Errors</dt><dd>{{ circuit.num_errors|human_number }}</dd></div>
+        <div><dt>Observables</dt><dd>{{ circuit.num_observables|human_number }}</dd></div>
         <div><dt>CSS</dt><dd>{{ circuit.is_css|yesno:"Yes,No" }}</dd></div>
         <div><dt>X only</dt><dd>{{ circuit.dem_x_detectors_only|yesno:"Yes,No" }}</dd></div>
         <div><dt>Z only</dt><dd>{{ circuit.dem_z_detectors_only|yesno:"Yes,No" }}</dd></div>
@@ -47,7 +47,7 @@
                   <tr>
                     <td>{{ role }}</td>
                     <td><a href="{% url 'artifacts:download' artifact.id %}">{{ artifact.original_filename }}</a></td>
-                    <td class="numeric">{{ artifact.byte_size }}</td>
+                    <td class="numeric">{{ artifact.byte_size|human_number }}</td>
                     <td><code>{{ artifact.sha256 }}</code></td>
                   </tr>
                 {% endfor %}
@@ -63,13 +63,15 @@
             <div><dt>Decompose errors</dt><dd>{{ circuit.dem_decompose_errors|yesno:"true,false" }}</dd></div>
             <div><dt>Flatten loops</dt><dd>{{ circuit.dem_flatten_loops|yesno:"true,false" }}</dd></div>
             <div><dt>Allow gauge detectors</dt><dd>{{ circuit.dem_allow_gauge_detectors|yesno:"true,false" }}</dd></div>
-            <div><dt>Approximate disjoint errors</dt><dd>{{ circuit.dem_approximate_disjoint_errors }}</dd></div>
+            <div><dt>Approximate disjoint errors</dt><dd>{{ circuit.dem_approximate_disjoint_errors|human_number }}</dd></div>
             <div><dt>Ignore decomposition failures</dt><dd>{{ circuit.dem_ignore_decomposition_failures|yesno:"true,false" }}</dd></div>
             <div><dt>Block remnant edges</dt><dd>{{ circuit.dem_block_decomposition_from_introducing_remnant_edges|yesno:"true,false" }}</dd></div>
           </dl>
         </section>
       </div>
     </details>
+
+    {% submission_history circuit "circuit" %}
 
     <section class="circuit-leaderboard" aria-label="Decoder results">
       <header class="leaderboard-heading">
@@ -100,8 +102,9 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'js/filter-grid.js' %}" defer></script>
+  <script src="{% static 'js/filter-grid.js' %}?v=0.1.20260831k" defer></script>
   <script src="{% static 'js/filter-query.js' %}" defer></script>
   <script src="{% static 'js/explorer.js' %}" defer></script>
-  <script src="{% static 'js/result-plot.js' %}" defer></script>
+  <script src="{% static 'js/plot-settings.js' %}?v=0.1.20260831k" defer></script>
+<script src="{% static 'js/result-plot.js' %}?v=0.1.20260831o" defer></script>
 {% endblock %}

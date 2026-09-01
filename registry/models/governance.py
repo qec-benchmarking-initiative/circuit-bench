@@ -15,14 +15,56 @@ MODERATION_SUBJECT_FIELDS = (
 )
 
 
+class RecordHistory(UUIDModel):
+    class RecordKind(models.TextChoices):
+        DECODER = "decoder", "Decoder version"
+        NOISE_MODEL = "noise_model", "Noise model"
+        CIRCUIT = "circuit", "Circuit revision"
+        MACHINE = "machine", "Machine"
+        RESULT = "result", "Result"
+        TAG = "tag", "Tag"
+        BENCHMARK = "benchmark", "Benchmark revision"
+        EVALUATOR = "evaluator", "Evaluator release"
+
+    record_kind = models.CharField(max_length=30, choices=RecordKind)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "record_history"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    record_kind__in=[
+                        "decoder",
+                        "noise_model",
+                        "circuit",
+                        "machine",
+                        "result",
+                        "tag",
+                        "benchmark",
+                        "evaluator",
+                    ]
+                ),
+                name="record_history_kind_valid",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.get_record_kind_display()} history {self.id}"
+
+
 class ModerationEvent(UUIDModel):
     class Action(models.TextChoices):
         SUBMITTED = "submitted", "Submitted"
+        EDITED = "edited", "Edited"
+        RESUBMITTED = "resubmitted", "Resubmitted"
         REQUESTED_CHANGES = "requested_changes", "Requested changes"
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"
         PUBLISHED = "published", "Published"
         WITHDRAWN = "withdrawn", "Withdrawn"
+        RESTORED = "restored", "Restored"
+        REVISION_CREATED = "revision_created", "Revision created"
         PROMOTED_OFFICIAL = "promoted_official", "Promoted official"
         DEPRECATED = "deprecated", "Deprecated"
         MERGED = "merged", "Merged"
@@ -31,11 +73,30 @@ class ModerationEvent(UUIDModel):
             "Admin credit claim override",
         )
 
+    class ActorType(models.TextChoices):
+        ACCOUNT = "account", "Account"
+        SYSTEM = "system", "System"
+
+    class Visibility(models.TextChoices):
+        PUBLIC = "public", "Public"
+        UPLOADER = "uploader", "Uploader and administrators"
+        ADMIN = "admin", "Administrators only"
+
+    history = models.ForeignKey(
+        RecordHistory,
+        on_delete=models.PROTECT,
+        related_name="events",
+    )
+    sequence = models.PositiveIntegerField()
+    actor_type = models.CharField(max_length=10, choices=ActorType)
     actor_account = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
         on_delete=models.PROTECT,
         related_name="moderation_events",
     )
+    actor_system = models.CharField(max_length=100, null=True, blank=True)
     decoder_version = models.ForeignKey(
         "registry.DecoderVersion",
         null=True,
@@ -95,7 +156,21 @@ class ModerationEvent(UUIDModel):
     action = models.CharField(max_length=40, choices=Action)
     note = models.TextField()
     details = models.JSONField(default=dict)
-    created_at = models.DateTimeField(auto_now_add=True)
+    event_schema_version = models.CharField(max_length=20, default="0.1")
+    payload_snapshot = models.JSONField(null=True, blank=True)
+    caused_by = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="consequences",
+    )
+    visibility = models.CharField(
+        max_length=10,
+        choices=Visibility,
+        default=Visibility.PUBLIC,
+    )
+    occurred_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "moderation_event"
@@ -104,11 +179,15 @@ class ModerationEvent(UUIDModel):
                 condition=models.Q(
                     action__in=[
                         "submitted",
+                        "edited",
+                        "resubmitted",
                         "requested_changes",
                         "approved",
                         "rejected",
                         "published",
                         "withdrawn",
+                        "restored",
+                        "revision_created",
                         "promoted_official",
                         "deprecated",
                         "merged",
@@ -120,5 +199,48 @@ class ModerationEvent(UUIDModel):
             models.CheckConstraint(
                 condition=exactly_one_not_null(*MODERATION_SUBJECT_FIELDS),
                 name="moderation_event_one_subject",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        actor_type="account",
+                        actor_account__isnull=False,
+                        actor_system__isnull=True,
+                    )
+                    | models.Q(
+                        actor_type="system",
+                        actor_account__isnull=True,
+                        actor_system__isnull=False,
+                    )
+                ),
+                name="moderation_event_actor_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(sequence__gte=1),
+                name="moderation_event_sequence_positive",
+            ),
+            models.UniqueConstraint(
+                fields=["history", "sequence"],
+                name="moderation_event_history_sequence_uniq",
+            ),
         ]
+        indexes = [
+            models.Index(
+                fields=["history", "occurred_at"],
+                name="idx_event_history_time",
+            ),
+            models.Index(
+                fields=["action", "occurred_at"],
+                name="idx_event_action_time",
+            ),
+            models.Index(
+                fields=["actor_account"],
+                name="idx_event_actor_account",
+            ),
+        ]
+
+    @property
+    def actor_label(self) -> str:
+        if self.actor_type == self.ActorType.SYSTEM:
+            return "System"
+        return self.actor_account.display_name

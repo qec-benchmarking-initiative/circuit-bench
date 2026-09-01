@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Sign out · Circuit Bench{% endblock %}
+
+{% block content %}
+  <section class="page-intro flow">
+    <p class="eyebrow">Account</p>
+    <h1>Sign out</h1>
+    <p class="lede">End this Circuit Bench session? Your GitHub and ORCID connections will remain linked.</p>
+  </section>
+  <section class="panel flow">
+    <form method="post" action="/accounts/logout/">
+      {% csrf_token %}
+      {% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}
+      <button type="submit">Sign out</button>
+      <a class="button button-secondary" href="/">Cancel</a>
+    </form>
+  </section>
+{% endblock %}

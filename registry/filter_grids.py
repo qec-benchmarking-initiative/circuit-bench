@@ -8,6 +8,8 @@ query behaviour.
 from collections.abc import Iterable, Sequence
 from typing import Any
 
+from registry.formatting import format_scientific_value
+
 Choice = tuple[str, str]
 
 
@@ -62,8 +64,14 @@ def range_cell(
         "maximum_name": maximum_name,
         "minimum_value": minimum_value,
         "maximum_value": maximum_value,
-        "display_minimum": minimum_number if minimum_number is not None else 0,
-        "display_maximum": maximum_value or "∞",
+        "display_minimum": (
+            format_scientific_value(minimum_number)
+            if minimum_number is not None
+            else "0"
+        ),
+        "display_maximum": (
+            format_scientific_value(maximum_value) if maximum_value else "∞"
+        ),
         "filtered": filtered,
         "histogram_label": histogram_label,
         "histogram": histogram,
@@ -219,7 +227,11 @@ def algorithm_grid(
                 histogram_label="Published results per decoder version",
             )
         )
-    return filter_grid(grid_id=grid_id, title="Algorithm filters", cells=cells)
+    return filter_grid(
+        grid_id=grid_id,
+        title="Decoding algorithm filters",
+        cells=cells,
+    )
 
 
 def machine_grid(

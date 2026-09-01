@@ -1,0 +1,21 @@
+<div class="submission-field submission-field-{{ item.type }}{% if item.errors %} submission-field-error{% endif %}">
+  {% if item.type == "boolean" %}
+    <label class="submission-boolean-field" for="{{ item.bound.id_for_label }}">{{ item.bound }} <span>{{ item.bound.label }}{% if item.required %} <span aria-label="required">*</span>{% endif %}</span>{% if item.definition_url %} <a class="field-definition-link" href="{{ item.definition_url }}">Definition</a>{% endif %}</label>
+  {% else %}
+    <label for="{{ item.bound.id_for_label }}">{{ item.bound.label }}{% if item.required %} <span aria-label="required">*</span>{% endif %}{% if item.definition_url %} <a class="field-definition-link" href="{{ item.definition_url }}">Definition</a>{% endif %}</label>
+    {% if item.type == "reference" %}
+      {% include "components/filters/related_record_picker.html" with cell=item.picker_cell only %}
+    {% elif item.type == "tags" %}
+      {% include "components/tag_picker.html" with picker_id=item.picker_id label=item.bound.label input_name=item.bound.html_name tags=item.tags selected_keys=item.selected_keys mode="submission" open_label="Choose tags…" only %}
+    {% elif item.type == "artifact" %}
+      <div class="submission-artifact-input">
+        <div><span class="submission-input-caption">Use an existing frozen artifact</span>{% include "components/filters/related_record_picker.html" with cell=item.picker_cell only %}</div>
+        <div><label for="id_{{ item.upload_name }}">Or upload a new file</label><input id="id_{{ item.upload_name }}" type="file" name="{{ item.upload_name }}"><small>Maximum {{ item.upload_limit }}. The bytes are hashed and frozen before preview.</small></div>
+      </div>
+    {% else %}
+      {{ item.bound }}
+    {% endif %}
+  {% endif %}
+  {% if item.help_text %}<p class="field-help">{{ item.help_text }}</p>{% endif %}
+  {% if item.errors %}<div class="field-errors" role="alert">{{ item.errors }}</div>{% endif %}
+</div>

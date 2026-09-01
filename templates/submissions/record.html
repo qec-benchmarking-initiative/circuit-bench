@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load submission_history %}
+
+{% block title %}{{ record_label }} · Submission · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <p class="eyebrow">Exact {{ spec.label }} submission</p>
+      <h1>{{ record_label }}</h1>
+      <p>Exact submission and moderation view for the uploader and admins.</p>
+      <p><strong>State:</strong> <span class="status-badge status-{{ record.state }}">{{ record.get_state_display }}</span></p>
+    </header>
+
+    <section class="submission-preview">
+      <dl class="submission-preview-list">
+        {% for row in record_rows %}
+          <div><dt>{{ row.label }}</dt><dd>{% if row.preformatted %}<pre><code>{{ row.value }}</code></pre>{% else %}{{ row.value|linebreaksbr }}{% endif %}</dd></div>
+        {% endfor %}
+      </dl>
+    </section>
+
+    <div class="submission-actions">
+      {% if user.is_admin %}<a class="button button-secondary" href="{% url 'submissions:review' %}">Back to admin queue</a>{% else %}<a class="button button-secondary" href="{% url 'submissions:profile' %}">Back to profile</a>{% endif %}
+      {% if public_url %}<a class="button" href="{{ public_url }}">Open public data page</a>{% endif %}
+      {% if can_edit %}<a class="button" href="{% url 'submissions:edit' kind=kind record_id=record.id %}">Edit</a>{% endif %}
+      {% if can_create_successor %}<a class="button" href="{% url 'submissions:successor' kind=kind record_id=record.id %}">{% if record.state == "withdrawn" %}Revise and resubmit{% else %}Edit / new revision{% endif %}</a>{% endif %}
+      {% if can_withdraw %}<a class="button button-danger" href="{% url 'submissions:withdraw' kind=kind record_id=record.id %}">Withdraw…</a>{% endif %}
+      {% if can_approve %}<form method="post" action="{% url 'submissions:approve' kind=kind record_id=record.id %}">{% csrf_token %}<button class="button" type="submit">Approve and publish</button></form>{% endif %}
+    </div>
+
+    {% submission_history record kind %}
+  </div>
+{% endblock %}

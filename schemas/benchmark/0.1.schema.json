@@ -253,7 +253,7 @@
       }
     },
     "state": {
-      "enum": ["draft", "pending_review", "published", "withdrawn"]
+      "enum": ["draft", "pending_review", "pending_reapproval", "published", "withdrawn"]
     },
     "submitted_by": {
       "type": "string",

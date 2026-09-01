@@ -1,4 +1,5 @@
 {% extends "layouts/entity_detail.html" %}
+{% load scientific submission_history %}
 
 {% block title %}Result {{ result.id }} · Circuit Bench{% endblock %}
 
@@ -23,11 +24,11 @@
       {% include "components/metadata_list.html" with items=outcomes only %}
       <p>
         <strong>Arithmetic check:</strong>
-        {{ result.successful_shots }} successful +
-        {{ result.logical_failure_shots }} logical failure +
-        {{ result.timeout_shots }} timeout +
-        {{ result.decoder_error_shots }} decoder error =
-        {{ outcome_sum }} = {{ result.shots_total }} total shots.
+        {{ result.successful_shots|human_number }} successful +
+        {{ result.logical_failure_shots|human_number }} logical failure +
+        {{ result.timeout_shots|human_number }} timeout +
+        {{ result.decoder_error_shots|human_number }} decoder error =
+        {{ outcome_sum|human_number }} = {{ result.shots_total|human_number }} total shots.
       </p>
     </section>
 
@@ -92,7 +93,7 @@
         <p>
           Machine-readable values:
           {% if hyperparameter_artifact_url %}<a href="{{ hyperparameter_artifact_url }}">{% endif %}{{ result.hyperparameter_values_artifact.original_filename }}{% if hyperparameter_artifact_url %}</a>{% endif %}
-          · {{ result.hyperparameter_values_artifact.byte_size }} bytes
+          · {{ result.hyperparameter_values_artifact.byte_size|human_number }} bytes
           · SHA-256 <code>{{ result.hyperparameter_values_artifact.sha256 }}</code>
         </p>
       {% endif %}
@@ -108,13 +109,14 @@
           {% for attachment in result.display_artifact_attachments %}
             <li>
               <a href="{% url 'artifacts:download' attachment.artifact.id %}">{{ attachment.artifact.original_filename }}</a>
-              — {{ attachment.role }} · {{ attachment.artifact.byte_size }} bytes · SHA-256 <code>{{ attachment.artifact.sha256 }}</code>
+              — {{ attachment.role }} · {{ attachment.artifact.byte_size|human_number }} bytes · SHA-256 <code>{{ attachment.artifact.sha256 }}</code>
             </li>
           {% endfor %}
         </ul>
       </section>
     {% endif %}
   </div>
+  {% submission_history result "result" %}
 {% endblock %}
 
 {% block entity_aside %}

@@ -15,6 +15,11 @@ class DecoderVersion(UUIDModel, PublishedLifecycleModel):
         on_delete=models.PROTECT,
         related_name="decoder_versions",
     )
+    history = models.ForeignKey(
+        "registry.RecordHistory",
+        on_delete=models.PROTECT,
+        related_name="decoder_versions",
+    )
     slug = models.SlugField(max_length=200, unique=True)
     name = models.CharField(max_length=200)
     version = models.CharField(max_length=100)

@@ -22,6 +22,11 @@ class Tag(UUIDModel):
         on_delete=models.PROTECT,
         related_name="tags",
     )
+    history = models.ForeignKey(
+        "registry.RecordHistory",
+        on_delete=models.PROTECT,
+        related_name="tags",
+    )
     namespace = models.CharField(max_length=20, choices=Namespace)
     slug = models.SlugField(max_length=200)
     label = models.CharField(max_length=200)

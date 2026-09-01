@@ -1,4 +1,5 @@
 {% extends "layouts/collection.html" %}
+{% load scientific %}
 
 {% block title %}Decoders · Circuit Bench{% endblock %}
 {% block explorer_name %}Decoders{% endblock %}
@@ -13,7 +14,7 @@
   <span class="query-mode">Plain-text search · scripted query syntax is not enabled yet</span>
 {% endblock %}
 
-{% block explorer_status %}Plain-text mode · {{ result_count }} exact published version{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
+{% block explorer_status %}Plain-text mode · {{ result_count|human_number }} exact published version{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
 
 {% block explorer_filters %}
   {% url 'decoders:list' as decoder_reset_url %}

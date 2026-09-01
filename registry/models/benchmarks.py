@@ -17,6 +17,11 @@ class BenchmarkRevision(UUIDModel, PublishedLifecycleModel):
         on_delete=models.PROTECT,
         related_name="benchmark_revisions",
     )
+    history = models.ForeignKey(
+        "registry.RecordHistory",
+        on_delete=models.PROTECT,
+        related_name="benchmark_revisions",
+    )
     slug = models.SlugField(max_length=200, unique=True)
     name = models.CharField(max_length=200)
     version = models.TextField()

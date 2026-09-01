@@ -1,6 +1,5 @@
 {% if cell.type == "tags" %}
   <section class="filter-grid-cell filter-grid-tag-cell{% if cell.filtered %} is-filtered{% endif %}" data-filter-grid-cell data-filter-tag-cell data-filter-key="{{ cell.key }}">
-    {% include "components/filters/clear_button.html" with cell=cell only %}
     <header class="filter-grid-tag-heading">
       <strong>{{ cell.label }}</strong>
       <span data-tag-rule-label>{{ cell.match_label }}</span>

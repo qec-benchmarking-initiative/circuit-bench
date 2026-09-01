@@ -51,12 +51,27 @@ def test_critical_postgresql_constraints_exist():
         "artifact_sha256_format",
         "credit_one_subject",
         "tag_display_color_hex",
-        "circuit_dem_approximate_disjoint_errors_valid",
         "result_outcome_counts_sum",
         "result_score_result_evaluator_fk",
         "result_score_definition_evaluator_fk",
         "benchmark_attempt_result_pkey",
     } <= names
+
+
+@pytest.mark.django_db
+def test_circuit_approximate_disjoint_errors_is_a_postgresql_boolean():
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT data_type
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'circuit_revision'
+              AND column_name = 'dem_approximate_disjoint_errors'
+            """
+        )
+
+        assert cursor.fetchone() == ("boolean",)
 
 
 @pytest.mark.django_db
@@ -86,12 +101,14 @@ def test_result_score_has_composite_primary_and_foreign_keys():
     assert definitions["result_score_pkey"] == (
         "PRIMARY KEY (result_id, score_definition_id)"
     )
-    assert "FOREIGN KEY (result_id, evaluator_version_id)" in definitions[
-        "result_score_result_evaluator_fk"
-    ]
-    assert "FOREIGN KEY (score_definition_id, evaluator_version_id)" in definitions[
-        "result_score_definition_evaluator_fk"
-    ]
+    assert (
+        "FOREIGN KEY (result_id, evaluator_version_id)"
+        in definitions["result_score_result_evaluator_fk"]
+    )
+    assert (
+        "FOREIGN KEY (score_definition_id, evaluator_version_id)"
+        in definitions["result_score_definition_evaluator_fk"]
+    )
 
 
 @pytest.mark.django_db

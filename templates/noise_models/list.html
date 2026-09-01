@@ -1,11 +1,12 @@
 {% extends "layouts/collection.html" %}
+{% load scientific %}
 
 {% block title %}Noise models · Circuit Bench{% endblock %}
 {% block explorer_name %}Noise models{% endblock %}
 
 {% block explorer_query %}
   <label class="visually-hidden" for="noise-search">Search noise models</label>
-  <input id="noise-search" name="q" type="search" value="{{ query }}" placeholder="Search noise-model name, slug, or definition">
+  <input id="noise-search" name="q" type="search" value="{{ query }}" placeholder="Search noise-model name, slug, or definition" autofocus>
   {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
   {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
   <button class="button-compact" type="submit">Run</button>
@@ -13,7 +14,7 @@
   <span class="query-mode">Plain-text search · scripted query syntax is not enabled yet</span>
 {% endblock %}
 
-{% block explorer_status %}Plain-text mode · {{ result_count }} published noise model{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
+{% block explorer_status %}Plain-text mode · {{ result_count|human_number }} published noise model{{ result_count|pluralize }} · filters, columns, and sort are reproducible from this URL{% endblock %}
 
 {% block explorer_filters %}
   {% url 'noise-models:list' as noise_model_reset_url %}

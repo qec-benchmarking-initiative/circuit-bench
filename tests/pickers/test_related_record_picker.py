@@ -52,3 +52,19 @@ def test_noise_model_picker_searches_name_slug_and_description(client):
 def test_unconfigured_record_picker_is_not_exposed(client):
     response = client.get(reverse("pickers:records", args=["accounts"]))
     assert response.status_code == 404
+
+
+def test_artifact_picker_searches_frozen_identity_and_paginates(client):
+    response = client.get(
+        reverse("pickers:records", args=["artifacts"]),
+        {"q": "demo-memory.stim"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["results"]) == 1
+    record = payload["results"][0]
+    assert record["label"] == "demo-memory.stim"
+    assert record["curation_status"] == "frozen"
+    assert "bytes" in record["secondary_label"]
+    assert record["detail_url"].startswith("/artifacts/")

@@ -1,0 +1,16 @@
+{% csrf_token %}
+{% if form.non_field_errors %}<div class="submission-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+<div class="submission-form-sections">
+  {% for section in sections %}
+    <section class="submission-form-section">
+      <header><h3>{{ section.title }}</h3><p>{{ section.description }}</p></header>
+      {% for group in section.groups %}
+        <div class="submission-field-group submission-field-group-{{ group.layout }}">
+          {% for item in group.fields %}
+            {% include "components/submission_field.html" with item=item only %}
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </section>
+  {% endfor %}
+</div>

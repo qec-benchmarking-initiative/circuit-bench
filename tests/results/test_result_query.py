@@ -6,7 +6,7 @@ import pytest
 from django.http import QueryDict
 
 from registry.demo import seed_demo_data
-from registry.models import Result, ResultScore
+from registry.models import RecordHistory, Result, ResultScore
 from registry.result_query import (
     MAX_PAGE_SIZE,
     RESULT_RECORD_SCHEMA_VERSION,
@@ -27,6 +27,7 @@ def two_results():
     seed_demo_data()
     first = Result.objects.get()
     second = Result.objects.create(
+        history=RecordHistory.objects.create(record_kind="result"),
         id=uuid4(),
         schema_release=first.schema_release,
         decoder_version=first.decoder_version,

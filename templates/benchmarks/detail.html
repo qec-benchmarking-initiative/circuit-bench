@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static scientific submission_history %}
 
 {% block title %}{{ benchmark.name }} {{ benchmark.version }} · Circuit Bench{% endblock %}
 
@@ -43,6 +43,8 @@
       </aside>
     </div>
 
+    {% submission_history benchmark "benchmark" %}
+
     <section class="record-related" aria-labelledby="benchmark-manifest-heading">
       <h2 id="benchmark-manifest-heading">Ordered circuit manifest</h2>
       <p>This is the frozen circuit order for this exact revision. Required and optional membership are shown explicitly.</p>
@@ -54,7 +56,7 @@
             <tbody>
               {% for item in public_items %}
                 <tr>
-                  <td class="numeric">{{ item.position }}</td>
+                  <td class="numeric">{{ item.position|human_number }}</td>
                   <td><a href="{% url 'circuits:detail' item.circuit_revision.slug %}">{{ item.circuit_revision.name }}</a> <span class="null-value"><code>{{ item.circuit_revision.id }}</code></span></td>
                   <td>{{ item.is_required|yesno:"Required,Optional" }}</td>
                 </tr>
@@ -75,7 +77,7 @@
           <h3>{{ summary.attempt.decoder_version.name }} {{ summary.attempt.decoder_version.version }}</h3>
           <p>
             {% if summary.is_complete %}<strong>Complete:</strong>{% else %}<strong>Incomplete or inconsistent:</strong>{% endif %}
-            {{ summary.required_result_count }} of {{ summary.required_count }} required circuits have exactly one matching public result.
+            {{ summary.required_result_count|human_number }} of {{ summary.required_count|human_number }} required circuits have exactly one matching public result.
             Attempt <code>{{ summary.attempt.id }}</code> · submitted by {{ summary.attempt.submitted_by.display_name }}.
           </p>
           {% if summary.attempt.description %}<p>{{ summary.attempt.description }}</p>{% endif %}
@@ -86,7 +88,7 @@
               <tbody>
                 {% for row in summary.items %}
                   <tr>
-                    <td class="numeric">{{ row.item.position }}</td>
+                    <td class="numeric">{{ row.item.position|human_number }}</td>
                     <td><a href="{% url 'circuits:detail' row.item.circuit_revision.slug %}">{{ row.item.circuit_revision.name }}</a></td>
                     <td>{{ row.item.is_required|yesno:"Required,Optional" }}</td>
                     <td>
@@ -135,9 +137,10 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'js/filter-grid.js' %}" defer></script>
+  <script src="{% static 'js/filter-grid.js' %}?v=0.1.20260831k" defer></script>
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
   <script src="{% static 'js/filter-query.js' %}" defer></script>
   <script src="{% static 'js/explorer.js' %}" defer></script>
-  <script src="{% static 'js/result-plot.js' %}" defer></script>
+  <script src="{% static 'js/plot-settings.js' %}?v=0.1.20260831k" defer></script>
+<script src="{% static 'js/result-plot.js' %}?v=0.1.20260831o" defer></script>
 {% endblock %}

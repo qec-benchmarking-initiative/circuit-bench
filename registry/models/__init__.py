@@ -16,7 +16,7 @@ from .evaluations import (
     ResultScore,
     ScoreDefinition,
 )
-from .governance import ModerationEvent
+from .governance import ModerationEvent, RecordHistory
 from .tags import (
     CircuitRevisionCodeTag,
     CircuitRevisionExperimentTag,
@@ -42,6 +42,7 @@ __all__ = [
     "ExternalLink",
     "Machine",
     "ModerationEvent",
+    "RecordHistory",
     "NoiseModel",
     "Result",
     "ResultAuthorApprovalEvent",

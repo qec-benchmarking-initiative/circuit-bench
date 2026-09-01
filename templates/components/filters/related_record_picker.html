@@ -1,11 +1,11 @@
-<div class="related-record-picker" data-related-record-picker data-search-url="{{ cell.search_url }}" data-input-name="{{ cell.input_name }}" data-singular-label="{{ cell.singular_label }}" data-plural-label="{{ cell.plural_label }}">
+<div class="related-record-picker" data-related-record-picker data-search-url="{{ cell.search_url }}" data-input-name="{{ cell.input_name }}" data-singular-label="{{ cell.singular_label }}" data-plural-label="{{ cell.plural_label }}" data-empty-label="{{ cell.empty_label|default:'Any' }}" data-maximum-selections="{{ cell.maximum_selections|default:0 }}" data-selection-required="{% if cell.required %}true{% else %}false{% endif %}">
   <div data-related-record-inputs>
     {% for record in cell.selected_records %}<input type="hidden" name="{{ cell.input_name }}" value="{{ record.identifier }}">{% endfor %}
   </div>
   <div data-related-record-initial hidden>
     {% for record in cell.selected_records %}<span data-record-identifier="{{ record.identifier }}" data-record-label="{{ record.label }}" data-record-secondary-label="{{ record.secondary_label }}" data-record-description="{{ record.description }}" data-record-curation-status="{{ record.curation_status }}" data-record-curation-label="{{ record.curation_label }}" data-record-detail-url="{{ record.detail_url }}"></span>{% endfor %}
   </div>
-  <button class="filter-grid-trigger" type="button" data-related-record-open aria-expanded="false" aria-haspopup="dialog" title="{{ cell.selection_label }}">
+  <button class="filter-grid-trigger" type="button" data-related-record-open aria-expanded="false" aria-haspopup="dialog" title="{{ cell.selection_label }}"{% if cell.disabled %} disabled{% endif %}>
     <span class="filter-grid-cell-title">{{ cell.label }}</span>
     <span class="filter-grid-cell-value" data-related-record-summary>{{ cell.display_value }}</span>
   </button>
