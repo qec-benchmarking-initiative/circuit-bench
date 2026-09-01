@@ -60,4 +60,6 @@ databases:
     user: circuit_bench
     postgresMajorVersion: "17"
     diskSizeGB: 1
-    ipAllowList: []
+    ipAllowList:
+      - source: 92.239.54.130/32
+        description: Stasiu development machine
