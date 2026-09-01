@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{{ decision_label }} · {{ record_label }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <p class="eyebrow">Admin review</p>
+      <h1>{{ decision_label }}</h1>
+      <p><a href="{% url 'submissions:record' kind=kind record_id=record.id %}">{{ record_label }}</a> · {{ record.get_state_display }}</p>
+    </header>
+
+    <form method="post" class="submission-form-sections">
+      {% csrf_token %}
+      <section class="submission-form-section">
+        {% if decision == "reject" %}
+          <p>Rejection is final for this exact candidate. The record will remain private and read-only.</p>
+        {% else %}
+          <p>The uploader may edit this exact candidate and explicitly resubmit it for review.</p>
+        {% endif %}
+        {{ form.non_field_errors }}
+        <label for="{{ form.note.id_for_label }}"><strong>{{ form.note.label }}</strong></label>
+        {{ form.note.errors }}
+        {{ form.note }}
+      </section>
+      <div class="submission-actions">
+        <button class="table-action{% if decision == 'reject' %} table-action-danger{% endif %}" type="submit">{{ decision_label }}</button>
+        <a class="table-action" href="{% url 'submissions:record' kind=kind record_id=record.id %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

@@ -25,12 +25,12 @@ class BenchmarkRevision(UUIDModel, PublishedLifecycleModel):
     slug = models.SlugField(max_length=200, unique=True)
     name = models.CharField(max_length=200)
     version = models.TextField()
-    previous_revision = models.OneToOneField(
+    predecessor = models.OneToOneField(
         "self",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="next_revision",
+        related_name="successor",
     )
     description = models.TextField(null=True, blank=True)
     revision_description = models.TextField()
@@ -63,10 +63,10 @@ class BenchmarkRevision(UUIDModel, PublishedLifecycleModel):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(previous_revision__isnull=True)
-                    | ~models.Q(previous_revision=models.F("id"))
+                    models.Q(predecessor__isnull=True)
+                    | ~models.Q(predecessor=models.F("id"))
                 ),
-                name="benchmark_revision_previous_not_self",
+                name="benchmark_revision_predecessor_not_self",
             ),
         ]
 
@@ -110,6 +110,11 @@ class BenchmarkRevisionItem(models.Model):
 
 
 class BenchmarkAttempt(UUIDModel, PublishedLifecycleModel):
+    history = models.ForeignKey(
+        "registry.RecordHistory",
+        on_delete=models.PROTECT,
+        related_name="benchmark_attempts",
+    )
     benchmark_revision = models.ForeignKey(
         BenchmarkRevision,
         on_delete=models.PROTECT,

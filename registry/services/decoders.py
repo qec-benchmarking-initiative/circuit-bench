@@ -138,8 +138,8 @@ def public_decoder_detail() -> QuerySet[DecoderVersion]:
             "schema_release",
             "hyperparameter_schema_artifact",
             "submitted_by",
-            "previous_version",
-            "next_version",
+            "predecessor",
+            "successor",
         )
         .prefetch_related(
             Prefetch(
@@ -178,12 +178,12 @@ def inherited_description_source(decoder: DecoderVersion) -> DecoderVersion | No
         visited.add(candidate.pk)
         if candidate.description and candidate.description.strip():
             return candidate
-        candidate = candidate.previous_version
+        candidate = candidate.predecessor
     return None
 
 
 def public_predecessor(decoder: DecoderVersion) -> DecoderVersion | None:
-    predecessor = decoder.previous_version
+    predecessor = decoder.predecessor
     if predecessor is not None and predecessor.state in PUBLIC_DETAIL_STATES:
         return predecessor
     return None
@@ -191,8 +191,8 @@ def public_predecessor(decoder: DecoderVersion) -> DecoderVersion | None:
 
 def public_successor(decoder: DecoderVersion) -> DecoderVersion | None:
     try:
-        successor = decoder.next_version
-    except DecoderVersion.next_version.RelatedObjectDoesNotExist:
+        successor = decoder.successor
+    except DecoderVersion.successor.RelatedObjectDoesNotExist:
         return None
     if successor.state in PUBLIC_DETAIL_STATES:
         return successor

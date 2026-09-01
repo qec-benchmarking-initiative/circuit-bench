@@ -16,7 +16,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import QuerySet
 from django.urls import NoReverseMatch, reverse
 
-from registry.formatting import format_scientific_value
+from registry.formatting import format_scientific_value, scientific_number_display
 from registry.models import Result
 from registry.result_query import (
     FIELD_BY_NAME,
@@ -495,7 +495,7 @@ def _axis_declaration(
             scale=scale,
             horizontal=horizontal,
             kind="major",
-            label=format_scientific_value(value),
+            number=scientific_number_display(value, profile=_number_profile(field)),
         )
         for value in major_values
     ]
@@ -519,6 +519,7 @@ def _axis_declaration(
         "label": field.label,
         "label_with_unit": f"{field.label}{unit_suffix}",
         "unit": field.unit,
+        "number_profile": _number_profile(field),
         "definition": field.definition,
         "direction": field.direction,
         "direction_label": field.direction.replace("_", " "),
@@ -655,7 +656,7 @@ def _tick_declaration(
     scale: str,
     horizontal: bool,
     kind: str,
-    label: str | None = None,
+    number=None,
 ) -> dict[str, object]:
     fraction = (_transform(value, scale) - minimum) / (maximum - minimum)
     if horizontal:
@@ -668,8 +669,9 @@ def _tick_declaration(
         "kind": kind,
         "is_major": kind == "major",
     }
-    if label is not None:
-        declaration["label"] = label
+    if number is not None:
+        declaration["number"] = number
+        declaration["label"] = number.text
     return declaration
 
 
@@ -705,8 +707,12 @@ def _point_declaration(
         "y": _coordinate(y_position),
         "x_value": str(x_value),
         "y_value": str(y_value),
-        "x_display": _display_with_unit(x_value, x_definition.unit),
-        "y_display": _display_with_unit(y_value, y_definition.unit),
+        "x_display": _display_with_unit(
+            x_value, x_definition.unit, profile=_number_profile(x_definition)
+        ),
+        "y_display": _display_with_unit(
+            y_value, y_definition.unit, profile=_number_profile(y_definition)
+        ),
         "x_interval": _interval_declaration(
             x_interval,
             field=x_definition,
@@ -764,14 +770,20 @@ def _interval_declaration(
     return {
         "lower_value": str(lower_value),
         "upper_value": str(upper_value),
-        "lower_display": _display_with_unit(lower_value, field.unit),
-        "upper_display": _display_with_unit(upper_value, field.unit),
+        "lower_display": _display_with_unit(
+            lower_value, field.unit, profile=_number_profile(field)
+        ),
+        "upper_display": _display_with_unit(
+            upper_value, field.unit, profile=_number_profile(field)
+        ),
         "start": _coordinate(start),
         "end": _coordinate(end),
         "size": _coordinate(end - start),
         "point_estimate": str(estimate) if estimate is not None else None,
         "point_estimate_display": (
-            _display_with_unit(estimate, field.unit) if estimate is not None else None
+            _display_with_unit(estimate, field.unit, profile=_number_profile(field))
+            if estimate is not None
+            else None
         ),
         "confidence_level": str(confidence) if confidence is not None else None,
         "confidence_display": (
@@ -860,7 +872,12 @@ def _summary_items(result: Result) -> list[dict[str, object]]:
             "label": "Machine",
             "value": machine.slug if machine is not None else None,
         },
-        {"label": "Shots", "value": getattr(result, "shots_total", None)},
+        {
+            "label": "Shots",
+            "value": getattr(result, "shots_total", None),
+            "numeric": True,
+            "number_profile": "count",
+        },
         {"label": "Result UUID", "value": str(result.id), "technical": True},
     ]
 
@@ -879,9 +896,21 @@ def _reverse_or_path(name, args, fallback):
         return fallback
 
 
-def _display_with_unit(value: Decimal, unit: str | None) -> str:
-    rendered = format_scientific_value(value)
+def _display_with_unit(
+    value: Decimal, unit: str | None, *, profile: str = "default"
+) -> str:
+    rendered = format_scientific_value(value, profile=profile)
     return f"{rendered} {unit}" if unit else rendered
+
+
+def _number_profile(field: ResultField) -> str:
+    if field.kind == "integer":
+        return "count"
+    if field.unit == "probability" or "ler" in field.name or "brier" in field.name:
+        return "probability"
+    if field.unit in {"ns", "s", "ms", "µs"}:
+        return "duration"
+    return "score"
 
 
 def _coordinate(value: Decimal) -> str:

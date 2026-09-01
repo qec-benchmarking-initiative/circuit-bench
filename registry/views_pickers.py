@@ -7,6 +7,7 @@ from registry.record_pickers import (
     search_picker_records,
     serialize_picker_record,
 )
+from registry.services.artifact_access import readable_artifacts_for
 
 PICKER_PAGE_SIZE = 25
 
@@ -23,8 +24,15 @@ def picker_records(request, picker_key):
         page_number = max(1, int(request.GET.get("page", "1")))
     except ValueError:
         page_number = 1
+    records = (
+        readable_artifacts_for(request.user).order_by(
+            "original_filename", "sha256", "id"
+        )
+        if spec.key == "artifacts"
+        else None
+    )
     page = Paginator(
-        search_picker_records(spec, query),
+        search_picker_records(spec, query, records=records),
         PICKER_PAGE_SIZE,
     ).get_page(page_number)
     return JsonResponse(

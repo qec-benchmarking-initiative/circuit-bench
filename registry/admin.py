@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     Artifact,
     ArtifactAttachment,
+    ArtifactGrant,
     BenchmarkAttempt,
     BenchmarkRevision,
     CircuitRevision,
@@ -12,14 +13,48 @@ from .models import (
     EvaluatorRelease,
     ExternalLink,
     Machine,
-    ModerationEvent,
     NoiseModel,
+    RecordEvent,
     Result,
     ResultAuthorApprovalEvent,
     SchemaRelease,
     ScoreDefinition,
     Tag,
 )
+
+
+class PublishedRecordAdminMixin:
+    """Keep public exact records immutable in the raw Django admin."""
+
+    def get_readonly_fields(self, request, obj=None):
+        inherited = tuple(super().get_readonly_fields(request, obj))
+        if obj is not None and getattr(obj, "state", None) in {
+            "published",
+            "withdrawn",
+        }:
+            return tuple(dict.fromkeys((*inherited, *self._model_field_names())))
+        return inherited
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def _model_field_names(self):
+        return tuple(field.name for field in self.model._meta.fields)
+
+
+class AppendOnlyAdmin(admin.ModelAdmin):
+    """Expose audit records for inspection without offering mutation controls."""
+
+    actions = ()
+
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Artifact)
@@ -43,34 +78,34 @@ class TagAdmin(admin.ModelAdmin):
 
 
 @admin.register(DecoderVersion)
-class DecoderVersionAdmin(admin.ModelAdmin):
+class DecoderVersionAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
     list_display = ("name", "version", "state", "submitted_by")
     list_filter = ("state", "provides_failure_probability")
     search_fields = ("name", "slug", "description", "revision_description")
 
 
 @admin.register(NoiseModel)
-class NoiseModelAdmin(admin.ModelAdmin):
+class NoiseModelAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
     list_display = ("name", "curation_status", "randomises_priors", "state")
     list_filter = ("curation_status", "randomises_priors", "state")
     search_fields = ("name", "slug", "short_description")
 
 
 @admin.register(CircuitRevision)
-class CircuitRevisionAdmin(admin.ModelAdmin):
+class CircuitRevisionAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
     list_display = ("name", "noise_model", "num_detectors", "num_errors", "state")
     list_filter = ("state", "is_css", "dem_x_detectors_only", "dem_z_detectors_only")
     search_fields = ("name", "slug", "description", "revision_description")
 
 
 @admin.register(Machine)
-class MachineAdmin(admin.ModelAdmin):
+class MachineAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
     list_display = ("slug", "machine_class", "status", "state")
     list_filter = ("machine_class", "status", "state")
 
 
 @admin.register(EvaluatorRelease)
-class EvaluatorReleaseAdmin(admin.ModelAdmin):
+class EvaluatorReleaseAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
     list_display = ("version", "source_revision", "state", "created_at")
     list_filter = ("state",)
 
@@ -82,7 +117,7 @@ class ScoreDefinitionAdmin(admin.ModelAdmin):
 
 
 @admin.register(Result)
-class ResultAdmin(admin.ModelAdmin):
+class ResultAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "decoder_version",
@@ -92,28 +127,32 @@ class ResultAdmin(admin.ModelAdmin):
         "state",
     )
     list_filter = ("state", "reproduction_status")
+    readonly_fields = ("reproduction_status",)
+
+    def save_model(self, request, obj, form, change):
+        from registry.services.result_verification import (
+            derive_result_reproduction_status,
+        )
+
+        obj.reproduction_status = derive_result_reproduction_status(obj)
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(BenchmarkRevision)
-class BenchmarkRevisionAdmin(admin.ModelAdmin):
+class BenchmarkRevisionAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
     list_display = ("name", "version", "recognition_status", "state")
     list_filter = ("recognition_status", "state")
     search_fields = ("name", "slug", "description")
 
 
 @admin.register(BenchmarkAttempt)
-class BenchmarkAttemptAdmin(admin.ModelAdmin):
+class BenchmarkAttemptAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
     list_display = ("id", "benchmark_revision", "decoder_version", "state")
     list_filter = ("state",)
 
 
+admin.site.register([ArtifactAttachment, Credit, ExternalLink])
 admin.site.register(
-    [
-        ArtifactAttachment,
-        Credit,
-        CreditClaim,
-        ExternalLink,
-        ModerationEvent,
-        ResultAuthorApprovalEvent,
-    ]
+    [ArtifactGrant, CreditClaim, RecordEvent, ResultAuthorApprovalEvent],
+    AppendOnlyAdmin,
 )

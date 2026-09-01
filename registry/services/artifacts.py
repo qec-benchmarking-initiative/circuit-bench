@@ -17,7 +17,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 
 from accounts.models import Account
-from registry.models import Artifact
+from registry.models import Artifact, ArtifactGrant
 
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024
@@ -55,20 +55,20 @@ def local_artifact_path(artifact: Artifact) -> Path:
     """Resolve an artifact object key without allowing it to escape MEDIA_ROOT."""
     if artifact.storage_backend != Artifact.StorageBackend.LOCAL:
         raise ArtifactIntegrityError(
-            f"Artifact {artifact.id} is not stored by the local backend."
+            f"File {artifact.id} is not stored by the local backend."
         )
 
     root = Path(settings.MEDIA_ROOT).resolve()
     object_key = Path(artifact.object_key)
     if object_key.is_absolute():
-        raise UnsafeObjectKeyError("Absolute artifact object keys are forbidden.")
+        raise UnsafeObjectKeyError("Absolute file object keys are forbidden.")
 
     candidate = root / object_key
     resolved = candidate.resolve(strict=False)
     if resolved == root or root not in resolved.parents:
-        raise UnsafeObjectKeyError("Artifact object key escapes MEDIA_ROOT.")
+        raise UnsafeObjectKeyError("File object key escapes MEDIA_ROOT.")
     if candidate.is_symlink():
-        raise UnsafeObjectKeyError("Artifact object keys may not be symbolic links.")
+        raise UnsafeObjectKeyError("File object keys may not be symbolic links.")
     return resolved
 
 
@@ -92,7 +92,7 @@ def open_verified_artifact(
         path = local_artifact_path(artifact)
         if not path.is_file():
             raise ArtifactIntegrityError(
-                f"Artifact object is missing: {artifact.object_key}"
+                f"File object is missing: {artifact.object_key}"
             )
         stored_file = path.open("rb")
         try:
@@ -109,7 +109,7 @@ def open_verified_artifact(
 
     if artifact.storage_backend != Artifact.StorageBackend.R2:
         raise ArtifactIntegrityError(
-            f"Artifact {artifact.id} uses an unsupported storage backend."
+            f"File {artifact.id} uses an unsupported storage backend."
         )
 
     temporary = tempfile.SpooledTemporaryFile(max_size=2 * 1024 * 1024)
@@ -138,7 +138,7 @@ def open_verified_artifact(
     except (ArtifactError, BotoCoreError, ClientError, KeyError, OSError) as error:
         temporary.close()
         raise ArtifactIntegrityError(
-            f"Artifact object could not be read: {artifact.object_key}"
+            f"File object could not be read: {artifact.object_key}"
         ) from error
     except Exception:
         temporary.close()
@@ -164,6 +164,7 @@ def store_uploaded_artifact(
         expected_sha256=expected_sha256,
         expected_byte_size=expected_byte_size,
         max_bytes=max_bytes,
+        grant_source=ArtifactGrant.Source.UPLOAD,
     )
 
 
@@ -179,7 +180,7 @@ def store_file_artifact(
 ) -> tuple[Artifact, bool]:
     source = Path(source_path)
     if source.is_symlink() or not source.is_file():
-        raise ArtifactError(f"Artifact source is not a regular file: {source}")
+        raise ArtifactError(f"The source is not a regular file: {source}")
 
     with source.open("rb") as source_file:
         return store_artifact_chunks(
@@ -190,6 +191,7 @@ def store_file_artifact(
             expected_sha256=expected_sha256,
             expected_byte_size=expected_byte_size,
             max_bytes=max_bytes,
+            grant_source=ArtifactGrant.Source.UPLOAD,
         )
 
 
@@ -203,8 +205,16 @@ def store_artifact_chunks(
     expected_byte_size: int | None = None,
     max_bytes: int = DEFAULT_MAX_UPLOAD_BYTES,
     artifact_id: uuid.UUID | None = None,
+    grant_source: str = ArtifactGrant.Source.GENERATED,
 ) -> tuple[Artifact, bool]:
-    """Write one immutable object, returning an existing row on duplicate."""
+    """Write immutable bytes and grant the initiating account durable access.
+
+    Content-addressed deduplication may return an artifact first uploaded by a
+    different account. In that case ``uploaded_by`` remains unchanged as legacy
+    provenance, while an ``ArtifactGrant`` records this account's acquisition.
+    """
+    if grant_source not in ArtifactGrant.Source.values:
+        raise ValueError("grant_source must be a supported ArtifactGrant source")
     if max_bytes < 0:
         raise ValueError("max_bytes must be non-negative")
     if expected_sha256 is not None and not SHA256_PATTERN.fullmatch(expected_sha256):
@@ -234,7 +244,7 @@ def store_artifact_chunks(
                 byte_size += len(chunk)
                 if byte_size > max_bytes:
                     raise ArtifactTooLargeError(
-                        f"Artifact exceeds the {max_bytes}-byte upload limit."
+                        f"File exceeds the {max_bytes}-byte upload limit."
                     )
                 digest.update(chunk)
                 temporary.write(chunk)
@@ -252,6 +262,7 @@ def store_artifact_chunks(
         existing = Artifact.objects.filter(sha256=sha256).first()
         if existing is not None:
             verify_artifact(existing)
+            _ensure_artifact_grant(existing, uploaded_by, source=grant_source)
             return existing, False
 
         object_key = f"artifacts/sha256/{sha256[:2]}/{sha256}"
@@ -276,9 +287,15 @@ def store_artifact_chunks(
                     object_key=object_key,
                     uploaded_by=uploaded_by,
                 )
+                _ensure_artifact_grant(
+                    artifact,
+                    uploaded_by,
+                    source=grant_source,
+                )
         except IntegrityError:
             artifact = Artifact.objects.get(sha256=sha256)
             verify_artifact(artifact)
+            _ensure_artifact_grant(artifact, uploaded_by, source=grant_source)
             return artifact, False
 
         verify_artifact(artifact)
@@ -286,6 +303,20 @@ def store_artifact_chunks(
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
+
+
+def _ensure_artifact_grant(
+    artifact: Artifact,
+    account: Account,
+    *,
+    source: str,
+) -> ArtifactGrant:
+    grant, _created = ArtifactGrant.objects.get_or_create(
+        artifact=artifact,
+        account=account,
+        defaults={"source": source},
+    )
+    return grant
 
 
 def _file_chunks(source_file: BinaryIO) -> Iterable[bytes]:
@@ -351,7 +382,7 @@ def _verify_file(
 def _configured_storage_backend() -> str:
     backend = settings.ARTIFACT_STORAGE_BACKEND
     if backend not in Artifact.StorageBackend.values:
-        raise ArtifactError(f"Unsupported artifact storage backend: {backend}")
+        raise ArtifactError(f"Unsupported file storage backend: {backend}")
     return backend
 
 
@@ -394,7 +425,7 @@ def _persist_object(
             )
     except (BotoCoreError, ClientError, OSError) as error:
         raise ArtifactError(
-            "Artifact could not be written to Cloudflare R2."
+            "The file could not be written to Cloudflare R2."
         ) from error
 
 
@@ -447,11 +478,11 @@ def _r2_client():
 
 
 def _safe_filename(filename: str | None) -> str:
-    candidate = (filename or "artifact.bin").replace("\\", "/").split("/")[-1]
+    candidate = (filename or "file.bin").replace("\\", "/").split("/")[-1]
     candidate = "".join(character for character in candidate if ord(character) >= 32)
     candidate = candidate.strip()
     if not candidate or candidate in {".", ".."}:
-        return "artifact.bin"
+        return "file.bin"
     return candidate[:255]
 
 

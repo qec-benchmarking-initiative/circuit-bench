@@ -17,6 +17,21 @@ class SubmissionKind(StrEnum):
     CIRCUIT = "circuit"
     RESULT = "result"
     MACHINE = "machine"
+    TAG = "tag"
+    NOISE_MODEL = "noise_model"
+    BENCHMARK = "benchmark"
+    BENCHMARK_ATTEMPT = "benchmark_attempt"
+
+
+# Only complete, routed submission kinds are exposed by the shared workflow.
+# Parallel slices can use the remaining enum values without making incomplete
+# forms or URLs reachable before the integration pass.
+ENABLED_SUBMISSION_KINDS = (
+    SubmissionKind.DECODER,
+    SubmissionKind.CIRCUIT,
+    SubmissionKind.RESULT,
+    SubmissionKind.MACHINE,
+)
 
 
 class ApprovalRoute(StrEnum):
@@ -37,6 +52,51 @@ class ApprovalDecision:
 
 
 POLICY_VERSION = "0.1"
+
+
+def approval_process(
+    kind: SubmissionKind | str, *, reapproval: bool = False
+) -> dict[str, str]:
+    """Return concise, versioned public copy for the current approval route."""
+
+    kind = SubmissionKind(kind)
+    if reapproval:
+        return {
+            "version": POLICY_VERSION,
+            "text": (
+                "This revision is subject to admin review. It may be edited while "
+                "pending review and is automatically published once approved. It "
+                "may then be withdrawn, and later revisions are also subject to review."
+            ),
+        }
+    if kind is SubmissionKind.MACHINE:
+        return {
+            "version": POLICY_VERSION,
+            "text": (
+                "Machine submissions are validated and published immediately. "
+                "Publication is attributed to System. Published machines may be "
+                "withdrawn, and revisions of withdrawn machines are subject to admin "
+                "review."
+            ),
+        }
+    noun = {
+        SubmissionKind.DECODER: "decoder",
+        SubmissionKind.CIRCUIT: "circuit",
+        SubmissionKind.RESULT: "result",
+        SubmissionKind.TAG: "tag",
+        SubmissionKind.NOISE_MODEL: "noise-model",
+        SubmissionKind.BENCHMARK: "benchmark",
+        SubmissionKind.BENCHMARK_ATTEMPT: "benchmark-attempt",
+    }[kind]
+    return {
+        "version": POLICY_VERSION,
+        "text": (
+            f"All {noun} submissions are subject to admin review. Submissions may "
+            "be edited while pending review and are automatically published once "
+            "approved. They may then be withdrawn, and future revisions are also "
+            "subject to review."
+        ),
+    }
 
 
 def approval_decision(
@@ -83,7 +143,7 @@ def approval_decision(
         route=ApprovalRoute.ADMIN_REVIEW,
         initial_state=LifecycleState.PENDING_REVIEW,
         explanation=(
-            "Decoder, circuit, and result submissions require admin approval under "
+            "Every enabled record kind except machines requires admin approval under "
             "policy 0.1, including submissions made by admins."
         ),
     )

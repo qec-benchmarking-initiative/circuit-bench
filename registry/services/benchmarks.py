@@ -136,7 +136,7 @@ def public_benchmark_detail() -> QuerySet[BenchmarkRevision]:
             "schema_release",
             "manifest_artifact",
             "submitted_by",
-            "previous_revision",
+            "predecessor",
         )
         .prefetch_related(
             Prefetch("items", queryset=public_items, to_attr="public_items"),
@@ -156,7 +156,7 @@ def inherited_benchmark_description(
         visited.add(current.pk)
         if current.description and current.description.strip():
             return current
-        predecessor = current.previous_revision
+        predecessor = current.predecessor
         current = (
             predecessor
             if predecessor is not None and predecessor.state in PUBLIC_DETAIL_STATES
@@ -168,7 +168,7 @@ def inherited_benchmark_description(
 def public_benchmark_predecessor(
     benchmark: BenchmarkRevision,
 ) -> BenchmarkRevision | None:
-    predecessor = benchmark.previous_revision
+    predecessor = benchmark.predecessor
     if predecessor is not None and predecessor.state in PUBLIC_DETAIL_STATES:
         return predecessor
     return None
@@ -179,7 +179,7 @@ def public_benchmark_successor(
 ) -> BenchmarkRevision | None:
     return (
         BenchmarkRevision.objects.filter(
-            previous_revision=benchmark,
+            predecessor=benchmark,
             state__in=PUBLIC_DETAIL_STATES,
         )
         .order_by("id")

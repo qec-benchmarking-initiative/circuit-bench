@@ -8,19 +8,20 @@
       <p class="eyebrow">Admin</p>
       <h1>Submission review</h1>
       <p><a href="{% url 'pages:static-reference' slug='submission-policy' %}">Submission and approval policy 0.1</a></p>
+      <p class="profile-header-actions"><a class="table-action" href="{% url 'benchmark-submissions:review' %}">Benchmark review</a> <a class="table-action" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a> <a class="table-action" href="{% url 'credits:review-queue' %}">Credit claims</a></p>
     </header>
 
-    {% include "components/submission_collection_controls.html" with reset_url=request.path controls=controls kind_choices=kind_choices sort_choices=sort_choices only %}
+    {% include "components/submission_collection_controls.html" with reset_url=request.path controls=controls kind_choices=kind_choices pending_state_choices=pending_state_choices sort_choices=sort_choices only %}
 
     <section class="submission-table-section" id="pending">
       <h2>Waiting for review</h2>
-      {% include "components/submission_table.html" with rows=pending.page.object_list show_kind=True show_submitter=True allow_review=True table_label="Pending submissions" empty_message="There are no submissions waiting for review." csrf_token=csrf_token sort_links=sort_links only %}
+      {% include "components/submission_table.html" with rows=pending.page.object_list show_kind=True show_submitter=True show_review_note=True allow_review=True table_label="Pending submissions" empty_message="There are no submissions waiting for review." csrf_token=csrf_token sort_links=sort_links only %}
       {% include "components/pagination.html" with page=pending.page page_prefix=pending.page_prefix page_parameter=pending.page_parameter label="Waiting for review" only %}
     </section>
 
     <section class="submission-table-section" id="recently-withdrawn">
       <h2>Recently withdrawn</h2>
-      <p>Records withdrawn during the preceding seven days.</p>
+      <p>This table shows records withdrawn during the preceding seven days.</p>
       {% include "components/submission_table.html" with rows=recently_withdrawn.page.object_list show_kind=True show_submitter=True show_approver=True show_withdrawn=True table_label="Recently withdrawn records" empty_message="No records were withdrawn in the last seven days." csrf_token=csrf_token sort_links=sort_links only %}
       {% include "components/pagination.html" with page=recently_withdrawn.page page_prefix=recently_withdrawn.page_prefix page_parameter=recently_withdrawn.page_parameter label="Recently withdrawn" only %}
     </section>

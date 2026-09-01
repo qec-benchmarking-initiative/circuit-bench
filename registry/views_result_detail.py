@@ -5,13 +5,21 @@ import json
 from django.shortcuts import get_object_or_404, render
 from django.urls import NoReverseMatch, reverse
 
-from registry.formatting import format_scientific_value
 from registry.models import Artifact, Result, ResultScore
+from registry.services.credits import (
+    current_result_author_approval,
+    is_exact_decoder_author,
+)
 from registry.services.result_detail import public_result_detail
 
 
 def result_detail(request, result_id):
     result = get_object_or_404(public_result_detail(), id=result_id)
+    viewer = getattr(request, "user", None)
+    can_review_author_status = bool(
+        getattr(viewer, "is_authenticated", False)
+        and is_exact_decoder_author(viewer, result)
+    )
     return render(
         request,
         "results/detail.html",
@@ -24,6 +32,12 @@ def result_detail(request, result_id):
             "execution": _execution(result),
             "score_rows": [_score_row(score) for score in result.display_scores],
             "evaluator": _evaluator(result),
+            "can_review_author_status": can_review_author_status,
+            "current_author_approval": (
+                current_result_author_approval(result, viewer)
+                if can_review_author_status
+                else None
+            ),
             "hyperparameter_artifact_url": _artifact_download_url(
                 result.hyperparameter_values_artifact
             ),
@@ -112,23 +126,33 @@ def _outcomes(result: Result) -> list[dict[str, object]]:
     return [
         {
             "label": "Successful shots",
-            "value": format_scientific_value(result.successful_shots),
+            "value": result.successful_shots,
+            "numeric": True,
+            "number_profile": "count",
         },
         {
             "label": "Logical-failure shots",
-            "value": format_scientific_value(result.logical_failure_shots),
+            "value": result.logical_failure_shots,
+            "numeric": True,
+            "number_profile": "count",
         },
         {
             "label": "Timeout shots",
-            "value": format_scientific_value(result.timeout_shots),
+            "value": result.timeout_shots,
+            "numeric": True,
+            "number_profile": "count",
         },
         {
             "label": "Decoder-error shots",
-            "value": format_scientific_value(result.decoder_error_shots),
+            "value": result.decoder_error_shots,
+            "numeric": True,
+            "number_profile": "count",
         },
         {
             "label": "Total shots",
-            "value": format_scientific_value(result.shots_total),
+            "value": result.shots_total,
+            "numeric": True,
+            "number_profile": "count",
         },
     ]
 
@@ -137,11 +161,15 @@ def _eligibility(result: Result) -> list[dict[str, object]]:
     return [
         {
             "label": "Failure-probability eligible shots",
-            "value": format_scientific_value(result.failure_probability_shots),
+            "value": result.failure_probability_shots,
+            "numeric": True,
+            "number_profile": "count",
         },
         {
             "label": "Latency eligible shots",
-            "value": format_scientific_value(result.latency_shots),
+            "value": result.latency_shots,
+            "numeric": True,
+            "number_profile": "count",
         },
     ]
 
@@ -151,11 +179,17 @@ def _execution(result: Result) -> list[dict[str, object]]:
     return [
         {
             "label": "Preparation duration",
-            "value": _value_with_unit(result.preparation_duration_seconds, "s"),
+            "value": result.preparation_duration_seconds,
+            "numeric": True,
+            "number_profile": "duration",
+            "unit": "s",
         },
         {
             "label": "t_1000",
-            "value": _value_with_unit(result.t_1000_ns, "ns"),
+            "value": result.t_1000_ns,
+            "numeric": True,
+            "number_profile": "duration",
+            "unit": "ns",
         },
         {
             "label": "Machine class",
@@ -184,13 +218,13 @@ def _score_row(score: ResultScore) -> dict[str, object]:
         "direction": definition.get_direction_display(),
         "primary_value_kind": definition.get_primary_value_kind_display(),
         "provisional": definition.is_provisional,
-        "value": format_scientific_value(score.value),
-        "point_estimate": _format_optional(score.point_estimate),
-        "lower_bound": _format_optional(score.lower_bound),
-        "upper_bound": _format_optional(score.upper_bound),
-        "confidence_level": _format_optional(score.confidence_level),
-        "sample_count": _format_optional(score.sample_count),
-        "event_count": _format_optional(score.event_count),
+        "value": score.value,
+        "point_estimate": score.point_estimate,
+        "lower_bound": score.lower_bound,
+        "upper_bound": score.upper_bound,
+        "confidence_level": score.confidence_level,
+        "sample_count": score.sample_count,
+        "event_count": score.event_count,
         "required_inputs": json.dumps(
             definition.required_inputs, sort_keys=True, indent=2
         ),
@@ -216,16 +250,6 @@ def _evaluator(result: Result) -> list[dict[str, object]]:
             "url": evaluator.summary_contract_url,
         },
     ]
-
-
-def _format_optional(value: object | None) -> str | None:
-    return None if value is None else format_scientific_value(value)
-
-
-def _value_with_unit(value: object | None, unit: str) -> str | None:
-    if value is None:
-        return None
-    return f"{format_scientific_value(value)} {unit}"
 
 
 def _artifact_download_url(artifact: Artifact | None) -> str | None:

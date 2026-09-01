@@ -173,7 +173,7 @@ def _serialize_artifact(record: Artifact) -> dict[str, Any]:
         "secondary_label": f"{record.sha256[:12]}… · {record.byte_size} bytes",
         "description": record.media_type,
         "curation_status": "frozen",
-        "curation_label": "Frozen artifact",
+        "curation_label": "Frozen file",
         "detail_url": reverse("artifacts:detail", args=[record.id]),
     }
 
@@ -262,8 +262,8 @@ PICKER_SPECS = {
     ),
     "artifacts": RecordPickerSpec(
         key="artifacts",
-        singular_label="frozen artifact",
-        plural_label="frozen artifacts",
+        singular_label="frozen file",
+        plural_label="frozen files",
         parameter_name="artifact",
         identifier_field="id",
         public_queryset=_artifacts,
@@ -282,8 +282,10 @@ def get_picker_spec(key: str) -> RecordPickerSpec:
         raise LookupError(key) from error
 
 
-def search_picker_records(spec: RecordPickerSpec, query: str) -> QuerySet:
-    records = spec.public_queryset()
+def search_picker_records(
+    spec: RecordPickerSpec, query: str, *, records: QuerySet | None = None
+) -> QuerySet:
+    records = records if records is not None else spec.public_queryset()
     if not query:
         return records
     predicate = Q()

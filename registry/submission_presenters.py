@@ -6,6 +6,7 @@ from django import forms
 from django.urls import reverse
 
 from registry.forms_submissions import submission_form_for_payload
+from registry.models.common import EDITABLE_CANDIDATE_STATES, REVIEW_QUEUE_STATES
 from registry.services.submissions import record_label, record_url
 from registry.submission_form_layout import LAYOUTS
 from registry.submission_policy import SubmissionKind
@@ -31,20 +32,50 @@ def submission_rows(kind: SubmissionKind | str, records, *, admin=False, actor=N
             "created_at": record.created_at,
             "withdrawn_at": record.withdrawn_at,
             "approved_by": _approval_label(record),
-            "can_approve": admin
-            and record.state in {"pending_review", "pending_reapproval"},
+            "latest_review": _latest_review(record),
+            "can_approve": admin and record.state in REVIEW_QUEUE_STATES,
+            "approve_url": reverse("submissions:approve", args=[kind.value, record.id]),
+            "review_actions": [],
             "actions": [],
         }
+        if admin and record.state in REVIEW_QUEUE_STATES:
+            row["review_actions"] = [
+                {
+                    "label": "Request changes",
+                    "url": reverse(
+                        "review-decisions:request-changes",
+                        args=[kind.value, record.id],
+                    ),
+                },
+                {
+                    "label": "Reject",
+                    "url": reverse(
+                        "review-decisions:reject",
+                        args=[kind.value, record.id],
+                    ),
+                    "danger": True,
+                },
+            ]
         can_manage = actor is not None and (
             record.submitted_by_id == actor.id or actor.is_admin
         )
-        if can_manage and record.state in {"pending_review", "pending_reapproval"}:
+        if can_manage and record.state in EDITABLE_CANDIDATE_STATES:
             row["actions"].append(
                 {
                     "label": "Edit",
                     "url": reverse("submissions:edit", args=[kind.value, record.id]),
                 }
             )
+            if record.state == "changes_requested":
+                row["actions"].append(
+                    {
+                        "label": "Resubmit",
+                        "url": reverse(
+                            "review-decisions:resubmit",
+                            args=[kind.value, record.id],
+                        ),
+                    }
+                )
         elif can_manage and record.state == "published":
             row["actions"].extend(
                 [
@@ -82,7 +113,7 @@ def _approval_label(record):
     events = getattr(record, "approval_events", None)
     if events is None:
         event = (
-            record.moderation_events.filter(action="approved")
+            record.record_events.filter(action="approved")
             .select_related("actor_account")
             .order_by("-sequence", "-id")
             .first()
@@ -90,6 +121,28 @@ def _approval_label(record):
     else:
         event = events[0] if events else None
     return event.actor_label if event else "Not recorded (legacy)"
+
+
+def _latest_review(record):
+    events = getattr(record, "review_decision_events", None)
+    if events is None:
+        event = (
+            record.record_events.filter(action__in=("requested_changes", "rejected"))
+            .select_related("actor_account")
+            .order_by("-sequence", "-id")
+            .first()
+        )
+    else:
+        event = events[0] if events else None
+    if event is None:
+        return None
+    return {
+        "action": event.action,
+        "action_label": event.get_action_display(),
+        "note": event.note,
+        "actor": event.actor_label,
+        "occurred_at": event.occurred_at,
+    }
 
 
 def stored_record_rows(kind: SubmissionKind | str, record) -> list[dict[str, str]]:
@@ -147,6 +200,15 @@ def stored_record_rows(kind: SubmissionKind | str, record) -> list[dict[str, str
                 "preformatted": True,
             }
         )
+    review = _latest_review(record)
+    if review is not None:
+        rows.extend(
+            [
+                {"label": "Latest review decision", "value": review["action_label"]},
+                {"label": "Latest review note", "value": review["note"]},
+                {"label": "Reviewed by", "value": review["actor"]},
+            ]
+        )
     return rows
 
 
@@ -156,6 +218,7 @@ def preview_sections(
     *,
     record=None,
     allow_withdrawn_lineage=False,
+    actor=None,
 ) -> list[dict]:
     kind = SubmissionKind(kind)
     form = submission_form_for_payload(
@@ -163,6 +226,7 @@ def preview_sections(
         payload,
         record=record,
         allow_withdrawn_lineage=allow_withdrawn_lineage,
+        actor=actor,
     )
     if not form.is_valid():
         return [

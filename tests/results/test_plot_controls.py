@@ -94,6 +94,6 @@ def test_plot_range_labels_are_compact_without_changing_submitted_values():
     )
 
     range_control = main["cells"][2]
-    assert range_control["display_value"] == "2.3e-3–2.5e7"
+    assert range_control["display_value"] == "2.3 · 10⁻³–2.5 · 10⁷"
     assert range_control["minimum_value"] == "0.002300000000"
     assert range_control["maximum_value"] == "25000000"

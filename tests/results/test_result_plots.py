@@ -4,6 +4,7 @@ from uuid import UUID
 
 import pytest
 from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 from registry.models import Result
 from registry.result_plots import (
@@ -375,16 +376,17 @@ def test_component_renders_accessible_svg_and_the_same_tabular_points():
     plot = build_result_scatter_plot([first, missing], plot_id="comparison")
 
     rendered = render_to_string("components/result_plot.html", {"plot": plot})
+    rendered_text = " ".join(strip_tags(rendered).split())
 
     assert 'role="img"' in rendered
     assert 'aria-label="LER upper 95% @ 5% acceptance against t₁₀₀₀"' in rendered
     assert 'aria-describedby="comparison-svg-description"' in rendered
-    assert "1 of 2 results plotted" in rendered
-    assert "1 omitted" in rendered
+    assert "1 of 2 results plotted" in rendered_text
+    assert "1 omitted" in rendered_text
     assert f'id="comparison-point-{first.id}"' in rendered
     assert f'id="comparison-point-{missing.id}"' not in rendered
     assert rendered.count(f'data-result-id="{first.id}"') == 2
-    assert "Tabular data for this plot (1 rows)" in rendered
+    assert "Tabular data for this plot (1 rows)" in rendered_text
     assert "plot-tick-label" in rendered
     assert "data-download-plot" in rendered
     assert "data-plot-crosshair" in rendered
@@ -420,7 +422,8 @@ def test_component_renders_accessible_svg_and_the_same_tabular_points():
     assert 'class="result-plot-point marker-circle"' in rendered
     assert "/definitions/result/0.1/#preparation-and-timing" in rendered
     assert "/definitions/result/0.1/#stored-scores" in rendered
-    assert "2.5e7 ns" in rendered
+    assert 'data-raw="25000000"' in rendered
+    assert "10<sup>7</sup>" in rendered
     assert "0.15 probability" in rendered
 
 

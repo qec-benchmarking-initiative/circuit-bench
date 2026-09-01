@@ -18,6 +18,7 @@ from registry.models import (
     ScoreDefinition,
     Tag,
 )
+from registry.services.artifact_access import readable_artifacts_for
 from registry.submission_policy import SubmissionKind
 
 
@@ -42,15 +43,28 @@ class WithdrawalForm(forms.Form):
 class BaseSubmissionForm(forms.Form):
     kind: SubmissionKind
 
-    def __init__(self, *args, record=None, allow_withdrawn_lineage=False, **kwargs):
+    def __init__(
+        self,
+        *args,
+        record=None,
+        allow_withdrawn_lineage=False,
+        actor=None,
+        **kwargs,
+    ):
         self.record = record
         self.allow_withdrawn_lineage = allow_withdrawn_lineage
+        self.actor = actor
         super().__init__(*args, **kwargs)
+
+    @property
+    def readable_artifacts(self):
+        return readable_artifacts_for(self.actor).order_by("original_filename", "id")
 
     @property
     def lineage_states(self):
         if self.allow_withdrawn_lineage or (
-            self.record is not None and self.record.state == "pending_reapproval"
+            self.record is not None
+            and self.record.state in {"pending_reapproval", "changes_requested"}
         ):
             return ["published", "withdrawn"]
         return ["published"]
@@ -93,7 +107,10 @@ class DecoderSubmissionForm(BaseSubmissionForm):
         required=False, widget=forms.Textarea(attrs={"rows": 4})
     )
     hyperparameter_schema_artifact = ArtifactChoiceField(
-        queryset=Artifact.objects.none(), required=False
+        queryset=Artifact.objects.none(),
+        required=False,
+        label="Hyperparameter JSON Schema",
+        widget=forms.HiddenInput(),
     )
     algorithm_tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.none(), required=False
@@ -101,15 +118,26 @@ class DecoderSubmissionForm(BaseSubmissionForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["previous_version"].queryset = DecoderVersion.objects.filter(
-            state__in=self.lineage_states
-        ).order_by("name", "version")
-        self.fields[
-            "hyperparameter_schema_artifact"
-        ].queryset = Artifact.objects.order_by("original_filename", "id")
-        self.fields["algorithm_tags"].queryset = Tag.objects.filter(
-            namespace=Tag.Namespace.ALGORITHM
-        ).order_by("status", "label", "id")
+        previous_versions = (
+            DecoderVersion.objects.filter(state__in=self.lineage_states)
+            .select_related("hyperparameter_schema_artifact")
+            .order_by("name", "version")
+        )
+        self.fields["previous_version"].queryset = previous_versions
+        self.fields["hyperparameter_schema_artifact"].queryset = self.readable_artifacts
+        self.previous_schema_choices = {
+            str(version.id): {
+                "identifier": str(version.hyperparameter_schema_artifact_id),
+                "label": version.hyperparameter_schema_artifact.original_filename,
+            }
+            for version in previous_versions
+            if version.hyperparameter_schema_artifact_id
+        }
+        self.fields["algorithm_tags"].queryset = (
+            Tag.objects.filter(namespace=Tag.Namespace.ALGORITHM)
+            .exclude(status=Tag.Status.DEPRECATED)
+            .order_by("status", "label", "id")
+        )
 
     def clean_slug(self):
         slug = self.cleaned_data["slug"]
@@ -166,11 +194,21 @@ class CircuitSubmissionForm(BaseSubmissionForm):
     dem_block_decomposition_from_introducing_remnant_edges = forms.BooleanField(
         required=False
     )
-    sampling_circuit_artifact = ArtifactChoiceField(queryset=Artifact.objects.none())
-    detector_error_model_artifact = ArtifactChoiceField(
-        queryset=Artifact.objects.none()
+    sampling_circuit_artifact = ArtifactChoiceField(
+        queryset=Artifact.objects.none(),
+        label="Sampling circuit file",
+        widget=forms.HiddenInput(),
     )
-    manifest_artifact = ArtifactChoiceField(queryset=Artifact.objects.none())
+    detector_error_model_artifact = ArtifactChoiceField(
+        queryset=Artifact.objects.none(),
+        label="Detector error model file",
+        widget=forms.HiddenInput(),
+    )
+    manifest_artifact = ArtifactChoiceField(
+        queryset=Artifact.objects.none(),
+        label="Manifest file",
+        widget=forms.HiddenInput(),
+    )
     code_tags = forms.ModelMultipleChoiceField(queryset=Tag.objects.none())
     experiment_tags = forms.ModelMultipleChoiceField(queryset=Tag.objects.none())
 
@@ -179,22 +217,28 @@ class CircuitSubmissionForm(BaseSubmissionForm):
         self.fields["previous_revision"].queryset = CircuitRevision.objects.filter(
             state__in=self.lineage_states
         ).order_by("name", "created_at")
-        self.fields["noise_model"].queryset = NoiseModel.objects.filter(
-            state="published"
-        ).order_by("name")
-        artifacts = Artifact.objects.order_by("original_filename", "id")
+        self.fields["noise_model"].queryset = (
+            NoiseModel.objects.filter(state="published")
+            .exclude(curation_status=NoiseModel.CurationStatus.DEPRECATED)
+            .order_by("name")
+        )
+        artifacts = self.readable_artifacts
         for name in (
             "sampling_circuit_artifact",
             "detector_error_model_artifact",
             "manifest_artifact",
         ):
             self.fields[name].queryset = artifacts
-        self.fields["code_tags"].queryset = Tag.objects.filter(
-            namespace=Tag.Namespace.CODE
-        ).order_by("status", "label", "id")
-        self.fields["experiment_tags"].queryset = Tag.objects.filter(
-            namespace=Tag.Namespace.EXPERIMENT
-        ).order_by("status", "label", "id")
+        self.fields["code_tags"].queryset = (
+            Tag.objects.filter(namespace=Tag.Namespace.CODE)
+            .exclude(status=Tag.Status.DEPRECATED)
+            .order_by("status", "label", "id")
+        )
+        self.fields["experiment_tags"].queryset = (
+            Tag.objects.filter(namespace=Tag.Namespace.EXPERIMENT)
+            .exclude(status=Tag.Status.DEPRECATED)
+            .order_by("status", "label", "id")
+        )
 
     def clean_slug(self):
         slug = self.cleaned_data["slug"]
@@ -249,7 +293,10 @@ class ResultSubmissionForm(BaseSubmissionForm):
         required=False, widget=forms.Textarea(attrs={"rows": 3})
     )
     hyperparameter_values_artifact = ArtifactChoiceField(
-        queryset=Artifact.objects.none(), required=False
+        queryset=Artifact.objects.none(),
+        required=False,
+        label="Hyperparameter values JSON file",
+        widget=forms.HiddenInput(),
     )
     shots_total = forms.IntegerField(min_value=1)
     successful_shots = forms.IntegerField(min_value=0)
@@ -271,7 +318,6 @@ class ResultSubmissionForm(BaseSubmissionForm):
     supersedes_result = ResultChoiceField(
         queryset=Result.objects.none(), required=False
     )
-    reproduction_status = forms.ChoiceField(choices=Result.ReproductionStatus)
     scores_json = forms.CharField(
         label="Evaluator scores",
         widget=forms.Textarea(attrs={"rows": 12, "spellcheck": "false"}),
@@ -295,9 +341,7 @@ class ResultSubmissionForm(BaseSubmissionForm):
         self.fields["machine"].queryset = Machine.objects.filter(
             state="published"
         ).order_by("slug")
-        self.fields[
-            "hyperparameter_values_artifact"
-        ].queryset = Artifact.objects.order_by("original_filename", "id")
+        self.fields["hyperparameter_values_artifact"].queryset = self.readable_artifacts
         self.fields["supersedes_result"].queryset = Result.objects.filter(
             state__in=self.lineage_states
         ).order_by("-created_at", "id")
@@ -348,6 +392,17 @@ class ResultSubmissionForm(BaseSubmissionForm):
                 cleaned["scores_json"] = _normalise_scores(scores, evaluator)
             except forms.ValidationError as error:
                 self.add_error("scores_json", error)
+        predecessor = cleaned.get("supersedes_result")
+        if predecessor and (
+            predecessor.decoder_version_id
+            != getattr(cleaned.get("decoder_version"), "id", None)
+            or predecessor.circuit_revision_id
+            != getattr(cleaned.get("circuit_revision"), "id", None)
+        ):
+            self.add_error(
+                "supersedes_result",
+                "A successor must use the predecessor's exact decoder and circuit.",
+            )
         return cleaned
 
     def canonical_payload(self) -> dict:
@@ -401,6 +456,7 @@ def submission_form_for_payload(
     *,
     record=None,
     allow_withdrawn_lineage=False,
+    actor=None,
 ) -> BaseSubmissionForm:
     kind = SubmissionKind(kind)
     data = QueryDict("", mutable=True)
@@ -418,6 +474,7 @@ def submission_form_for_payload(
         data=data,
         record=record,
         allow_withdrawn_lineage=allow_withdrawn_lineage,
+        actor=actor,
     )
 
 

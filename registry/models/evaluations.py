@@ -36,12 +36,12 @@ class Machine(UUIDModel, PublishedLifecycleModel):
     )
     description = models.TextField()
     status = models.CharField(max_length=20, choices=EvidenceStatus)
-    supersedes_machine = models.ForeignKey(
+    predecessor = models.OneToOneField(
         "self",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="superseded_by",
+        related_name="successor",
     )
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -65,10 +65,10 @@ class Machine(UUIDModel, PublishedLifecycleModel):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(supersedes_machine__isnull=True)
-                    | ~models.Q(supersedes_machine=models.F("id"))
+                    models.Q(predecessor__isnull=True)
+                    | ~models.Q(predecessor=models.F("id"))
                 ),
-                name="machine_supersedes_not_self",
+                name="machine_predecessor_not_self",
             ),
         ]
 
@@ -218,7 +218,10 @@ class ScoreDefinition(UUIDModel):
 class Result(UUIDModel, PublishedLifecycleModel):
     class ReproductionStatus(models.TextChoices):
         INDEPENDENT = "independent_reproduction", "Independent reproduction"
-        AUTHOR_VERIFIED = "decoder_author_verified", "Decoder author verified"
+        AUTHOR_VERIFIED = (
+            "decoder_author_verified",
+            "Decoder-author submitted/approved",
+        )
 
     schema_release = models.ForeignKey(
         SchemaRelease,
@@ -277,12 +280,12 @@ class Result(UUIDModel, PublishedLifecycleModel):
     training_workload_description = models.TextField(null=True, blank=True)
     software_environment = models.TextField(null=True, blank=True)
     t_1000_ns = models.BigIntegerField(null=True, blank=True)
-    supersedes_result = models.OneToOneField(
+    predecessor = models.OneToOneField(
         "self",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="superseded_by",
+        related_name="successor",
     )
     reproduction_status = models.CharField(max_length=30, choices=ReproductionStatus)
     submitted_by = models.ForeignKey(
@@ -359,10 +362,10 @@ class Result(UUIDModel, PublishedLifecycleModel):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(supersedes_result__isnull=True)
-                    | ~models.Q(supersedes_result=models.F("id"))
+                    models.Q(predecessor__isnull=True)
+                    | ~models.Q(predecessor=models.F("id"))
                 ),
-                name="result_supersedes_not_self",
+                name="result_predecessor_not_self",
             ),
             models.UniqueConstraint(
                 fields=["id", "evaluator_version"],
@@ -384,9 +387,9 @@ class Result(UUIDModel, PublishedLifecycleModel):
                 name="idx_result_machine",
             ),
             models.Index(
-                fields=["supersedes_result"],
-                condition=models.Q(supersedes_result__isnull=False),
-                name="idx_result_supersedes",
+                fields=["predecessor"],
+                condition=models.Q(predecessor__isnull=False),
+                name="idx_result_predecessor",
             ),
         ]
 

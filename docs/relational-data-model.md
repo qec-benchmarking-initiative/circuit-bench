@@ -69,7 +69,7 @@ artifact is referenced by revisions and results; account owns submissions.
 | `benchmark_revision` | `id` | (`benchmark_id`, `version`) | Immutable Core/Full release |
 | `benchmark_revision_item` | (`benchmark_revision_id`, `circuit_revision_id`) | (`benchmark_revision_id`, `position`) | Ordered workload membership |
 | `evaluator_release` | `id` | `version` | Versioned calculation semantics |
-| `result` | `id` | `evaluator_output_artifact_id`; `supersedes_result_id` | One circuit measurement |
+| `result` | `id` | `evaluator_output_artifact_id`; `predecessor_id` | One circuit measurement |
 | `result_artifact` | (`result_id`, `role`, `position`) | (`result_id`, `artifact_id`) | Optional raw/reproduction files |
 | `result_link` | `id` | (`result_id`, `url`) | External supporting evidence |
 | `benchmark_attempt` | `id` | (`id`, `benchmark_revision_id`, `decoder_version_id`, `machine_id`) | Complete gamut submission |
@@ -157,7 +157,7 @@ CREATE TABLE decoder_version (
     version             TEXT NOT NULL,
     description         TEXT NOT NULL,
     release_date        DATE,
-    previous_version_id UUID REFERENCES decoder_version(id) ON DELETE RESTRICT,
+    predecessor_id UUID REFERENCES decoder_version(id) ON DELETE RESTRICT,
     state               TEXT NOT NULL DEFAULT 'draft',
     submitted_by_id     UUID NOT NULL REFERENCES account(id) ON DELETE RESTRICT,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -167,7 +167,7 @@ CREATE TABLE decoder_version (
     CONSTRAINT decoder_version_state_ck
         CHECK (state IN ('draft', 'pending_review', 'published', 'withdrawn')),
     CONSTRAINT decoder_version_identity_uq UNIQUE (decoder_id, version),
-    CONSTRAINT decoder_version_previous_not_self_ck CHECK (previous_version_id <> id),
+    CONSTRAINT decoder_version_predecessor_not_self_ck CHECK (predecessor_id <> id),
     CONSTRAINT decoder_version_publication_ck CHECK (
         (state IN ('published', 'withdrawn') AND published_at IS NOT NULL)
         OR (state IN ('draft', 'pending_review') AND published_at IS NULL)
@@ -403,7 +403,7 @@ CREATE TABLE result (
     evaluator_output_artifact_id UUID NOT NULL UNIQUE
                             REFERENCES artifact(id) ON DELETE RESTRICT,
     submitted_by_id     UUID NOT NULL REFERENCES account(id) ON DELETE RESTRICT,
-    supersedes_result_id UUID REFERENCES result(id) ON DELETE RESTRICT,
+    predecessor_id UUID REFERENCES result(id) ON DELETE RESTRICT,
 
     state               TEXT NOT NULL DEFAULT 'pending_review',
     measurement_scope   TEXT NOT NULL,
@@ -472,7 +472,7 @@ CREATE TABLE result (
         OR
         (soft_output_samples > 0 AND soft_output_calibration IS NOT NULL)
     ),
-    CONSTRAINT result_supersedes_not_self_ck CHECK (supersedes_result_id <> id),
+    CONSTRAINT result_predecessor_not_self_ck CHECK (predecessor_id <> id),
     CONSTRAINT result_publication_ck CHECK (
         (state IN ('published', 'withdrawn') AND published_at IS NOT NULL)
         OR (state IN ('pending_review', 'rejected') AND published_at IS NULL)
@@ -489,8 +489,8 @@ CREATE TABLE result (
 );
 
 CREATE UNIQUE INDEX result_supersedes_once_uq
-    ON result (supersedes_result_id)
-    WHERE supersedes_result_id IS NOT NULL;
+    ON result (predecessor_id)
+    WHERE predecessor_id IS NOT NULL;
 
 CREATE INDEX result_circuit_leaderboard_idx
     ON result (circuit_revision_id, state, logical_error_rate);

@@ -56,7 +56,7 @@
             <tbody>
               {% for item in public_items %}
                 <tr>
-                  <td class="numeric">{{ item.position|human_number }}</td>
+                  <td class="numeric">{% scientific_number item.position "count" %}</td>
                   <td><a href="{% url 'circuits:detail' item.circuit_revision.slug %}">{{ item.circuit_revision.name }}</a> <span class="null-value"><code>{{ item.circuit_revision.id }}</code></span></td>
                   <td>{{ item.is_required|yesno:"Required,Optional" }}</td>
                 </tr>
@@ -72,12 +72,13 @@
     <section class="record-related" aria-labelledby="benchmark-attempts-heading">
       <h2 id="benchmark-attempts-heading">Published attempts</h2>
       <p>Attempts group existing circuit results. The site does not pool them or calculate an aggregate benchmark score.</p>
+      {% if request.user.is_authenticated %}<p><a class="table-action" href="{% url 'benchmark-submissions:attempt-create' %}?benchmark_revision={{ benchmark.id }}">Submit an attempt</a></p>{% endif %}
       {% for summary in attempt_summaries %}
         <article class="record-section benchmark-attempt" id="attempt-{{ summary.attempt.id }}">
           <h3>{{ summary.attempt.decoder_version.name }} {{ summary.attempt.decoder_version.version }}</h3>
           <p>
             {% if summary.is_complete %}<strong>Complete:</strong>{% else %}<strong>Incomplete or inconsistent:</strong>{% endif %}
-            {{ summary.required_result_count|human_number }} of {{ summary.required_count|human_number }} required circuits have exactly one matching public result.
+            {% scientific_number summary.required_result_count "count" %} of {% scientific_number summary.required_count "count" %} required circuits have exactly one matching public result.
             Attempt <code>{{ summary.attempt.id }}</code> · submitted by {{ summary.attempt.submitted_by.display_name }}.
           </p>
           {% if summary.attempt.description %}<p>{{ summary.attempt.description }}</p>{% endif %}
@@ -88,7 +89,7 @@
               <tbody>
                 {% for row in summary.items %}
                   <tr>
-                    <td class="numeric">{{ row.item.position|human_number }}</td>
+                    <td class="numeric">{% scientific_number row.item.position "count" %}</td>
                     <td><a href="{% url 'circuits:detail' row.item.circuit_revision.slug %}">{{ row.item.circuit_revision.name }}</a></td>
                     <td>{{ row.item.is_required|yesno:"Required,Optional" }}</td>
                     <td>
@@ -119,13 +120,13 @@
         {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
         {% for name, value in plot_control_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
         {% include "components/result_query.html" with query_id="benchmark-result-odata" scripted_query_text=scripted_query_text last_valid_scripted_query=last_valid_scripted_query only %}
-        <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
         {% include "components/filters/grid.html" with grid=algorithm_filter_grid only %}
         {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
         {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
         <div class="leaderboard-filter-actions">
           {% include "components/filters/query_actions.html" with show_reset=result_filters_active reset_url=result_reset_url reset_label="Reset filters" only %}
         </div>
+        <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
       </form>
       <div class="collection-results" aria-live="polite">
         {% include "components/result_comparison.html" with result_plot=result_plot only %}

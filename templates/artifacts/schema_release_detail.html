@@ -19,7 +19,7 @@
       </dl>
       <p><a href="{% url 'artifacts:download' artifact_id=release.json_schema_artifact_id %}">Download exact JSON Schema</a></p>
       <p><a href="{% url 'artifacts:download' artifact_id=release.definitions_artifact_id %}">Download exact human-readable definitions</a></p>
-      {% if debug %}<p><a href="{% url 'artifacts:index' %}">Back to artifact inspection</a></p>{% endif %}
+      {% if debug %}<p><a href="{% url 'artifacts:index' %}">Back to file inspection</a></p>{% endif %}
     </section>
   </div>
 {% endblock %}

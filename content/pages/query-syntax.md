@@ -1,6 +1,6 @@
 ---
 title: ResultRecord query syntax 0.1
-summary: The exact OData-inspired query subset shared by result tables and code.
+summary: This page defines the OData-inspired query subset used by result tables and code.
 ---
 
 Status: development contract 0.1. Version 1 is reserved for collaborator review and public release.
@@ -76,4 +76,4 @@ The browser query box accepts the same raw text. It reports either a successful 
 
 Invalid queries return a stable machine-readable error with a code and message. Filter errors also include a zero-based character position. Query text is parsed into a typed syntax tree and compiled only through whitelisted Django ORM expressions; it is never interpolated into SQL.
 
-Ordinary browser and API queries are live. Repeating a URL later may include newly published matching results. A response records its generation time, canonical query, schema version, count, and exact ordered result UUIDs, but that is not an immutable scientific snapshot. A future snapshot feature must mint a frozen artifact explicitly.
+Ordinary browser and API queries are live. Repeating a URL later may include newly published matching results. A response records its generation time, canonical query, schema version, count, and exact ordered result UUIDs, but that is not an immutable scientific snapshot. A future snapshot feature must create a frozen snapshot file explicitly.

@@ -102,6 +102,7 @@ def plot_control_grids(
                 maximum_value=x_maximum,
                 values=_axis_values(results, fields_by_name[x_field]),
                 histogram_label=f"{fields_by_name[x_field].label} distribution",
+                number_profile=_number_profile(fields_by_name[x_field]),
             ),
             _axis_cell(
                 key="y-axis",
@@ -127,6 +128,7 @@ def plot_control_grids(
                 maximum_value=y_maximum,
                 values=_axis_values(results, fields_by_name[y_field]),
                 histogram_label=f"{fields_by_name[y_field].label} distribution",
+                number_profile=_number_profile(fields_by_name[y_field]),
             ),
         ],
     }
@@ -230,6 +232,7 @@ def _range_cell(
     maximum_value,
     values,
     histogram_label,
+    number_profile,
 ):
     histogram = _decimal_histogram(values)
     display_value = format_scientific_range(
@@ -257,6 +260,7 @@ def _range_cell(
         "filtered": bool(minimum_value or maximum_value),
         "allow_negative": True,
         "histogram_label": histogram_label,
+        "number_profile": number_profile,
         "histogram": histogram,
         "step": "any",
         "span": 1,
@@ -328,3 +332,13 @@ def _option_label(option):
 def _plain_decimal(value: Decimal) -> str:
     rendered = format(value, "f")
     return rendered.rstrip("0").rstrip(".") if "." in rendered else rendered
+
+
+def _number_profile(field: ResultField) -> str:
+    if field.kind == "integer":
+        return "count"
+    if field.unit == "probability" or "ler" in field.name or "brier" in field.name:
+        return "probability"
+    if field.unit in {"ns", "s", "ms", "µs"}:
+        return "duration"
+    return "score"

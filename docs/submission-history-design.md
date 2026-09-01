@@ -79,12 +79,12 @@ decoder_version A
 
 decoder_version B
     history_id = H1
-    previous_version_id = A
+    predecessor_id = A
     state = pending_reapproval
 
 decoder_version C
     history_id = H1
-    previous_version_id = B
+    predecessor_id = B
     state = published
 ```
 
@@ -206,11 +206,11 @@ because they could disagree.
 The existing predecessor or supersession foreign keys should initially remain
 on the typed scientific records:
 
-- `previous_version_id`;
-- `previous_revision_id`;
-- `supersedes_result_id`;
-- `supersedes_machine_id`;
-- `supersedes_noise_model_id`.
+- `predecessor_id`;
+- `predecessor_id`;
+- `predecessor_id`;
+- `predecessor_id`;
+- `predecessor_id`.
 
 They are useful queryable projections of the `revision_created` event and
 allow PostgreSQL to enforce referential and cardinality constraints. The write
@@ -519,9 +519,9 @@ current lifecycle fields.
   silently interpreted;
 - after validation, `history_id` becomes non-null.
 
-### Phase 3: migrate existing moderation events
+### Phase 3: migrate existing record events
 
-Existing moderation events should retain their identities where practical and
+Existing record events should retain their identities where practical and
 gain history, sequence, exact actor type, and event schema information.
 
 Human actor rows can be migrated directly. Existing automatic publications
@@ -592,7 +592,7 @@ Questions to settle during implementation include:
   allowed;
 - which review notes and payload details are public, uploader-visible, or
   administrator-only;
-- whether the existing `moderation_event` table is evolved in place or migrated
+- whether the existing `record_event` table is evolved in place or migrated
   into a newly named `record_event` table;
 - how event payload schemas themselves are versioned and documented.
 
@@ -611,8 +611,8 @@ incrementally.
 - Public events are visible on public data pages. The data model also supports
   uploader-only and administrator-only event details, although the first
   submission paths currently write public notes.
-- The existing `moderation_event` table was evolved in place and remains named
-  `ModerationEvent` in Django so existing provenance is preserved.
+- The existing `record_event` table was evolved in place and remains named
+  `RecordEvent` in Django so existing provenance is preserved.
 - Event payloads use the documented `0.1` envelope containing `schema`, `data`,
   and immutable artifact identities. Later event shapes require a new
   `event_schema_version`.

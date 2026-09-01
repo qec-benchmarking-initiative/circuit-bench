@@ -47,6 +47,44 @@ class Artifact(UUIDModel):
         return self.original_filename
 
 
+class ArtifactGrant(UUIDModel):
+    class Source(models.TextChoices):
+        UPLOAD = "upload", "Uploaded file"
+        GENERATED = "generated", "Generated file"
+        LEGACY_UPLOADER = "legacy_uploader", "Legacy uploader backfill"
+
+    artifact = models.ForeignKey(
+        Artifact,
+        on_delete=models.PROTECT,
+        related_name="access_grants",
+    )
+    account = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="artifact_grants",
+    )
+    acquired_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=20, choices=Source)
+
+    class Meta:
+        db_table = "artifact_grant"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["artifact", "account"],
+                name="artifact_grant_artifact_account_uniq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    source__in=["upload", "generated", "legacy_uploader"]
+                ),
+                name="artifact_grant_source_valid",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.account} may read {self.artifact}"
+
+
 class SchemaRelease(UUIDModel):
     class RecordType(models.TextChoices):
         DECODER = "decoder", "Decoder"
@@ -231,7 +269,7 @@ class ExternalLink(UUIDModel):
         PAPER = "paper", "Paper"
         SOURCE = "source", "Source"
         DOCUMENTATION = "documentation", "Documentation"
-        ARTIFACT = "artifact", "Artifact"
+        ARTIFACT = "artifact", "File"
         CONFIGURATION = "configuration", "Configuration"
         RAW_TRACE = "raw_trace", "Raw trace"
         OTHER = "other", "Other"

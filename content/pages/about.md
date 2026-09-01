@@ -1,6 +1,6 @@
 ---
 title: About Circuit Bench
-summary: What this scientific registry records, and what its numbers mean.
+summary: This page explains what the registry records and how it preserves the meaning of scientific quantities.
 ---
 
 Circuit Bench is a compact public reference work for evidence about quantum error-correction circuits and decoders. It is meant to make two claims equally easy to inspect: “this decoder performs well on these circuits” and “this circuit performs well under these decoders.”
@@ -8,7 +8,7 @@ Circuit Bench is a compact public reference work for evidence about quantum erro
 ## What the registry records
 
 - A decoder version states its preparation requirements, probability-output capability, algorithmic tags, and hyperparameter definitions.
-- A circuit revision fixes its noise model, tags, structural counts, Stim detector-error-model construction parameters, and immutable circuit, DEM, and manifest artifacts.
+- A circuit revision fixes its noise model, tags, structural counts, Stim detector-error-model construction parameters, and immutable circuit, DEM, and manifest files.
 - A result connects one exact decoder version to one exact circuit revision, evaluator release, and, when reported, one exact machine record.
 - A benchmark is a curated ordered set of required and optional circuit revisions. It does not erase the individual results from which an attempt is built.
 

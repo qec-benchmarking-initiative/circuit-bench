@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Claim {{ credit.display_name }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading"><h1>Claim {{ credit.display_name }}</h1></header>
+    <dl class="metadata-list">
+      <div><dt>Record type</dt><dd>{{ subject.kind }}</dd></div>
+      <div><dt>Scientific record</dt><dd>{{ subject.label }}</dd></div>
+      <div><dt>Uploader</dt><dd>{{ subject.uploader.display_name }}</dd></div>
+    </dl>
+    <form method="post" class="submission-form-sections">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <fieldset><legend>{{ form.attribution_mode.label }}</legend>{{ form.attribution_mode }}{{ form.attribution_mode.errors }}</fieldset>
+      <button type="submit">Submit claim</button>
+      <a class="table-action" href="{% url 'credits:search' %}">Cancel</a>
+    </form>
+  </div>
+{% endblock %}

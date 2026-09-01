@@ -1,9 +1,9 @@
 # Circuit Bench development plan
 
-Status: foundation, parallel waves A and B, the ResultRecord query integration,
-and comparison-interface wave C are complete for the 0.1 prototype. Submission
-and governance workflows remain deliberately deferred and were not part of
-this implementation pass.
+Status: foundation, read views, the ResultRecord query integration,
+comparison interfaces, and the first submission/governance waves are complete
+for the 0.1 prototype. Remaining governance limitations are listed below rather
+than being hidden behind the word “future”.
 
 ## Working rules
 
@@ -345,13 +345,13 @@ not label it “best” and do not mix it with scientific leaderboard ordering.
 User verification: an unfiltered overview shows labelled featured entries;
 searching replaces them with relevance-ranked matches.
 
-## Submission and governance waves — editing/withdrawal slice complete
+## Submission and governance waves — current 0.1 prototype
 
 The first write-side slice is implemented and specified in
 `docs/submission-governance-0.1.md`: decoder, circuit, result and machine entry
 through either a structured form or strict JSON; session-bound preview/back;
 searchable and paginated profile tables; a staff-only review work queue; private
-exact candidate-record views; transactional publication and moderation events;
+exact candidate-record views; transactional publication and record events;
 and deterministic workflow fixtures. Pending candidates can be edited in place.
 Published edits create immutable successors, withdrawal requires confirmation,
 and successors to withdrawn records enter `pending_reapproval`. The admin page
@@ -362,11 +362,28 @@ decoder/circuit/result records to admin review even when an admin submits them,
 while ordinary machines publish immediately after validation. Result references
 must already be published at submission and are rechecked at approval.
 
-Later slices remain separate: rejection/requested changes, credit claims,
-author approvals, tag and noise-model curation, benchmark
-approval, evaluator-summary ingestion, notification and account recovery. They
-modify immutable scientific state and should retain focused service boundaries
-and audit-event tests.
+The next governance slice adds implemented request-changes, rejection and
+resubmission transitions for decoder, circuit, result and machine candidates;
+name-only credit claims reviewed by the uploader or an admin; exact
+decoder-author approval of results; immediate custom-tag submission followed by
+separate admin curation; community noise-model review and separate official
+promotion; and reviewed benchmark revisions and benchmark attempts. These
+records now appear in shared profile and admin queues, with deterministic
+pending fixtures for local review.
+
+The integration hardening pass makes result reproduction status server-derived,
+prevents normal-create and cross-uploader lineage hijacking, gives every
+content-addressed file a durable per-account access grant, keeps candidate-only
+files private, locks publication references before revalidation, verifies a
+benchmark manifest against its ordered relational rows, and validates exact
+event causation. Published scientific rows and append-only events are not
+mutable through raw Django admin forms.
+
+Still incomplete: request-changes/edit/reject/withdraw workflows for the
+specialised noise-model and benchmark entry surfaces; an append-only event log
+for credit-claim decisions; evaluator-summary ingestion; notifications; and
+account recovery. Those limits are explicit prototype boundaries, not implied
+capabilities.
 
 ## Integration discipline for parallel agents
 

@@ -1,7 +1,7 @@
 ---
 title: A single query contract for tables and scripts
 slug: one-query-contract
-summary: The browser and API should describe the same filtered, ordered collection.
+summary: Browser and API requests use the same filtered and ordered collection.
 published: 2026-08-30
 author: Circuit Bench editors
 ---

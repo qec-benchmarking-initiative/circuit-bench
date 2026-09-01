@@ -1,6 +1,7 @@
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import include, path, reverse
+from django.utils import timezone
 
 from accounts.models import Account
 from registry.models import Artifact, SchemaRelease
@@ -58,7 +59,7 @@ def test_development_upload_inspection_and_deduplication(
         follow=True,
     )
     assert second_response.status_code == 200
-    assert b"Reused existing bytes" in second_response.content
+    assert b"Reused the existing file" in second_response.content
     assert Artifact.objects.count() == 1
     assert b"Integrity verified" in second_response.content
 
@@ -161,7 +162,8 @@ def test_schema_release_permanent_page_and_downloads_are_public(
         permanent_url=(
             "https://registry.example/artifacts/schema-releases/decoder/test-public/"
         ),
-        state="draft",
+        state=SchemaRelease.State.FROZEN,
+        frozen_at=timezone.now(),
     )
     settings.DEBUG = False
 

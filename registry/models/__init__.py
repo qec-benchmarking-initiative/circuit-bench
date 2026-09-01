@@ -1,4 +1,10 @@
-from .artifacts import Artifact, ArtifactAttachment, ExternalLink, SchemaRelease
+from .artifacts import (
+    Artifact,
+    ArtifactAttachment,
+    ArtifactGrant,
+    ExternalLink,
+    SchemaRelease,
+)
 from .attribution import Credit, CreditClaim
 from .benchmarks import (
     BenchmarkAttempt,
@@ -16,7 +22,7 @@ from .evaluations import (
     ResultScore,
     ScoreDefinition,
 )
-from .governance import ModerationEvent, RecordHistory
+from .governance import RecordEvent, RecordHistory
 from .tags import (
     CircuitRevisionCodeTag,
     CircuitRevisionExperimentTag,
@@ -27,6 +33,7 @@ from .tags import (
 __all__ = [
     "Artifact",
     "ArtifactAttachment",
+    "ArtifactGrant",
     "BenchmarkAttempt",
     "BenchmarkAttemptResult",
     "BenchmarkRevision",
@@ -41,7 +48,7 @@ __all__ = [
     "EvaluatorRelease",
     "ExternalLink",
     "Machine",
-    "ModerationEvent",
+    "RecordEvent",
     "RecordHistory",
     "NoiseModel",
     "Result",

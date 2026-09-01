@@ -77,7 +77,7 @@ the relational model. Scientific foreign keys and audit foreign keys use
 for application operations.
 
 The explicit nullable subject foreign keys in credits, attachments, links and
-moderation events remain explicit columns. They are not replaced by Django's
+record events remain explicit columns. They are not replaced by Django's
 generic foreign keys. `CheckConstraint` enforces exactly one subject where the
 relational model requires it, and per-subject conditional `UniqueConstraint`
 objects enforce visible ordering and uniqueness.

@@ -23,8 +23,9 @@ def test_machine_detail_is_a_scientific_record_with_reverse_results(client):
     assert "Physical evidence" in content
     assert "Clear Matcher" in content
     assert "Rotated surface-code memory d=5" in content
-    assert "2.3e-2 probability" in content
-    assert "0.15 probability" in content
+    assert "10<sup>7</sup>" in content
+    assert "probability" in content
+    assert "0.15 probability" in content
     assert "02300000000000000000" not in content
 
 

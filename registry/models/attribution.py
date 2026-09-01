@@ -94,6 +94,18 @@ class Credit(UUIDModel):
                 )
                 for subject in CREDIT_SUBJECT_FIELDS
             ],
+            *[
+                models.UniqueConstraint(
+                    fields=[subject, "account"],
+                    condition=(
+                        models.Q(**{f"{subject}__isnull": False})
+                        & models.Q(account__isnull=False)
+                        & models.Q(hidden_at__isnull=True)
+                    ),
+                    name=f"credit_{subject}_visible_account_uniq",
+                )
+                for subject in CREDIT_SUBJECT_FIELDS
+            ],
         ]
         indexes = [
             models.Index(

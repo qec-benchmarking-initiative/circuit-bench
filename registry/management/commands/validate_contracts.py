@@ -28,6 +28,52 @@ JSON_TYPES = {
     "string",
 }
 
+MODERATED_LIFECYCLE_STATES_0_1 = (
+    "pending_review",
+    "pending_reapproval",
+    "changes_requested",
+    "rejected",
+    "published",
+    "withdrawn",
+)
+MACHINE_LIFECYCLE_STATES_0_1 = (
+    "pending_reapproval",
+    "changes_requested",
+    "rejected",
+    "published",
+    "withdrawn",
+)
+BENCHMARK_ATTEMPT_LIFECYCLE_STATES_0_1 = (
+    "pending_review",
+    "published",
+    "withdrawn",
+)
+
+# These are the lifecycle states reachable through each frozen 0.1 workflow,
+# not every value accepted by the shared database model. In particular, the
+# application does not retain contributor-created draft records.
+LIFECYCLE_ENUMS_0_1 = {
+    ("decoder", "0.1"): {
+        "#/properties/state": MODERATED_LIFECYCLE_STATES_0_1,
+    },
+    ("noise_model", "0.1"): {
+        "#/properties/state": MODERATED_LIFECYCLE_STATES_0_1,
+    },
+    ("circuit", "0.1"): {
+        "#/properties/state": MODERATED_LIFECYCLE_STATES_0_1,
+    },
+    ("machine", "0.1"): {
+        "#/properties/state": MACHINE_LIFECYCLE_STATES_0_1,
+    },
+    ("result", "0.1"): {
+        "#/properties/state": MODERATED_LIFECYCLE_STATES_0_1,
+    },
+    ("benchmark", "0.1"): {
+        "#/properties/state": MODERATED_LIFECYCLE_STATES_0_1,
+        "#/$defs/attempt/properties/state": (BENCHMARK_ATTEMPT_LIFECYCLE_STATES_0_1),
+    },
+}
+
 
 class DuplicateJsonKeyError(ValueError):
     pass
@@ -166,6 +212,27 @@ def _validate_schema_document(
             )
 
     errors.extend(_validate_schema_node(document, document, relative, "#"))
+    errors.extend(_validate_lifecycle_enums(document, record_type, version, relative))
+    return errors
+
+
+def _validate_lifecycle_enums(
+    document: dict[str, Any],
+    record_type: str,
+    version: str,
+    relative: Path,
+) -> list[str]:
+    expected_by_pointer = LIFECYCLE_ENUMS_0_1.get((record_type, version), {})
+    errors = []
+    for pointer, expected in expected_by_pointer.items():
+        node = _resolve_pointer(document, pointer)
+        actual = node.get("enum") if isinstance(node, dict) else None
+        expected_values = list(expected)
+        if actual != expected_values:
+            errors.append(
+                f"{relative} {pointer}: lifecycle enum must be "
+                f"{expected_values!r}; found {actual!r}"
+            )
     return errors
 
 

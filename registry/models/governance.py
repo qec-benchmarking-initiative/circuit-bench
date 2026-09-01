@@ -3,7 +3,7 @@ from django.db import models
 
 from .common import UUIDModel, exactly_one_not_null
 
-MODERATION_SUBJECT_FIELDS = (
+RECORD_EVENT_SUBJECT_FIELDS = (
     "decoder_version",
     "noise_model",
     "circuit_revision",
@@ -11,6 +11,7 @@ MODERATION_SUBJECT_FIELDS = (
     "result",
     "tag",
     "benchmark_revision",
+    "benchmark_attempt",
     "evaluator_release",
 )
 
@@ -24,6 +25,7 @@ class RecordHistory(UUIDModel):
         RESULT = "result", "Result"
         TAG = "tag", "Tag"
         BENCHMARK = "benchmark", "Benchmark revision"
+        BENCHMARK_ATTEMPT = "benchmark_attempt", "Benchmark attempt"
         EVALUATOR = "evaluator", "Evaluator release"
 
     record_kind = models.CharField(max_length=30, choices=RecordKind)
@@ -42,6 +44,7 @@ class RecordHistory(UUIDModel):
                         "result",
                         "tag",
                         "benchmark",
+                        "benchmark_attempt",
                         "evaluator",
                     ]
                 ),
@@ -53,7 +56,7 @@ class RecordHistory(UUIDModel):
         return f"{self.get_record_kind_display()} history {self.id}"
 
 
-class ModerationEvent(UUIDModel):
+class RecordEvent(UUIDModel):
     class Action(models.TextChoices):
         SUBMITTED = "submitted", "Submitted"
         EDITED = "edited", "Edited"
@@ -94,7 +97,7 @@ class ModerationEvent(UUIDModel):
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="moderation_events",
+        related_name="record_events",
     )
     actor_system = models.CharField(max_length=100, null=True, blank=True)
     decoder_version = models.ForeignKey(
@@ -102,56 +105,63 @@ class ModerationEvent(UUIDModel):
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="moderation_events",
+        related_name="record_events",
     )
     noise_model = models.ForeignKey(
         "registry.NoiseModel",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="moderation_events",
+        related_name="record_events",
     )
     circuit_revision = models.ForeignKey(
         "registry.CircuitRevision",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="moderation_events",
+        related_name="record_events",
     )
     machine = models.ForeignKey(
         "registry.Machine",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="moderation_events",
+        related_name="record_events",
     )
     result = models.ForeignKey(
         "registry.Result",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="moderation_events",
+        related_name="record_events",
     )
     tag = models.ForeignKey(
         "registry.Tag",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="moderation_events",
+        related_name="record_events",
     )
     benchmark_revision = models.ForeignKey(
         "registry.BenchmarkRevision",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="moderation_events",
+        related_name="record_events",
+    )
+    benchmark_attempt = models.ForeignKey(
+        "registry.BenchmarkAttempt",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="record_events",
     )
     evaluator_release = models.ForeignKey(
         "registry.EvaluatorRelease",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="moderation_events",
+        related_name="record_events",
     )
     action = models.CharField(max_length=40, choices=Action)
     note = models.TextField()
@@ -173,7 +183,7 @@ class ModerationEvent(UUIDModel):
     occurred_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "moderation_event"
+        db_table = "record_event"
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(
@@ -194,11 +204,11 @@ class ModerationEvent(UUIDModel):
                         "admin_credit_claim_override",
                     ]
                 ),
-                name="moderation_event_action_valid",
+                name="record_event_action_valid",
             ),
             models.CheckConstraint(
-                condition=exactly_one_not_null(*MODERATION_SUBJECT_FIELDS),
-                name="moderation_event_one_subject",
+                condition=exactly_one_not_null(*RECORD_EVENT_SUBJECT_FIELDS),
+                name="record_event_one_subject",
             ),
             models.CheckConstraint(
                 condition=(
@@ -213,15 +223,15 @@ class ModerationEvent(UUIDModel):
                         actor_system__isnull=False,
                     )
                 ),
-                name="moderation_event_actor_valid",
+                name="record_event_actor_valid",
             ),
             models.CheckConstraint(
                 condition=models.Q(sequence__gte=1),
-                name="moderation_event_sequence_positive",
+                name="record_event_sequence_positive",
             ),
             models.UniqueConstraint(
                 fields=["history", "sequence"],
-                name="moderation_event_history_sequence_uniq",
+                name="record_event_history_sequence_uniq",
             ),
         ]
         indexes = [

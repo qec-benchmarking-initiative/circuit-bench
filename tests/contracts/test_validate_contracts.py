@@ -5,7 +5,12 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from registry.management.commands.validate_contracts import REQUIRED_CONTRACTS
+from registry.management.commands.validate_contracts import (
+    LIFECYCLE_ENUMS_0_1,
+    REQUIRED_CONTRACTS,
+    _resolve_pointer,
+    _validate_schema_document,
+)
 
 
 def test_checked_in_public_contracts_validate(capsys):
@@ -60,3 +65,36 @@ def test_validator_rejects_an_unresolved_local_reference(tmp_path: Path):
             schema_root=schema_root,
             definitions_root=definitions_root,
         )
+
+
+def test_checked_in_lifecycle_enums_match_the_declared_workflows():
+    project_root = Path(__file__).resolve().parents[2]
+
+    for (record_type, version), expected_by_pointer in LIFECYCLE_ENUMS_0_1.items():
+        schema_path = project_root / "schemas" / record_type / f"{version}.schema.json"
+        document = json.loads(schema_path.read_text(encoding="utf-8"))
+        for pointer, expected in expected_by_pointer.items():
+            assert _resolve_pointer(document, pointer)["enum"] == list(expected)
+
+
+@pytest.mark.parametrize(
+    ("record_type", "pointer", "unsupported_state"),
+    (
+        ("decoder", "#/properties/state", "draft"),
+        ("benchmark", "#/$defs/attempt/properties/state", "changes_requested"),
+    ),
+)
+def test_validator_rejects_lifecycle_enum_drift(
+    record_type, pointer, unsupported_state
+):
+    version = "0.1"
+    relative = Path(record_type) / f"{version}.schema.json"
+    schema_path = Path(__file__).resolve().parents[2] / "schemas" / relative
+    document = json.loads(schema_path.read_text(encoding="utf-8"))
+    _resolve_pointer(document, pointer)["enum"].append(unsupported_state)
+
+    errors = _validate_schema_document(document, record_type, version, relative)
+
+    assert any(
+        pointer in error and "lifecycle enum must be" in error for error in errors
+    )

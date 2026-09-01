@@ -34,8 +34,13 @@ def test_result_explorer_uses_all_three_reusable_filter_grids(client):
     )
     assert result_url in content
     assert "0.15 probability" in content
-    assert "2.5e7 ns" in content
+    assert 'data-raw="25000000"' in content
+    assert "10<sup>7</sup>" in content
     assert "02300000000000000000" not in content
+    assert content.index('class="explorer-query-status"') > content.index(
+        "data-autoquery-toggle"
+    )
+    assert "The current population contains 1 exact published result." in content
 
 
 def test_result_metrics_are_independent_sortable_columns(client):

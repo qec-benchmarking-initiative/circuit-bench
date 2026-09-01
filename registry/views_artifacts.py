@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from registry.forms_artifacts import DevelopmentArtifactUploadForm
 from registry.models import Artifact, SchemaRelease
+from registry.services.artifact_access import can_download_artifact
 from registry.services.artifacts import (
     ArtifactError,
     ArtifactIntegrityError,
@@ -51,7 +52,7 @@ def artifact_upload(request):
                 form.add_error("file", str(error))
             else:
                 outcome = (
-                    "Stored a new artifact." if created else "Reused existing bytes."
+                    "Stored a new file." if created else "Reused the existing file."
                 )
                 messages.success(request, outcome)
                 return redirect("artifacts:detail", artifact_id=artifact.id)
@@ -84,10 +85,19 @@ def artifact_detail(request, artifact_id):
 
 
 def schema_release_detail(request, record_type, version):
+    releases = SchemaRelease.objects.select_related(
+        "json_schema_artifact", "definitions_artifact"
+    )
+    if not (
+        request.user.is_authenticated
+        and request.user.is_active
+        and request.user.is_admin
+    ):
+        releases = releases.filter(
+            state__in=(SchemaRelease.State.FROZEN, SchemaRelease.State.RETIRED)
+        )
     release = get_object_or_404(
-        SchemaRelease.objects.select_related(
-            "json_schema_artifact", "definitions_artifact"
-        ),
+        releases,
         record_type=record_type,
         version=version,
     )
@@ -95,12 +105,17 @@ def schema_release_detail(request, record_type, version):
 
 
 def artifact_download(request, artifact_id):
-    artifact = get_object_or_404(Artifact, id=artifact_id)
+    artifact = get_object_or_404(
+        Artifact.objects.select_related("uploaded_by"), id=artifact_id
+    )
+    if not can_download_artifact(request.user, artifact):
+        # Do not disclose whether a private immutable file UUID exists.
+        raise Http404
     try:
         stored_file, verification = open_verified_artifact(artifact)
     except ArtifactIntegrityError as error:
         return HttpResponse(
-            f"Artifact integrity verification failed: {error}",
+            f"File integrity verification failed: {error}",
             status=409,
             content_type="text/plain; charset=utf-8",
         )
@@ -125,4 +140,4 @@ def _require_development() -> None:
 def _download_filename(filename: str) -> str:
     candidate = filename.replace("\\", "/").split("/")[-1]
     candidate = "".join(character for character in candidate if ord(character) >= 32)
-    return candidate.strip()[:255] or "artifact.bin"
+    return candidate.strip()[:255] or "file.bin"

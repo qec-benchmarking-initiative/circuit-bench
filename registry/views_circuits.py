@@ -464,9 +464,9 @@ def circuit_detail(request, slug):
                 ],
             },
             "previous_revision": (
-                circuit.previous_revision
-                if circuit.previous_revision
-                and circuit.previous_revision.state in {"published", "withdrawn"}
+                circuit.predecessor
+                if circuit.predecessor
+                and circuit.predecessor.state in {"published", "withdrawn"}
                 else None
             ),
             "algorithm_filter_tags": algorithm_filter_tags,

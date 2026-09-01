@@ -142,21 +142,32 @@ def result_cell_map(
                 else None
             ),
         },
-        "shots": {"key": "shots", "value": result.shots_total, "numeric": True},
+        "shots": {
+            "key": "shots",
+            "value": result.shots_total,
+            "numeric": True,
+            "number_profile": "count",
+        },
         "score_ler_upper_95_at_5pct_acceptance_v0_1": {
             "key": "score_ler_upper_95_at_5pct_acceptance_v0_1",
-            "value": _format_metric(ler, "probability"),
+            "value": ler,
             "numeric": True,
+            "number_profile": "probability",
+            "unit": "probability",
         },
         "t_1000_ns": {
             "key": "t_1000_ns",
-            "value": _format_metric(result.t_1000_ns, "ns"),
+            "value": result.t_1000_ns,
             "numeric": True,
+            "number_profile": "duration",
+            "unit": "ns",
         },
         "score_brier_loss_upper_95_v0_1": {
             "key": "score_brier_loss_upper_95_v0_1",
-            "value": _format_metric(brier, "probability"),
+            "value": brier,
             "numeric": True,
+            "number_profile": "probability",
+            "unit": "probability",
         },
         "scores": {"key": "scores", "value": scores},
         "reproduction": {
@@ -180,9 +191,3 @@ def _metric_value(result, public_field_name):
         ):
             return score.value
     return None
-
-
-def _format_metric(value, unit):
-    if value is None:
-        return None
-    return f"{format_scientific_value(value)} {unit}"

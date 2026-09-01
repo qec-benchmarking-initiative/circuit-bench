@@ -7,17 +7,25 @@
     <header class="page-heading submission-heading">
       <p class="eyebrow">Write-side registry</p>
       <h1>Submit data</h1>
-      <p>Enter the same scientific record through a structured form or JSON, inspect an exact preview, then submit it under the current approval policy.</p>
     </header>
     <div class="submission-kind-grid">
       {% for card in submission_cards %}
         <section class="submission-kind">
           <h2>{{ card.spec.label|title }}</h2>
-          <p>{{ card.spec.summary }}</p>
-          <p class="submission-policy"><strong>Policy 0.1:</strong> {{ card.decision.explanation }}</p>
+          {% include "components/submission_policy_bar.html" with policy=card.policy only %}
           <p><a class="button" href="{% url 'submissions:create' kind=card.kind %}">Submit {{ card.spec.label }}</a></p>
         </section>
       {% endfor %}
+      <section class="submission-kind">
+        <h2>Benchmark</h2>
+        <p><a class="button" href="{% url 'benchmark-submissions:create' %}">Submit benchmark revision</a></p>
+        <p><a class="table-action" href="{% url 'benchmark-submissions:attempt-create' %}">Submit benchmark attempt</a></p>
+      </section>
+      <section class="submission-kind">
+        <h2>Taxonomy</h2>
+        <p><a class="button" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a></p>
+        <p><a class="table-action" href="{% url 'taxonomy:tag-create' %}">Create custom tag</a></p>
+      </section>
     </div>
   </div>
 {% endblock %}

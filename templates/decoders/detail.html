@@ -60,7 +60,7 @@
 
     {% if decoder.display_external_links or decoder.display_artifact_attachments %}
       <section class="record-section">
-        <h2>Links and supporting artifacts</h2>
+        <h2>Links and supporting files</h2>
         <ul>
           {% for link in decoder.display_external_links %}
             <li><a href="{{ link.url }}">{{ link.label|default:link.get_kind_display }}</a> — {{ link.get_kind_display }}</li>
@@ -94,7 +94,7 @@
             </ul>
           {% endif %}
         {% else %}
-          {{ credit.display_name }}
+          {{ credit.display_name }}{% if user.is_authenticated %} · <a class="table-action" href="{% url 'credits:claim' credit_id=credit.id %}">Claim this credit</a>{% endif %}
         {% endif %}
       </li>
     {% empty %}
@@ -105,18 +105,17 @@
 
 {% block entity_related %}
   <h2>Results for this exact decoder version</h2>
-  <p class="muted">Filter the exact published results by circuit or execution hardware.</p>
   <form class="leaderboard-filter-form" method="get">
     {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
     {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
     {% for name, value in plot_control_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
     {% include "components/result_query.html" with query_id="decoder-result-odata" scripted_query_text=scripted_query_text last_valid_scripted_query=last_valid_scripted_query only %}
-    <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
     {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
     {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
     <div class="leaderboard-filter-actions">
       {% include "components/filters/query_actions.html" with show_reset=result_filters_active reset_url=result_reset_url reset_label="Reset filters" only %}
     </div>
+    <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
   </form>
   <div class="collection-results" aria-live="polite">
     {% include "components/result_comparison.html" with result_plot=result_plot only %}

@@ -26,13 +26,20 @@ from registry.models import (
     ScoreDefinition,
     Tag,
 )
+from registry.models.common import (
+    EDITABLE_CANDIDATE_STATES,
+    PROFILE_PENDING_STATES,
+    REVIEW_QUEUE_STATES,
+    LifecycleState,
+)
 from registry.services.artifacts import ArtifactError, store_uploaded_artifact
 from registry.services.submissions import (
-    LINEAGE_FIELD_BY_KIND,
+    LINEAGE_INPUT_FIELD_BY_KIND,
     MODEL_BY_KIND,
     SubmissionStateError,
     SubmissionValidationError,
     approve_submission,
+    candidate_lineage_is_locked,
     create_submission,
     create_successor_submission,
     record_label,
@@ -44,14 +51,21 @@ from registry.services.submissions import (
 )
 from registry.submission_collections import (
     SORT_CHOICES,
+    collect_specialized_submission_rows,
     collect_submission_rows,
     normalise_collection_controls,
+    sort_submission_rows,
 )
 from registry.submission_form_layout import (
     ARTIFACT_FIELDS,
     submission_form_sections,
 )
-from registry.submission_policy import SubmissionKind, approval_decision
+from registry.submission_policy import (
+    ENABLED_SUBMISSION_KINDS,
+    SubmissionKind,
+    approval_decision,
+    approval_process,
+)
 from registry.submission_presenters import (
     preview_sections,
     stored_record_rows,
@@ -73,7 +87,14 @@ def submission_hub(request):
     cards = []
     for kind, spec in SUBMISSION_SPECS.items():
         decision = approval_decision(kind, request.user)
-        cards.append({"kind": kind.value, "spec": spec, "decision": decision})
+        cards.append(
+            {
+                "kind": kind.value,
+                "spec": spec,
+                "decision": decision,
+                "policy": approval_process(kind),
+            }
+        )
     return render(request, "submissions/hub.html", {"submission_cards": cards})
 
 
@@ -89,8 +110,11 @@ def submission_create(request, kind):
 def submission_edit(request, kind, record_id):
     kind = _kind_or_404(kind)
     record = _manageable_record(request, kind, record_id)
-    if record.state not in {"pending_review", "pending_reapproval"}:
-        raise PermissionDenied("Only pending candidates can be edited in place.")
+    if record.state not in EDITABLE_CANDIDATE_STATES:
+        raise PermissionDenied(
+            "Only pending candidates or candidates with requested changes can be "
+            "edited in place."
+        )
     return _submission_editor(request, kind, operation="edit", record=record)
 
 
@@ -123,10 +147,15 @@ def _submission_editor(request, kind, *, operation, record=None):
 
     validation_record = record if operation == "edit" else None
     allow_withdrawn_lineage = operation == "successor" and record.state == "withdrawn"
-    initial = submission_initial(kind, initial_payload)
+    structured_initial_payload = initial_payload.copy()
+    if not restored and operation in {"create", "successor"}:
+        for field_name in ARTIFACT_FIELDS:
+            structured_initial_payload[field_name] = None
+    initial = submission_initial(kind, structured_initial_payload)
     form_options = {
         "record": validation_record,
         "allow_withdrawn_lineage": allow_withdrawn_lineage,
+        "actor": request.user,
     }
     structured_form = submission_form(kind, initial=initial, **form_options)
     _lock_lineage_field(structured_form, kind, operation, record)
@@ -171,6 +200,7 @@ def _submission_editor(request, kind, *, operation, record=None):
                         payload,
                         record=validation_record,
                         allow_withdrawn_lineage=allow_withdrawn_lineage,
+                        actor=request.user,
                     )
                 except SubmissionValidationError as error:
                     structured_form.add_error(None, str(error))
@@ -200,6 +230,7 @@ def _submission_editor(request, kind, *, operation, record=None):
                         parsed,
                         record=validation_record,
                         allow_withdrawn_lineage=allow_withdrawn_lineage,
+                        actor=request.user,
                     )
                 except SubmissionValidationError as error:
                     json_error = str(error)
@@ -238,24 +269,8 @@ def _submission_editor(request, kind, *, operation, record=None):
             "revision_control": _revision_control(
                 kind, operation, record, revision_mode
             ),
-            "inherits_artifacts": bool(
-                operation == "successor"
-                and any(
-                    initial_payload.get(field_name)
-                    for field_name in ARTIFACT_FIELDS.intersection(
-                        structured_form.fields
-                    )
-                )
-            ),
-            "policy_explanation": (
-                f"This exact candidate remains {record.get_state_display().lower()} "
-                "after the edit."
-                if operation == "edit"
-                else approval_decision(
-                    kind,
-                    request.user,
-                    reapproval=allow_withdrawn_lineage,
-                ).explanation
+            "policy_statement": approval_process(
+                kind, reapproval=allow_withdrawn_lineage
             ),
         },
     )
@@ -303,6 +318,7 @@ def submission_preview(request, preview_id):
                 preview["payload"],
                 record=record if operation == "edit" else None,
                 allow_withdrawn_lineage=reapproval,
+                actor=request.user,
             ),
             "payload_json": json.dumps(preview["payload"], indent=2, sort_keys=True),
             "operation": operation,
@@ -312,6 +328,7 @@ def submission_preview(request, preview_id):
             "revision_control": _revision_control(
                 kind, operation, record, revision_mode
             ),
+            "policy_statement": approval_process(kind, reapproval=reapproval),
             "back_url": _preview_back_url(kind, preview_id, operation, record),
         },
     )
@@ -374,7 +391,7 @@ def profile(request):
     pending_states = (
         [controls["pending_state"]]
         if controls["pending_state"]
-        else ["pending_review", "pending_reapproval"]
+        else PROFILE_PENDING_STATES
     )
     pending = collect_submission_rows(
         states=pending_states,
@@ -384,8 +401,22 @@ def profile(request):
         kind_filter=controls["kind"],
         sort=controls["sort"],
     )
+    pending = sort_submission_rows(
+        [
+            *pending,
+            *collect_specialized_submission_rows(
+                states=pending_states,
+                actor=request.user,
+                owner=request.user,
+                query=controls["query"],
+                kind_filter=controls["kind"],
+                sort=controls["sort"],
+            ),
+        ],
+        controls["sort"],
+    )
     published_sections = []
-    for kind in SubmissionKind:
+    for kind in ENABLED_SUBMISSION_KINDS:
         if controls["kind"] and controls["kind"] != kind.value:
             continue
         rows = collect_submission_rows(
@@ -411,6 +442,28 @@ def profile(request):
         kind_filter=controls["kind"],
         sort=controls["sort"],
     )
+    withdrawn = sort_submission_rows(
+        [
+            *withdrawn,
+            *collect_specialized_submission_rows(
+                states=["withdrawn"],
+                actor=request.user,
+                owner=request.user,
+                query=controls["query"],
+                kind_filter=controls["kind"],
+                sort=controls["sort"],
+            ),
+        ],
+        controls["sort"],
+    )
+    rejected = collect_submission_rows(
+        states=["rejected"],
+        actor=request.user,
+        owner=request.user,
+        query=controls["query"],
+        kind_filter=controls["kind"],
+        sort=controls["sort"],
+    )
     return render(
         request,
         "submissions/profile.html",
@@ -419,9 +472,11 @@ def profile(request):
             "sort_choices": SORT_CHOICES,
             "sort_links": _sort_links(request, controls["sort"]),
             "kind_choices": _kind_choices(),
+            "pending_state_choices": _pending_state_choices(PROFILE_PENDING_STATES),
             "pending": _page_context(request, pending, "pending_page"),
             "published_sections": published_sections,
             "withdrawn": _page_context(request, withdrawn, "withdrawn_page"),
+            "rejected": _page_context(request, rejected, "rejected_page"),
         },
     )
 
@@ -448,10 +503,9 @@ def submission_record(request, kind, record_id):
             "record_rows": stored_record_rows(kind, record),
             "public_url": record_url(kind, record),
             "can_approve": (
-                request.user.is_admin
-                and record.state in {"pending_review", "pending_reapproval"}
+                request.user.is_admin and record.state in REVIEW_QUEUE_STATES
             ),
-            "can_edit": record.state in {"pending_review", "pending_reapproval"},
+            "can_edit": record.state in EDITABLE_CANDIDATE_STATES,
             "can_create_successor": record.state in {"published", "withdrawn"},
             "can_withdraw": record.state == "published",
         },
@@ -463,11 +517,13 @@ def submission_record(request, kind, record_id):
 def review_dashboard(request):
     if not request.user.is_admin:
         raise PermissionDenied
-    controls = normalise_collection_controls(request)
+    controls = normalise_collection_controls(
+        request, pending_states=REVIEW_QUEUE_STATES
+    )
     pending_states = (
         [controls["pending_state"]]
         if controls["pending_state"]
-        else ["pending_review", "pending_reapproval"]
+        else REVIEW_QUEUE_STATES
     )
     pending = collect_submission_rows(
         states=pending_states,
@@ -477,6 +533,20 @@ def review_dashboard(request):
         kind_filter=controls["kind"],
         sort=controls["sort"],
     )
+    pending = sort_submission_rows(
+        [
+            *pending,
+            *collect_specialized_submission_rows(
+                states=pending_states,
+                actor=request.user,
+                admin=True,
+                query=controls["query"],
+                kind_filter=controls["kind"],
+                sort=controls["sort"],
+            ),
+        ],
+        controls["sort"],
+    )
     recently_withdrawn = collect_submission_rows(
         states=["withdrawn"],
         actor=request.user,
@@ -484,6 +554,21 @@ def review_dashboard(request):
         kind_filter=controls["kind"],
         sort="-withdrawn",
         withdrawn_since=timezone.now() - timedelta(days=7),
+    )
+    recently_withdrawn = sort_submission_rows(
+        [
+            *recently_withdrawn,
+            *collect_specialized_submission_rows(
+                states=["withdrawn"],
+                actor=request.user,
+                admin=True,
+                query=controls["query"],
+                kind_filter=controls["kind"],
+                sort=controls["sort"],
+                withdrawn_since=timezone.now() - timedelta(days=7),
+            ),
+        ],
+        controls["sort"],
     )
     return render(
         request,
@@ -493,6 +578,7 @@ def review_dashboard(request):
             "sort_choices": SORT_CHOICES,
             "sort_links": _sort_links(request, controls["sort"]),
             "kind_choices": _kind_choices(),
+            "pending_state_choices": _pending_state_choices(REVIEW_QUEUE_STATES),
             "pending": _page_context(request, pending, "pending_page"),
             "recently_withdrawn": _page_context(
                 request, recently_withdrawn, "withdrawn_page"
@@ -558,7 +644,10 @@ def submission_withdraw(request, kind, record_id):
 
 def _kind_or_404(raw: str) -> SubmissionKind:
     try:
-        return SubmissionKind(raw)
+        kind = SubmissionKind(raw)
+        if kind not in ENABLED_SUBMISSION_KINDS:
+            raise ValueError
+        return kind
     except ValueError as error:
         raise Http404("Unknown submission kind") from error
 
@@ -636,23 +725,35 @@ def _manageable_record(request, kind, record_id):
 
 
 def _force_lineage(kind, record, operation, payload):
-    locked = operation == "successor" or (
-        operation == "edit" and record.state == "pending_reapproval"
+    locked = operation in {"create", "successor"} or (
+        operation == "edit" and candidate_lineage_is_locked(kind, record)
     )
     if not locked:
         return payload
     payload = dict(payload)
-    payload[LINEAGE_FIELD_BY_KIND[kind]] = str(record.id)
+    if operation == "create":
+        lineage_id = None
+    elif operation == "successor":
+        lineage_id = record.id
+    else:
+        lineage_id = record.predecessor_id
+    payload[LINEAGE_INPUT_FIELD_BY_KIND[kind]] = (
+        str(lineage_id) if lineage_id is not None else None
+    )
     return payload
 
 
 def _lock_lineage_field(form, kind, operation, record):
-    if record is None:
-        return
-    if operation == "successor" or (
-        operation == "edit" and record.state == "pending_reapproval"
+    if operation == "create":
+        field = form.fields[LINEAGE_INPUT_FIELD_BY_KIND[kind]]
+        field.disabled = True
+        field.help_text = (
+            "Use the Revise action on an existing record to create a successor."
+        )
+    elif operation == "successor" or (
+        operation == "edit" and candidate_lineage_is_locked(kind, record)
     ):
-        field = form.fields[LINEAGE_FIELD_BY_KIND[kind]]
+        field = form.fields[LINEAGE_INPUT_FIELD_BY_KIND[kind]]
         field.disabled = True
         field.help_text = "Fixed by the immutable predecessor relationship."
 
@@ -723,8 +824,17 @@ def _preview_back_url(kind, preview_id, operation, record):
 
 def _kind_choices():
     return [
-        (kind.value, get_submission_spec(kind).label.title()) for kind in SubmissionKind
+        (kind.value, get_submission_spec(kind).label.title())
+        for kind in ENABLED_SUBMISSION_KINDS
+    ] + [
+        ("noise_model", "Noise model"),
+        ("benchmark", "Benchmark revision"),
+        ("benchmark_attempt", "Benchmark attempt"),
     ]
+
+
+def _pending_state_choices(states):
+    return [(state, LifecycleState(state).label) for state in states]
 
 
 def _page_context(request, rows, parameter, *, per_page=25):
@@ -889,7 +999,6 @@ def _example_payload(kind: SubmissionKind) -> dict:
         "software_environment": None,
         "t_1000_ns": None,
         "supersedes_result": None,
-        "reproduction_status": "independent_reproduction",
         "scores": [
             {
                 "score_definition": str(definition.id) if definition else missing,
