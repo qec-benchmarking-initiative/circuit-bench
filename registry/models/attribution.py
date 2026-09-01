@@ -99,8 +99,7 @@ class Credit(UUIDModel):
             models.Index(
                 fields=["account"],
                 condition=(
-                    models.Q(account__isnull=False)
-                    & models.Q(hidden_at__isnull=True)
+                    models.Q(account__isnull=False) & models.Q(hidden_at__isnull=True)
                 ),
                 name="idx_credit_account",
             )

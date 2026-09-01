@@ -11,6 +11,11 @@
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
+    {% if is_staging %}
+      <div class="staging-banner" role="status">
+        Staging installation · synthetic data · not a permanent scientific record
+      </div>
+    {% endif %}
     <header class="site-header">
       <a class="site-name" href="{% url 'pages:home' %}">Circuit Bench</a>
       <nav aria-label="Primary navigation">

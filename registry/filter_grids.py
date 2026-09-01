@@ -130,9 +130,7 @@ def related_records_cell(
         "plural_label": picker["plural_label"],
         "selected_records": selected_records,
         "display_value": display_value,
-        "selection_label": ", ".join(
-            record["label"] for record in selected_records
-        )
+        "selection_label": ", ".join(record["label"] for record in selected_records)
         or "Any",
         "filtered": bool(selected_records),
     }

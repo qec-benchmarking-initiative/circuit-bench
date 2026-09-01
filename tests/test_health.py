@@ -8,4 +8,3 @@ def test_health_checks_postgresql(client):
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "database": "ok"}
-

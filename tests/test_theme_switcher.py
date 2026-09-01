@@ -12,9 +12,10 @@ def test_shared_shell_exposes_the_seven_theme_mouse_control(client):
     assert 'aria-hidden="true"' in content
     assert content.count("data-theme-swatch=") == 7
     assert "selected values shown in green" not in content
-    assert "<button" not in content.split('class="theme-switcher"', 1)[1].split(
-        "</div>", 1
-    )[0]
+    assert (
+        "<button"
+        not in content.split('class="theme-switcher"', 1)[1].split("</div>", 1)[0]
+    )
 
 
 def test_two_theme_palettes_are_dark_modes():

@@ -66,9 +66,7 @@ def test_command_loads_paired_contract_as_idempotent_draft(
 
 
 @pytest.mark.django_db
-def test_command_refuses_to_repoint_an_existing_release(
-    settings, tmp_path, uploader
-):
+def test_command_refuses_to_repoint_an_existing_release(settings, tmp_path, uploader):
     settings.MEDIA_ROOT = tmp_path / "media"
     schema_root, definitions_root, schema_path = write_contract(tmp_path)
     options = {

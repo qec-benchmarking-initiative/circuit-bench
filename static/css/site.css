@@ -44,6 +44,17 @@ body {
   line-height: 1.42;
 }
 
+.staging-banner {
+  padding: 0.22rem 0.7rem;
+  border-bottom: 1px solid var(--warning);
+  color: var(--ink);
+  background: var(--warning-soft);
+  font: 700 0.76rem/1.3 var(--font-interface);
+  letter-spacing: 0.025em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 a {
   color: var(--accent);
   text-underline-offset: 0.16em;

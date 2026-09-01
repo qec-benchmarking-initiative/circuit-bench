@@ -333,8 +333,7 @@ class Result(UUIDModel, PublishedLifecycleModel):
             models.CheckConstraint(
                 condition=models.Q(
                     failure_probability_shots__lte=(
-                        models.F("successful_shots")
-                        + models.F("logical_failure_shots")
+                        models.F("successful_shots") + models.F("logical_failure_shots")
                     )
                 ),
                 name="result_probability_shots_valid",
@@ -342,8 +341,7 @@ class Result(UUIDModel, PublishedLifecycleModel):
             models.CheckConstraint(
                 condition=models.Q(
                     latency_shots__lte=(
-                        models.F("successful_shots")
-                        + models.F("logical_failure_shots")
+                        models.F("successful_shots") + models.F("logical_failure_shots")
                     )
                 ),
                 name="result_latency_shots_valid",
@@ -356,8 +354,7 @@ class Result(UUIDModel, PublishedLifecycleModel):
                 name="result_preparation_duration_nonnegative",
             ),
             models.CheckConstraint(
-                condition=models.Q(t_1000_ns__isnull=True)
-                | models.Q(t_1000_ns__gt=0),
+                condition=models.Q(t_1000_ns__isnull=True) | models.Q(t_1000_ns__gt=0),
                 name="result_t_1000_positive",
             ),
             models.CheckConstraint(

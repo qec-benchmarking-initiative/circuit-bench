@@ -40,8 +40,7 @@ def provider_identity(social_account: SocialAccount) -> ProviderIdentity:
         identifier = extra_data.get("orcid-identifier") or {}
         public_identifier = str(identifier.get("path") or subject)
         profile_url = str(
-            identifier.get("uri")
-            or f"https://orcid.org/{quote(public_identifier)}"
+            identifier.get("uri") or f"https://orcid.org/{quote(public_identifier)}"
         )
     else:
         raise IdentityConflict(

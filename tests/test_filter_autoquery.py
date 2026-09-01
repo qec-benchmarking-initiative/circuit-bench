@@ -30,4 +30,4 @@ def test_filter_forms_share_autoquery_controls(client, route_name, route_args):
     assert content.count("data-autoquery-toggle") == 1
     assert content.count("data-filter-apply") == 1
     assert 'data-manual-label="Apply filters"' in content
-    assert '/static/js/filter-query.js' in content
+    assert "/static/js/filter-query.js" in content

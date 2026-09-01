@@ -8,8 +8,10 @@ class Command(BaseCommand):
     help = "Add a larger synthetic result population for local plot development."
 
     def handle(self, *args, **options):
-        if not settings.DEBUG:
-            raise CommandError("seed_plot_demo is available only with DEBUG=True")
+        if not (settings.DEBUG or settings.ALLOW_DEMO_SEED):
+            raise CommandError(
+                "seed_plot_demo requires DEBUG=True or ALLOW_DEMO_SEED=True"
+            )
 
         counts = seed_plot_demo_data()
         rendered = ", ".join(f"{key}={value}" for key, value in counts.items())

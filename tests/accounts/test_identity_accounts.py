@@ -79,12 +79,10 @@ def test_login_page_has_plain_post_controls_for_both_providers(client):
     assert "Continue with GitHub" in response.content.decode()
     assert "Continue with ORCID" in response.content.decode()
     assert (
-        f'action="{reverse("github_login")}?process=login"'
-        in response.content.decode()
+        f'action="{reverse("github_login")}?process=login"' in response.content.decode()
     )
     assert (
-        f'action="{reverse("orcid_login")}?process=login"'
-        in response.content.decode()
+        f'action="{reverse("orcid_login")}?process=login"' in response.content.decode()
     )
     assert response.content.decode().count('method="post"') == 2
     assert 'type="password"' not in response.content.decode().casefold()
@@ -113,7 +111,7 @@ def test_identity_list_shows_public_identity_and_missing_provider(client):
 
     assert response.status_code == 200
     assert "<title>Settings · Circuit Bench</title>" in content
-    assert '<h1>Settings</h1>' in content
+    assert "<h1>Settings</h1>" in content
     assert '<h2 id="identities-heading">Sign-in identities</h2>' in content
     assert 'href="/profile/">Profile: Ada Decoder</a>' in content
     assert 'class="account-link active" href="/accounts/">Settings</a>' in content

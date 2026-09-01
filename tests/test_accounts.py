@@ -17,4 +17,3 @@ def test_direct_password_assignment_is_replaced_by_unusable_marker():
     account.save()
 
     assert account.has_usable_password() is False
-

@@ -1,0 +1,63 @@
+services:
+  - type: web
+    name: circuit-bench-staging
+    runtime: python
+    branch: staging
+    plan: free
+    region: frankfurt
+    buildCommand: ./scripts/render-build.sh
+    startCommand: ./scripts/render-start.sh
+    healthCheckPath: /health/
+    autoDeployTrigger: checksPass
+    initialDeployHook: python manage.py seed_staging
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: circuit-bench-staging-db
+          property: connectionString
+      - key: DEPLOYMENT_ENVIRONMENT
+        value: staging
+      - key: DJANGO_SECURE_HSTS_SECONDS
+        value: "3600"
+      - key: ALLOW_DEMO_SEED
+        value: "true"
+      - key: ARTIFACT_STORAGE_BACKEND
+        value: r2
+      - key: R2_BUCKET_NAME
+        value: circuit-bench
+      - key: R2_ENDPOINT_URL
+        value: https://63b9cf4fbc03f05e1dc6c4e33c421d0a.r2.cloudflarestorage.com
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_REGION
+        value: auto
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: ORCID_CLIENT_ID
+        sync: false
+      - key: ORCID_CLIENT_SECRET
+        sync: false
+      - key: ORCID_BASE_DOMAIN
+        value: sandbox.orcid.org
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: GUNICORN_THREADS
+        value: "4"
+
+databases:
+  - name: circuit-bench-staging-db
+    plan: 0.1c-256mb
+    region: frankfurt
+    databaseName: circuit_bench_staging
+    user: circuit_bench
+    postgresMajorVersion: "17"
+    diskSizeGB: 1
+    ipAllowList: []

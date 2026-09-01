@@ -8,8 +8,10 @@ class Command(BaseCommand):
     help = "Load deterministic records for submission and approval UI development"
 
     def handle(self, *args, **options):
-        if not settings.DEBUG:
-            raise CommandError("seed_submission_demo is available only with DEBUG=True")
+        if not (settings.DEBUG or settings.ALLOW_DEMO_SEED):
+            raise CommandError(
+                "seed_submission_demo requires DEBUG=True or ALLOW_DEMO_SEED=True"
+            )
         counts = seed_submission_demo_data()
         summary = ", ".join(f"{name}={count}" for name, count in counts.items())
         self.stdout.write(self.style.SUCCESS(f"Submission demo ready: {summary}"))

@@ -13,6 +13,7 @@ workflow are implemented.
 - [Submission and approval policy 0.1](docs/submission-governance-0.1.md)
 - [Physical Django model mapping](docs/physical-model-mapping.md)
 - [Deferred GitHub/ORCID application setup](docs/oauth-application-setup.md)
+- [Render/R2 staging deployment](docs/staging-deployment.md)
 - [Decoder record schema 0.1](schemas/decoder/0.1.schema.json)
 - [Decoder definitions 0.1](definitions/decoder/0.1.md)
 - [Result definitions 0.1 (incomplete working draft)](definitions/result/0.1.md)
@@ -92,3 +93,10 @@ uv run python manage.py check
 uv run python manage.py makemigrations --check --dry-run
 uv run pytest
 ```
+
+## Hosted staging
+
+The version-controlled Render Blueprint deploys the `staging` branch with a
+separate PostgreSQL database and Cloudflare R2 artifact storage. Follow the
+[staging deployment runbook](docs/staging-deployment.md); no deployment or
+provider credential belongs in this repository.

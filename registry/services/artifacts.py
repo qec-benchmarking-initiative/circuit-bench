@@ -4,11 +4,15 @@ import hashlib
 import os
 import re
 import tempfile
+import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import BinaryIO
 
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
 from django.db import IntegrityError, transaction
 
@@ -42,7 +46,7 @@ class UnsafeObjectKeyError(ArtifactIntegrityError):
 
 @dataclass(frozen=True)
 class ArtifactVerification:
-    path: Path
+    path: Path | None
     sha256: str
     byte_size: int
 
@@ -69,35 +73,76 @@ def local_artifact_path(artifact: Artifact) -> Path:
 
 
 def verify_artifact(artifact: Artifact) -> ArtifactVerification:
-    """Recompute local bytes and require exact agreement with stored metadata."""
+    """Recompute stored bytes and require exact agreement with database metadata."""
+    stored_file, verification = open_verified_artifact(artifact)
+    stored_file.close()
+    return verification
+
+
+def open_verified_artifact(
+    artifact: Artifact,
+) -> tuple[BinaryIO, ArtifactVerification]:
+    """Return a verified readable file; the caller is responsible for closing it."""
     if not SHA256_PATTERN.fullmatch(artifact.sha256):
         raise ArtifactIntegrityError("Stored SHA-256 metadata is malformed.")
     if artifact.byte_size < 0:
         raise ArtifactIntegrityError("Stored byte-size metadata is negative.")
 
-    path = local_artifact_path(artifact)
-    if not path.is_file():
+    if artifact.storage_backend == Artifact.StorageBackend.LOCAL:
+        path = local_artifact_path(artifact)
+        if not path.is_file():
+            raise ArtifactIntegrityError(
+                f"Artifact object is missing: {artifact.object_key}"
+            )
+        stored_file = path.open("rb")
+        try:
+            sha256, byte_size = _verify_file(
+                stored_file,
+                expected_sha256=artifact.sha256,
+                expected_byte_size=artifact.byte_size,
+            )
+        except Exception:
+            stored_file.close()
+            raise
+        stored_file.seek(0)
+        return stored_file, ArtifactVerification(path, sha256, byte_size)
+
+    if artifact.storage_backend != Artifact.StorageBackend.R2:
         raise ArtifactIntegrityError(
-            f"Artifact object is missing: {artifact.object_key}"
+            f"Artifact {artifact.id} uses an unsupported storage backend."
         )
 
-    digest = hashlib.sha256()
-    byte_size = 0
-    with path.open("rb") as stored_file:
-        for chunk in iter(lambda: stored_file.read(READ_CHUNK_SIZE), b""):
-            digest.update(chunk)
-            byte_size += len(chunk)
-
-    actual_sha256 = digest.hexdigest()
-    if actual_sha256 != artifact.sha256:
-        raise ArtifactIntegrityError(
-            f"SHA-256 mismatch: expected {artifact.sha256}, got {actual_sha256}."
+    temporary = tempfile.SpooledTemporaryFile(max_size=2 * 1024 * 1024)
+    try:
+        response = _r2_client().get_object(
+            Bucket=settings.R2_BUCKET_NAME,
+            Key=artifact.object_key,
         )
-    if byte_size != artifact.byte_size:
-        raise ArtifactIntegrityError(
-            f"Size mismatch: expected {artifact.byte_size}, got {byte_size}."
+        body = response["Body"]
+        try:
+            for chunk in iter(lambda: body.read(READ_CHUNK_SIZE), b""):
+                temporary.write(chunk)
+        finally:
+            body.close()
+        temporary.seek(0)
+        sha256, byte_size = _verify_file(
+            temporary,
+            expected_sha256=artifact.sha256,
+            expected_byte_size=artifact.byte_size,
         )
-    return ArtifactVerification(path, actual_sha256, byte_size)
+        temporary.seek(0)
+        return temporary, ArtifactVerification(None, sha256, byte_size)
+    except ArtifactIntegrityError:
+        temporary.close()
+        raise
+    except (ArtifactError, BotoCoreError, ClientError, KeyError, OSError) as error:
+        temporary.close()
+        raise ArtifactIntegrityError(
+            f"Artifact object could not be read: {artifact.object_key}"
+        ) from error
+    except Exception:
+        temporary.close()
+        raise
 
 
 def store_uploaded_artifact(
@@ -157,8 +202,9 @@ def store_artifact_chunks(
     expected_sha256: str | None = None,
     expected_byte_size: int | None = None,
     max_bytes: int = DEFAULT_MAX_UPLOAD_BYTES,
+    artifact_id: uuid.UUID | None = None,
 ) -> tuple[Artifact, bool]:
-    """Write one immutable local object, returning an existing row on duplicate."""
+    """Write one immutable object, returning an existing row on duplicate."""
     if max_bytes < 0:
         raise ValueError("max_bytes must be non-negative")
     if expected_sha256 is not None and not SHA256_PATTERN.fullmatch(expected_sha256):
@@ -170,8 +216,11 @@ def store_artifact_chunks(
 
     filename = _safe_filename(original_filename)
     content_type = _safe_media_type(media_type)
-    incoming_dir = Path(settings.MEDIA_ROOT).resolve() / ".incoming"
-    incoming_dir.mkdir(parents=True, exist_ok=True)
+    storage_backend = _configured_storage_backend()
+    incoming_dir: Path | None = None
+    if storage_backend == Artifact.StorageBackend.LOCAL:
+        incoming_dir = Path(settings.MEDIA_ROOT).resolve() / ".incoming"
+        incoming_dir.mkdir(parents=True, exist_ok=True)
 
     temporary_path: Path | None = None
     try:
@@ -206,21 +255,24 @@ def store_artifact_chunks(
             return existing, False
 
         object_key = f"artifacts/sha256/{sha256[:2]}/{sha256}"
-        destination = Path(settings.MEDIA_ROOT).resolve() / object_key
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            os.link(temporary_path, destination)
-        except FileExistsError:
-            _verify_path(destination, sha256, byte_size)
+        _persist_object(
+            temporary_path,
+            storage_backend=storage_backend,
+            object_key=object_key,
+            sha256=sha256,
+            byte_size=byte_size,
+            media_type=content_type,
+        )
 
         try:
             with transaction.atomic():
                 artifact = Artifact.objects.create(
+                    id=artifact_id or uuid.uuid4(),
                     sha256=sha256,
                     byte_size=byte_size,
                     media_type=content_type,
                     original_filename=filename,
-                    storage_backend=Artifact.StorageBackend.LOCAL,
+                    storage_backend=storage_backend,
                     object_key=object_key,
                     uploaded_by=uploaded_by,
                 )
@@ -271,6 +323,127 @@ def _verify_path(path: Path, expected_sha256: str, expected_size: int) -> None:
         raise ArtifactIntegrityError(
             "Existing content-addressed object does not match its object key."
         )
+
+
+def _verify_file(
+    stored_file: BinaryIO,
+    *,
+    expected_sha256: str,
+    expected_byte_size: int,
+) -> tuple[str, int]:
+    digest = hashlib.sha256()
+    byte_size = 0
+    for chunk in iter(lambda: stored_file.read(READ_CHUNK_SIZE), b""):
+        digest.update(chunk)
+        byte_size += len(chunk)
+    actual_sha256 = digest.hexdigest()
+    if actual_sha256 != expected_sha256:
+        raise ArtifactIntegrityError(
+            f"SHA-256 mismatch: expected {expected_sha256}, got {actual_sha256}."
+        )
+    if byte_size != expected_byte_size:
+        raise ArtifactIntegrityError(
+            f"Size mismatch: expected {expected_byte_size}, got {byte_size}."
+        )
+    return actual_sha256, byte_size
+
+
+def _configured_storage_backend() -> str:
+    backend = settings.ARTIFACT_STORAGE_BACKEND
+    if backend not in Artifact.StorageBackend.values:
+        raise ArtifactError(f"Unsupported artifact storage backend: {backend}")
+    return backend
+
+
+def _persist_object(
+    temporary_path: Path,
+    *,
+    storage_backend: str,
+    object_key: str,
+    sha256: str,
+    byte_size: int,
+    media_type: str,
+) -> None:
+    if storage_backend == Artifact.StorageBackend.LOCAL:
+        destination = Path(settings.MEDIA_ROOT).resolve() / object_key
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.link(temporary_path, destination)
+        except FileExistsError:
+            _verify_path(destination, sha256, byte_size)
+        return
+
+    try:
+        client = _r2_client()
+        if _verify_existing_r2_object(
+            client,
+            object_key=object_key,
+            sha256=sha256,
+            byte_size=byte_size,
+        ):
+            return
+        with temporary_path.open("rb") as source:
+            client.upload_fileobj(
+                source,
+                settings.R2_BUCKET_NAME,
+                object_key,
+                ExtraArgs={
+                    "ContentType": media_type,
+                    "Metadata": {"sha256": sha256, "byte-size": str(byte_size)},
+                },
+            )
+    except (BotoCoreError, ClientError, OSError) as error:
+        raise ArtifactError(
+            "Artifact could not be written to Cloudflare R2."
+        ) from error
+
+
+def _verify_existing_r2_object(client, *, object_key, sha256, byte_size) -> bool:
+    try:
+        response = client.get_object(
+            Bucket=settings.R2_BUCKET_NAME,
+            Key=object_key,
+        )
+    except ClientError as error:
+        error_code = str(error.response.get("Error", {}).get("Code", ""))
+        status = error.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        if error_code in {"404", "NoSuchKey", "NotFound"} or status == 404:
+            return False
+        raise
+
+    body = response["Body"]
+    try:
+        _verify_file(
+            body,
+            expected_sha256=sha256,
+            expected_byte_size=byte_size,
+        )
+    finally:
+        body.close()
+    return True
+
+
+@lru_cache(maxsize=1)
+def _r2_client():
+    required = {
+        "R2_BUCKET_NAME": settings.R2_BUCKET_NAME,
+        "R2_ENDPOINT_URL": settings.R2_ENDPOINT_URL,
+        "R2_ACCESS_KEY_ID": settings.R2_ACCESS_KEY_ID,
+        "R2_SECRET_ACCESS_KEY": settings.R2_SECRET_ACCESS_KEY,
+    }
+    missing = [name for name, value in required.items() if not value]
+    if missing:
+        raise ArtifactError(
+            "Cloudflare R2 is selected but required configuration is missing: "
+            + ", ".join(missing)
+        )
+    return boto3.client(
+        service_name="s3",
+        endpoint_url=settings.R2_ENDPOINT_URL,
+        aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+        region_name=settings.R2_REGION,
+    )
 
 
 def _safe_filename(filename: str | None) -> str:

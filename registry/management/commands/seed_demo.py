@@ -16,12 +16,11 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        if not settings.DEBUG:
-            raise CommandError("seed_demo is available only with DEBUG=True")
+        if not (settings.DEBUG or settings.ALLOW_DEMO_SEED):
+            raise CommandError("seed_demo requires DEBUG=True or ALLOW_DEMO_SEED=True")
         if options["reset"]:
             call_command("flush", interactive=False, verbosity=0)
 
         counts = seed_demo_data()
         summary = ", ".join(f"{name}={count}" for name, count in counts.items())
         self.stdout.write(self.style.SUCCESS(f"Demo data ready: {summary}"))
-

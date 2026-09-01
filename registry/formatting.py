@@ -23,9 +23,7 @@ def format_scientific_value(value: object, *, significant_digits: int = 4) -> st
     exponent = number.copy_abs().adjusted()
     if exponent <= -2 or exponent >= 4:
         mantissa = number.scaleb(-exponent)
-        rendered = _trim_decimal(
-            format(mantissa, f".{significant_digits - 1}f")
-        )
+        rendered = _trim_decimal(format(mantissa, f".{significant_digits - 1}f"))
         # Rounding 9.999... must not produce the awkward, non-normalized 10eN.
         if Decimal(rendered).copy_abs() >= 10:
             exponent += 1

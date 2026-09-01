@@ -9,17 +9,21 @@ def test_demo_data_is_complete_and_idempotent():
     first_counts = seed_demo_data()
     second_counts = seed_demo_data()
 
-    assert first_counts == second_counts == {
-        "accounts": 2,
-        "artifacts": 21,
-        "benchmarks": 1,
-        "circuits": 1,
-        "decoders": 2,
-        "noise_models": 2,
-        "results": 1,
-        "scores": 2,
-        "tags": 4,
-    }
+    assert (
+        first_counts
+        == second_counts
+        == {
+            "accounts": 2,
+            "artifacts": 21,
+            "benchmarks": 1,
+            "circuits": 1,
+            "decoders": 2,
+            "noise_models": 2,
+            "results": 1,
+            "scores": 2,
+            "tags": 4,
+        }
+    )
     decoder = DecoderVersion.objects.get(slug="clear-matcher-0-2")
     assert decoder.description is None
     assert decoder.previous_version.description.startswith("A compact matching")

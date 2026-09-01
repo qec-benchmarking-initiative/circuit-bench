@@ -23,4 +23,3 @@ class ExternalIdentityAdmin(admin.ModelAdmin):
     list_display = ("public_identifier", "provider", "account", "created_at")
     list_filter = ("provider",)
     search_fields = ("public_identifier", "provider_subject", "account__display_name")
-

@@ -17,15 +17,12 @@ def public_result_detail() -> QuerySet[Result]:
     remain outside this read model.
     """
 
-    scores = (
-        ResultScore.objects.select_related(
-            "score_definition",
-            "score_definition__evaluator_release",
-        )
-        .order_by(
-            "score_definition__display_order",
-            "score_definition__key",
-        )
+    scores = ResultScore.objects.select_related(
+        "score_definition",
+        "score_definition__evaluator_release",
+    ).order_by(
+        "score_definition__display_order",
+        "score_definition__key",
     )
     attachments = ArtifactAttachment.objects.select_related("artifact").order_by(
         "role",

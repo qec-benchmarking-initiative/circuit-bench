@@ -54,12 +54,8 @@ def _entity(result: Result) -> dict[str, object]:
 
 
 def _provenance(result: Result) -> list[dict[str, object]]:
-    decoder_url = _reverse_or_none(
-        "decoders:detail", slug=result.decoder_version.slug
-    )
-    circuit_url = _reverse_or_none(
-        "circuits:detail", slug=result.circuit_revision.slug
-    )
+    decoder_url = _reverse_or_none("decoders:detail", slug=result.decoder_version.slug)
+    circuit_url = _reverse_or_none("circuits:detail", slug=result.circuit_revision.slug)
     machine_url = (
         _reverse_or_none("machines:detail", slug=result.machine.slug)
         if result.machine

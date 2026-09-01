@@ -1,7 +1,5 @@
-import hashlib
 import uuid
 from decimal import Decimal
-from pathlib import Path
 
 from django.conf import settings
 from django.contrib.sites.models import Site
@@ -33,6 +31,7 @@ from registry.models import (
     ScoreDefinition,
     Tag,
 )
+from registry.services.artifacts import store_artifact_chunks
 from registry.services.histories import append_history_event, submission_snapshot
 
 DEMO_NAMESPACE = uuid.UUID("f333b191-09a8-4631-8775-3cb6fc51426e")
@@ -61,7 +60,7 @@ def seed_demo_data() -> dict[str, int]:
 
     Site.objects.update_or_create(
         id=settings.SITE_ID,
-        defaults={"domain": "127.0.0.1:8000", "name": "Circuit Bench local"},
+        defaults={"domain": settings.PUBLIC_SITE_HOST, "name": "Circuit Bench"},
     )
     published_at = timezone.now()
 
@@ -622,7 +621,7 @@ def _refresh_demo_presentation() -> None:
     """Keep presentation-only demo metadata current without rebuilding the data set."""
     Site.objects.update_or_create(
         id=settings.SITE_ID,
-        defaults={"domain": "127.0.0.1:8000", "name": "Circuit Bench local"},
+        defaults={"domain": settings.PUBLIC_SITE_HOST, "name": "Circuit Bench"},
     )
     colours = {
         "tag/algorithm/matching": "#315f7d",
@@ -710,19 +709,12 @@ def _artifact(
     media_type: str,
     content: bytes,
 ) -> Artifact:
-    digest = hashlib.sha256(content).hexdigest()
-    object_key = f"artifacts/{digest}"
-    destination = Path(settings.MEDIA_ROOT) / object_key
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if not destination.exists():
-        destination.write_bytes(content)
-    return Artifact.objects.create(
-        id=demo_id(f"artifact/{identity}"),
-        sha256=digest,
-        byte_size=len(content),
+    artifact, _created = store_artifact_chunks(
+        [content],
+        artifact_id=demo_id(f"artifact/{identity}"),
+        uploaded_by=uploader,
         media_type=media_type,
         original_filename=filename,
-        storage_backend="local",
-        object_key=object_key,
-        uploaded_by=uploader,
+        max_bytes=max(len(content), 1),
     )
+    return artifact

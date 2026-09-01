@@ -57,12 +57,10 @@ class DecoderBenchSocialAccountAdapter(DefaultSocialAccountAdapter):
     def validate_disconnect(self, account, accounts) -> None:
         # allauth checks its SocialAccount count first. Mirror the invariant in
         # the application's public identity projection as well.
-        has_other_identity = (
-            account.user.external_identities.exclude(
-                provider=account.provider,
-                provider_subject=account.uid,
-            ).exists()
-        )
+        has_other_identity = account.user.external_identities.exclude(
+            provider=account.provider,
+            provider_subject=account.uid,
+        ).exists()
         if not has_other_identity:
             raise self.validation_error("disconnect_last")
 

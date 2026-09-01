@@ -9,6 +9,7 @@ from registry.models import Artifact, SchemaRelease
 from registry.services.artifacts import (
     ArtifactError,
     ArtifactIntegrityError,
+    open_verified_artifact,
     store_uploaded_artifact,
     verify_artifact,
 )
@@ -50,9 +51,7 @@ def artifact_upload(request):
                 form.add_error("file", str(error))
             else:
                 outcome = (
-                    "Stored a new artifact."
-                    if created
-                    else "Reused existing bytes."
+                    "Stored a new artifact." if created else "Reused existing bytes."
                 )
                 messages.success(request, outcome)
                 return redirect("artifacts:detail", artifact_id=artifact.id)
@@ -98,7 +97,7 @@ def schema_release_detail(request, record_type, version):
 def artifact_download(request, artifact_id):
     artifact = get_object_or_404(Artifact, id=artifact_id)
     try:
-        verification = verify_artifact(artifact)
+        stored_file, verification = open_verified_artifact(artifact)
     except ArtifactIntegrityError as error:
         return HttpResponse(
             f"Artifact integrity verification failed: {error}",
@@ -107,7 +106,7 @@ def artifact_download(request, artifact_id):
         )
 
     response = FileResponse(
-        verification.path.open("rb"),
+        stored_file,
         as_attachment=True,
         filename=_download_filename(artifact.original_filename),
         content_type=artifact.media_type or "application/octet-stream",
