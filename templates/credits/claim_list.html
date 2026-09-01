@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Your credit claims · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <h1>Your credit claims</h1>
+      <p><a class="table-action" href="{% url 'credits:search' %}">Search name credits</a></p>
+    </header>
+    <div class="table-scroll" tabindex="0" aria-label="Your credit claims">
+      <table class="data-table">
+        <thead><tr><th scope="col">Credited name</th><th scope="col">Scientific record</th><th scope="col">Display choice</th><th scope="col">State</th><th scope="col">Reviewer</th><th scope="col">Action</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>{{ row.claim.name_credit.display_name }}</td>
+              <td>{{ row.subject.label }}</td>
+              <td>{% if row.claim.retain_name_credit %}Retain name and add account{% else %}Replace name with account{% endif %}</td>
+              <td><span class="status-badge status-{{ row.claim.state }}">{{ row.claim.get_state_display }}</span></td>
+              <td>{{ row.claim.reviewed_by|default:"—" }}</td>
+              <td>{% if row.claim.state == "pending" %}<form method="post" action="{% url 'credits:claim-cancel' claim_id=row.claim.id %}">{% csrf_token %}<button class="table-action table-action-danger" type="submit">Cancel</button></form>{% else %}<span class="null-value">—</span>{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td class="table-empty" colspan="6">You have not submitted any credit claims.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

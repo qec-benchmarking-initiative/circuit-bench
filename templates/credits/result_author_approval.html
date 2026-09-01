@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Decoder-author approval · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading"><h1>Decoder-author approval</h1></header>
+    <dl class="metadata-list">
+      <div><dt>Decoder version</dt><dd>{{ result.decoder_version }}</dd></div>
+      <div><dt>Circuit revision</dt><dd>{{ result.circuit_revision }}</dd></div>
+      <div><dt>Current decision</dt><dd>{% if current %}{{ current.get_action_display }}{% else %}No decision{% endif %}</dd></div>
+    </dl>
+    <form method="post" class="submission-form-sections">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <fieldset><legend>Decision</legend>{{ form.action }}{{ form.action.errors }}</fieldset>
+      <p>{{ form.note.label_tag }} {{ form.note }} {{ form.note.errors }}</p>
+      <button type="submit">Record decision</button>
+    </form>
+  </div>
+{% endblock %}
