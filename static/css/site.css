@@ -240,6 +240,22 @@ textarea {
   letter-spacing: -0.025em;
 }
 
+.home-title {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.home-title-logo {
+  width: clamp(4.5rem, 8vw, 7rem);
+  height: auto;
+  flex: none;
+}
+
+.home-title h1 {
+  margin: 0;
+}
+
 .hero > p:not(.eyebrow),
 .page-heading > p:not(.eyebrow) {
   max-width: 46rem;

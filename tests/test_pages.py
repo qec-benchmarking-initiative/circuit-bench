@@ -7,6 +7,8 @@ def test_home_page_uses_shared_shell(client):
     assert response.status_code == 200
     assert b"Circuit Bench" in response.content
     assert b"Search the registry" in response.content
+    assert b'class="home-title-logo"' in response.content
+    assert b"/static/images/circuit-bench-logo.svg" in response.content
     assert b"Copyright Stasiu Wolanski 2026" in response.content
     search_row = response.content.decode().split('<div class="input-row">', 1)[1]
     search_row = search_row.split("</div>", 1)[0]
