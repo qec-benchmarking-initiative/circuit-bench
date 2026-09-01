@@ -8,6 +8,9 @@ def test_home_page_uses_shared_shell(client):
     assert b"Circuit Bench" in response.content
     assert b"Search the registry" in response.content
     assert b"Copyright Stasiu Wolanski 2026" in response.content
+    search_row = response.content.decode().split('<div class="input-row">', 1)[1]
+    search_row = search_row.split("</div>", 1)[0]
+    assert search_row.index('id="site-search"') < search_row.index(">Search</button>")
 
 
 @pytest.mark.django_db
