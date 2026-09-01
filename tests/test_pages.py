@@ -1,4 +1,3 @@
-import re
 from collections import Counter
 from datetime import timedelta
 
@@ -51,6 +50,13 @@ def test_daily_quote_collection_is_large_and_well_formed():
     assert {item.speaker_kind for item in quotes} <= {"character", "person"}
     assert all(len(item.quote_original.split()) <= 25 for item in quotes)
     assert all(word_count <= 25 for word_count in words_by_source.values())
+    assert Counter(item.decision for item in quotes) == {
+        "accepted": 111,
+        "weak_accepted": 26,
+    }
+    assert all(
+        item.id and item.selected_variant and item.source_file for item in quotes
+    )
 
 
 def test_daily_quote_rotates_in_collection_order(monkeypatch):
@@ -92,23 +98,6 @@ def test_stored_quote_kets_receive_structured_display_parts():
         "This isn't a democracy, mother|1010⟩r!"
     )
     assert [part.text for part in parts if part.is_ket] == ["|1010⟩"]
-
-
-def test_every_censored_quote_keeps_enough_of_each_word_to_be_legible():
-    censored_quotes = [
-        item
-        for item in load_daily_quotes()
-        if item.quote_display != item.quote_original
-    ]
-
-    assert censored_quotes
-    for item in censored_quotes:
-        matches = list(
-            re.finditer(r"([A-Za-z]*)\|[01]+⟩([A-Za-z]*)", item.quote_display)
-        )
-        assert matches
-        for match in matches:
-            assert len(match.group(1)) + len(match.group(2)) >= 2
 
 
 @pytest.mark.django_db

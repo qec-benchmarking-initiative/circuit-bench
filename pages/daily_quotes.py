@@ -23,13 +23,18 @@ class QuoteDisplayPart:
 
 @dataclass(frozen=True, slots=True)
 class DailyQuote:
+    id: str
     quote_original: str
     quote_display: str
+    selected_variant: str
+    decision: str
     speaker: str
     speaker_kind: str
     work: str | None
     year: int | None
     source_url: str
+    source_note: str
+    source_file: str
 
     @property
     def display_parts(self) -> tuple[QuoteDisplayPart, ...]:
@@ -123,7 +128,15 @@ def _parse_quote(item, index: int) -> DailyQuote:
         raise DailyQuoteDataError(f"Quote {index} must be an object.")
 
     values = {}
-    for field in ("quote_original", "quote_display", "speaker", "source_url"):
+    for field in (
+        "id",
+        "quote_original",
+        "quote_display",
+        "selected_variant",
+        "speaker",
+        "source_url",
+        "source_file",
+    ):
         value = item.get(field)
         if not isinstance(value, str) or not value.strip():
             raise DailyQuoteDataError(f"Quote {index} has an invalid {field}.")
@@ -145,9 +158,19 @@ def _parse_quote(item, index: int) -> DailyQuote:
     if parsed_source.scheme not in {"http", "https"} or not parsed_source.netloc:
         raise DailyQuoteDataError(f"Quote {index} has an invalid source_url.")
 
+    decision = item.get("decision")
+    if decision not in {"accepted", "weak_accepted"}:
+        raise DailyQuoteDataError(f"Quote {index} has an invalid decision.")
+
+    source_note = item.get("source_note")
+    if not isinstance(source_note, str):
+        raise DailyQuoteDataError(f"Quote {index} has an invalid source_note.")
+
     return DailyQuote(
+        decision=decision,
         speaker_kind=speaker_kind,
         work=work.strip() if work else None,
         year=year,
+        source_note=source_note.strip(),
         **values,
     )
