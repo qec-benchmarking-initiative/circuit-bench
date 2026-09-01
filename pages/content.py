@@ -20,7 +20,17 @@ PAGE_FILES = {
     "submission-policy": "submission-policy.md",
 }
 
-_INLINE_PATTERN = re.compile(r"`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)")
+_INLINE_PATTERN = re.compile(
+    r"`(?P<code>[^`\n]+)`"
+    r"|\[\^(?P<footnote>[A-Za-z0-9][A-Za-z0-9_-]*)\]"
+    r"|\[(?P<label>[^\]\n]+)\]\((?P<url>[^)\n]+)\)"
+    r"|\*\*\*(?P<strong_emphasis>[^*\n]+)\*\*\*"
+    r"|\*\*(?P<strong>[^*\n]+)\*\*"
+    r"|(?<!\*)\*(?P<emphasis>[^*\n]+)\*(?!\*)"
+)
+_FOOTNOTE_DEFINITION = re.compile(
+    r"^\[\^(?P<identifier>[A-Za-z0-9][A-Za-z0-9_-]*)\]:\s*(?P<body>.*)$"
+)
 _ORDERED_ITEM = re.compile(r"^\s*\d+[.)]\s+(.+)$")
 _UNORDERED_ITEM = re.compile(r"^\s*[-*+]\s+(.+)$")
 _HEADING = re.compile(r"^(#{1,4})\s+(.+)$")
@@ -40,6 +50,65 @@ class MarkdownDocument:
     html: SafeString
     published: date | None = None
     author: str | None = None
+
+
+@dataclass
+class _FootnoteState:
+    definitions: dict[str, str]
+    order: list[str]
+    reference_ids: dict[str, list[str]]
+
+    @classmethod
+    def from_definitions(cls, definitions: dict[str, str]) -> _FootnoteState:
+        return cls(definitions=definitions, order=[], reference_ids={})
+
+    def reference(self, identifier: str) -> str:
+        if identifier not in self.definitions:
+            return html.escape(f"[^{identifier}]")
+        if identifier not in self.order:
+            self.order.append(identifier)
+        number = self.order.index(identifier) + 1
+        references = self.reference_ids.setdefault(identifier, [])
+        suffix = f"-{len(references) + 1}" if references else ""
+        reference_id = f"fnref-{identifier}{suffix}"
+        references.append(reference_id)
+        return (
+            f'<sup class="footnote-reference" id="{reference_id}">'
+            f'<a href="#fn-{identifier}" role="doc-noteref" '
+            f'aria-label="Reference {number}">[{number}]</a></sup>'
+        )
+
+    def render(self) -> str:
+        if not self.order:
+            return ""
+        output = [
+            '<section class="footnotes" role="doc-endnotes" '
+            'aria-labelledby="footnote-references">',
+            '<h2 id="footnote-references">References</h2>',
+            "<ol>",
+        ]
+        for number, identifier in enumerate(self.order, start=1):
+            backlinks = []
+            for occurrence, reference_id in enumerate(
+                self.reference_ids[identifier], start=1
+            ):
+                occurrence_label = (
+                    f", occurrence {occurrence}"
+                    if len(self.reference_ids[identifier]) > 1
+                    else ""
+                )
+                backlinks.append(
+                    f'<a class="footnote-backref" href="#{reference_id}" '
+                    f'aria-label="Back to reference {number}{occurrence_label}">↩</a>'
+                )
+            output.append(
+                f'<li id="fn-{identifier}" role="doc-endnote">'
+                f"{_inline(self.definitions[identifier])} "
+                f'<span class="footnote-backlinks">{" ".join(backlinks)}</span>'
+                "</li>"
+            )
+        output.extend(["</ol>", "</section>"])
+        return "\n".join(output)
 
 
 def get_page(slug: str) -> MarkdownDocument:
@@ -143,11 +212,14 @@ def render_markdown(source: str) -> SafeString:
     """Render a constrained Markdown subset after escaping all source text.
 
     Supported blocks are headings, paragraphs, flat ordered/unordered lists,
-    and fenced code.  Inline code and links are supported.  Raw HTML is always
-    displayed as text, and links are restricted to ordinary web/mail schemes
-    or local absolute/fragment references.
+    and fenced code. Inline code, emphasis, strong emphasis, links, and
+    single-line Markdown footnotes are supported. Raw HTML is always displayed
+    as text, and links are restricted to ordinary web/mail schemes or local
+    absolute/fragment references.
     """
 
+    source, definitions = _extract_footnote_definitions(source)
+    footnotes = _FootnoteState.from_definitions(definitions)
     output: list[str] = []
     paragraph: list[str] = []
     list_kind: str | None = None
@@ -158,7 +230,7 @@ def render_markdown(source: str) -> SafeString:
 
     def flush_paragraph() -> None:
         if paragraph:
-            output.append(f"<p>{_inline(' '.join(paragraph))}</p>")
+            output.append(f"<p>{_inline(' '.join(paragraph), footnotes)}</p>")
             paragraph.clear()
 
     def close_list() -> None:
@@ -207,7 +279,9 @@ def render_markdown(source: str) -> SafeString:
             occurrence = heading_ids.get(base_id, 0) + 1
             heading_ids[base_id] = occurrence
             identifier = base_id if occurrence == 1 else f"{base_id}-{occurrence}"
-            output.append(f'<h{level} id="{identifier}">{_inline(text)}</h{level}>')
+            output.append(
+                f'<h{level} id="{identifier}">{_inline(text, footnotes)}</h{level}>'
+            )
             continue
 
         unordered = _UNORDERED_ITEM.match(line)
@@ -220,7 +294,7 @@ def render_markdown(source: str) -> SafeString:
                 output.append(f"<{requested_kind}>")
                 list_kind = requested_kind
             item_text = (unordered or ordered).group(1)
-            output.append(f"<li>{_inline(item_text)}</li>")
+            output.append(f"<li>{_inline(item_text, footnotes)}</li>")
             continue
 
         close_list()
@@ -233,6 +307,9 @@ def render_markdown(source: str) -> SafeString:
         )
     flush_paragraph()
     close_list()
+    rendered_footnotes = footnotes.render()
+    if rendered_footnotes:
+        output.append(rendered_footnotes)
     return mark_safe("\n".join(output))
 
 
@@ -251,23 +328,71 @@ def _split_front_matter(source: str) -> tuple[dict[str, str], str]:
     raise ContentError("Content front matter has no closing --- line.")
 
 
-def _inline(source: str) -> str:
+def _inline(source: str, footnotes: _FootnoteState | None = None) -> str:
     pieces: list[str] = []
     cursor = 0
     for match in _INLINE_PATTERN.finditer(source):
         pieces.append(html.escape(source[cursor : match.start()]))
-        if match.group(1) is not None:
-            pieces.append(f"<code>{html.escape(match.group(1))}</code>")
-        else:
-            label = html.escape(match.group(2))
-            url = match.group(3).strip()
+        if match.group("code") is not None:
+            pieces.append(f"<code>{html.escape(match.group('code'))}</code>")
+        elif match.group("footnote") is not None:
+            identifier = match.group("footnote")
+            pieces.append(
+                footnotes.reference(identifier)
+                if footnotes is not None
+                else html.escape(match.group(0))
+            )
+        elif match.group("label") is not None:
+            label = _emphasis(match.group("label"))
+            url = match.group("url").strip()
             if _safe_url(url):
                 pieces.append(f'<a href="{html.escape(url, quote=True)}">{label}</a>')
             else:
                 pieces.append(label)
+        elif match.group("strong_emphasis") is not None:
+            pieces.append(
+                "<strong><em>"
+                f"{html.escape(match.group('strong_emphasis'))}"
+                "</em></strong>"
+            )
+        elif match.group("strong") is not None:
+            pieces.append(f"<strong>{html.escape(match.group('strong'))}</strong>")
+        else:
+            pieces.append(f"<em>{html.escape(match.group('emphasis'))}</em>")
         cursor = match.end()
     pieces.append(html.escape(source[cursor:]))
     return "".join(pieces)
+
+
+def _extract_footnote_definitions(source: str) -> tuple[str, dict[str, str]]:
+    """Remove footnote definitions while leaving fenced examples untouched."""
+
+    body: list[str] = []
+    definitions: dict[str, str] = {}
+    in_fence = False
+    for line in source.splitlines():
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            body.append(line)
+            continue
+        definition = None if in_fence else _FOOTNOTE_DEFINITION.match(line)
+        if definition is None:
+            body.append(line)
+            continue
+        identifier = definition.group("identifier")
+        if identifier in definitions:
+            raise ContentError(f"Duplicate footnote definition: {identifier}")
+        definitions[identifier] = definition.group("body").strip()
+    return "\n".join(body), definitions
+
+
+def _emphasis(source: str) -> str:
+    """Render emphasis in a link label without permitting nested links."""
+
+    escaped = html.escape(source)
+    escaped = re.sub(r"\*\*\*([^*]+)\*\*\*", r"<strong><em>\1</em></strong>", escaped)
+    escaped = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", escaped)
+    return re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", escaped)
 
 
 def _safe_url(url: str) -> bool:

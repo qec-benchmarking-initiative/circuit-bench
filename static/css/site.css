@@ -242,7 +242,7 @@ textarea {
 
 .hero {
   max-width: 58rem;
-  padding-block: 3.5rem;
+  padding: 3.5rem 0 5rem;
 }
 
 .hero h1,
@@ -351,6 +351,81 @@ textarea {
 
 .page-heading {
   margin-bottom: 2rem;
+}
+
+.static-page {
+  width: min(54rem, calc(100% - 2rem));
+}
+
+.static-page .page-heading,
+.static-page .prose-content {
+  max-width: 48rem;
+}
+
+.prose-content {
+  line-height: 1.58;
+}
+
+.prose-content p,
+.prose-content li {
+  max-width: 72ch;
+}
+
+.prose-content p {
+  margin-block: 0 0.9rem;
+}
+
+.prose-content h2,
+.prose-content h3,
+.prose-content h4 {
+  margin-block: 1.8rem 0.55rem;
+}
+
+.footnote-reference {
+  margin-left: 0.08em;
+  font: 700 0.72em/0 var(--font-interface);
+}
+
+.footnote-reference a {
+  text-decoration: none;
+}
+
+.footnotes {
+  margin-top: 2.5rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.prose-content .footnotes h2 {
+  margin: 0 0 0.55rem;
+  color: var(--ink);
+  font: 700 0.78rem/1.2 var(--font-interface);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.footnotes ol {
+  margin: 0;
+  padding-left: 1.55rem;
+}
+
+.footnotes li {
+  padding: 0.16rem 0 0.16rem 0.12rem;
+}
+
+.footnotes li:target {
+  background: var(--accent-soft);
+}
+
+.footnote-backlinks {
+  white-space: nowrap;
+}
+
+.footnote-backref {
+  margin-left: 0.28rem;
+  text-decoration: none;
 }
 
 .page-heading h1 {
