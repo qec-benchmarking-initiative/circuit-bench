@@ -22,6 +22,7 @@ def test_result_explorer_uses_all_three_reusable_filter_grids(client):
     assert 'id="result-circuit-filters"' in content
     assert 'id="result-machine-filters"' in content
     assert content.count('class="filter-grid"') == 3
+    assert "data-filter-grid open" not in content
     assert 'name="decoder_priors"' in content
     assert 'name="circuit_priors"' in content
     assert 'aria-label="Clear Prior preparation filter"' in content

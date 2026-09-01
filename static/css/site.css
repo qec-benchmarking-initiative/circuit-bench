@@ -269,6 +269,17 @@ textarea {
   font-weight: 700;
 }
 
+.site-search .input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+
+.site-search .input-row > button {
+  white-space: nowrap;
+}
+
 .page-shell {
   padding-top: 1.75rem;
 }
