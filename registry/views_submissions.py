@@ -26,6 +26,11 @@ from registry.models import (
     ScoreDefinition,
     Tag,
 )
+from registry.models.common import (
+    EDITABLE_CANDIDATE_STATES,
+    PROFILE_PENDING_STATES,
+    REVIEW_QUEUE_STATES,
+)
 from registry.services.artifacts import ArtifactError, store_uploaded_artifact
 from registry.services.submissions import (
     LINEAGE_FIELD_BY_KIND,
@@ -52,6 +57,7 @@ from registry.submission_form_layout import (
     submission_form_sections,
 )
 from registry.submission_policy import (
+    ENABLED_SUBMISSION_KINDS,
     SubmissionKind,
     approval_decision,
     approval_process,
@@ -100,8 +106,11 @@ def submission_create(request, kind):
 def submission_edit(request, kind, record_id):
     kind = _kind_or_404(kind)
     record = _manageable_record(request, kind, record_id)
-    if record.state not in {"pending_review", "pending_reapproval"}:
-        raise PermissionDenied("Only pending candidates can be edited in place.")
+    if record.state not in EDITABLE_CANDIDATE_STATES:
+        raise PermissionDenied(
+            "Only pending candidates or candidates with requested changes can be "
+            "edited in place."
+        )
     return _submission_editor(request, kind, operation="edit", record=record)
 
 
@@ -374,7 +383,7 @@ def profile(request):
     pending_states = (
         [controls["pending_state"]]
         if controls["pending_state"]
-        else ["pending_review", "pending_reapproval"]
+        else PROFILE_PENDING_STATES
     )
     pending = collect_submission_rows(
         states=pending_states,
@@ -385,7 +394,7 @@ def profile(request):
         sort=controls["sort"],
     )
     published_sections = []
-    for kind in SubmissionKind:
+    for kind in ENABLED_SUBMISSION_KINDS:
         if controls["kind"] and controls["kind"] != kind.value:
             continue
         rows = collect_submission_rows(
@@ -448,10 +457,9 @@ def submission_record(request, kind, record_id):
             "record_rows": stored_record_rows(kind, record),
             "public_url": record_url(kind, record),
             "can_approve": (
-                request.user.is_admin
-                and record.state in {"pending_review", "pending_reapproval"}
+                request.user.is_admin and record.state in REVIEW_QUEUE_STATES
             ),
-            "can_edit": record.state in {"pending_review", "pending_reapproval"},
+            "can_edit": record.state in EDITABLE_CANDIDATE_STATES,
             "can_create_successor": record.state in {"published", "withdrawn"},
             "can_withdraw": record.state == "published",
         },
@@ -467,7 +475,7 @@ def review_dashboard(request):
     pending_states = (
         [controls["pending_state"]]
         if controls["pending_state"]
-        else ["pending_review", "pending_reapproval"]
+        else REVIEW_QUEUE_STATES
     )
     pending = collect_submission_rows(
         states=pending_states,
@@ -558,7 +566,10 @@ def submission_withdraw(request, kind, record_id):
 
 def _kind_or_404(raw: str) -> SubmissionKind:
     try:
-        return SubmissionKind(raw)
+        kind = SubmissionKind(raw)
+        if kind not in ENABLED_SUBMISSION_KINDS:
+            raise ValueError
+        return kind
     except ValueError as error:
         raise Http404("Unknown submission kind") from error
 
@@ -723,7 +734,8 @@ def _preview_back_url(kind, preview_id, operation, record):
 
 def _kind_choices():
     return [
-        (kind.value, get_submission_spec(kind).label.title()) for kind in SubmissionKind
+        (kind.value, get_submission_spec(kind).label.title())
+        for kind in ENABLED_SUBMISSION_KINDS
     ]
 
 

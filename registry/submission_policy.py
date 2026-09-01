@@ -17,6 +17,21 @@ class SubmissionKind(StrEnum):
     CIRCUIT = "circuit"
     RESULT = "result"
     MACHINE = "machine"
+    TAG = "tag"
+    NOISE_MODEL = "noise_model"
+    BENCHMARK = "benchmark"
+    BENCHMARK_ATTEMPT = "benchmark_attempt"
+
+
+# Only complete, routed submission kinds are exposed by the shared workflow.
+# Parallel slices can use the remaining enum values without making incomplete
+# forms or URLs reachable before the integration pass.
+ENABLED_SUBMISSION_KINDS = (
+    SubmissionKind.DECODER,
+    SubmissionKind.CIRCUIT,
+    SubmissionKind.RESULT,
+    SubmissionKind.MACHINE,
+)
 
 
 class ApprovalRoute(StrEnum):
@@ -68,6 +83,10 @@ def approval_process(
         SubmissionKind.DECODER: "decoder",
         SubmissionKind.CIRCUIT: "circuit",
         SubmissionKind.RESULT: "result",
+        SubmissionKind.TAG: "tag",
+        SubmissionKind.NOISE_MODEL: "noise-model",
+        SubmissionKind.BENCHMARK: "benchmark",
+        SubmissionKind.BENCHMARK_ATTEMPT: "benchmark-attempt",
     }[kind]
     return {
         "version": POLICY_VERSION,
@@ -124,7 +143,7 @@ def approval_decision(
         route=ApprovalRoute.ADMIN_REVIEW,
         initial_state=LifecycleState.PENDING_REVIEW,
         explanation=(
-            "Decoder, circuit, and result submissions require admin approval under "
+            "Every enabled record kind except machines requires admin approval under "
             "policy 0.1, including submissions made by admins."
         ),
     )

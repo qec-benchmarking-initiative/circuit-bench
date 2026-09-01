@@ -25,6 +25,7 @@ from registry.models import (
     ResultScore,
     SchemaRelease,
 )
+from registry.models.common import EDITABLE_CANDIDATE_STATES, REVIEW_QUEUE_STATES
 from registry.services.histories import (
     append_history_event,
     history_for_new_record,
@@ -35,16 +36,15 @@ from registry.submission_policy import (
     SubmissionKind,
     approval_decision,
 )
+from registry.submission_registry import (
+    LINEAGE_FIELD_BY_KIND,
+    MODEL_BY_KIND,
+    submission_registration,
+)
 from registry.submission_specs import get_submission_schema
 
-PENDING_STATES = ("pending_review", "pending_reapproval")
+PENDING_STATES = REVIEW_QUEUE_STATES
 PUBLIC_HISTORY_STATES = ("published", "withdrawn")
-LINEAGE_FIELD_BY_KIND = {
-    SubmissionKind.DECODER: "previous_version",
-    SubmissionKind.CIRCUIT: "previous_revision",
-    SubmissionKind.RESULT: "supersedes_result",
-    SubmissionKind.MACHINE: "supersedes_machine",
-}
 
 
 class SubmissionError(Exception):
@@ -66,14 +66,6 @@ class SubmissionOutcome:
     kind: SubmissionKind
     record: object
     decision: ApprovalDecision
-
-
-MODEL_BY_KIND = {
-    SubmissionKind.DECODER: DecoderVersion,
-    SubmissionKind.CIRCUIT: CircuitRevision,
-    SubmissionKind.RESULT: Result,
-    SubmissionKind.MACHINE: Machine,
-}
 
 
 def validate_submission_payload(
@@ -345,8 +337,11 @@ def update_pending_submission(
 
     kind = SubmissionKind(kind)
     record = _managed_record(kind, record_id, actor=actor)
-    if record.state not in PENDING_STATES:
-        raise SubmissionStateError("Only pending submissions can be edited in place.")
+    if record.state not in EDITABLE_CANDIDATE_STATES:
+        raise SubmissionStateError(
+            "Only pending submissions or submissions with requested changes can "
+            "be edited in place."
+        )
 
     if record.state == "pending_reapproval":
         payload = dict(payload)
@@ -511,13 +506,9 @@ def record_url(kind: SubmissionKind | str, record) -> str | None:
     kind = SubmissionKind(kind)
     if record.state not in PUBLIC_HISTORY_STATES:
         return None
-    if kind is SubmissionKind.DECODER:
-        return reverse("decoders:detail", args=[record.slug])
-    if kind is SubmissionKind.CIRCUIT:
-        return reverse("circuits:detail", args=[record.slug])
-    if kind is SubmissionKind.RESULT:
-        return reverse("results:detail", args=[record.id])
-    return reverse("machines:detail", args=[record.slug])
+    registration = submission_registration(kind)
+    argument = getattr(record, registration.public_argument_attribute)
+    return reverse(registration.public_route_name, args=[argument])
 
 
 def record_label(kind: SubmissionKind | str, record) -> str:
@@ -545,11 +536,7 @@ def _managed_record(kind: SubmissionKind, record_id, *, actor: Account):
 
 
 def _assert_successor_available(kind, source, *, excluding=None):
-    reverse_name = {
-        SubmissionKind.DECODER: "next_version",
-        SubmissionKind.CIRCUIT: "next_revision",
-        SubmissionKind.RESULT: "superseded_by",
-    }.get(kind)
+    reverse_name = submission_registration(kind).reverse_lineage_relation
     if reverse_name is None:
         return
     try:

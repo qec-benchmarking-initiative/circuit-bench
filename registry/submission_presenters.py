@@ -6,6 +6,7 @@ from django import forms
 from django.urls import reverse
 
 from registry.forms_submissions import submission_form_for_payload
+from registry.models.common import EDITABLE_CANDIDATE_STATES, REVIEW_QUEUE_STATES
 from registry.services.submissions import record_label, record_url
 from registry.submission_form_layout import LAYOUTS
 from registry.submission_policy import SubmissionKind
@@ -31,14 +32,13 @@ def submission_rows(kind: SubmissionKind | str, records, *, admin=False, actor=N
             "created_at": record.created_at,
             "withdrawn_at": record.withdrawn_at,
             "approved_by": _approval_label(record),
-            "can_approve": admin
-            and record.state in {"pending_review", "pending_reapproval"},
+            "can_approve": admin and record.state in REVIEW_QUEUE_STATES,
             "actions": [],
         }
         can_manage = actor is not None and (
             record.submitted_by_id == actor.id or actor.is_admin
         )
-        if can_manage and record.state in {"pending_review", "pending_reapproval"}:
+        if can_manage and record.state in EDITABLE_CANDIDATE_STATES:
             row["actions"].append(
                 {
                     "label": "Edit",

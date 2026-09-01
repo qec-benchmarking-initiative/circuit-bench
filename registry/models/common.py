@@ -7,8 +7,18 @@ class LifecycleState(models.TextChoices):
     DRAFT = "draft", "Draft"
     PENDING_REVIEW = "pending_review", "Pending review"
     PENDING_REAPPROVAL = "pending_reapproval", "Pending reapproval"
+    CHANGES_REQUESTED = "changes_requested", "Changes requested"
+    REJECTED = "rejected", "Rejected"
     PUBLISHED = "published", "Published"
     WITHDRAWN = "withdrawn", "Withdrawn"
+
+
+REVIEW_QUEUE_STATES = (
+    LifecycleState.PENDING_REVIEW,
+    LifecycleState.PENDING_REAPPROVAL,
+)
+EDITABLE_CANDIDATE_STATES = (*REVIEW_QUEUE_STATES, LifecycleState.CHANGES_REQUESTED)
+PROFILE_PENDING_STATES = EDITABLE_CANDIDATE_STATES
 
 
 class PublishedLifecycleModel(models.Model):
@@ -31,6 +41,8 @@ class PublishedLifecycleModel(models.Model):
                             LifecycleState.DRAFT,
                             LifecycleState.PENDING_REVIEW,
                             LifecycleState.PENDING_REAPPROVAL,
+                            LifecycleState.CHANGES_REQUESTED,
+                            LifecycleState.REJECTED,
                         ],
                         published_at__isnull=True,
                         withdrawn_at__isnull=True,

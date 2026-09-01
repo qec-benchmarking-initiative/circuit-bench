@@ -10,8 +10,9 @@ duplicated generic-submission table.
 from django.db.models import Prefetch, Q
 
 from registry.models import ModerationEvent
+from registry.models.common import PROFILE_PENDING_STATES
 from registry.services.submissions import MODEL_BY_KIND
-from registry.submission_policy import SubmissionKind
+from registry.submission_policy import ENABLED_SUBMISSION_KINDS, SubmissionKind
 from registry.submission_presenters import submission_rows
 
 SORT_CHOICES = (
@@ -39,7 +40,7 @@ def collect_submission_rows(
 ):
     sort = sort if sort in VALID_SORTS else "-submitted"
     rows = []
-    for kind in SubmissionKind:
+    for kind in ENABLED_SUBMISSION_KINDS:
         if kind_filter and kind.value != kind_filter:
             continue
         queryset = MODEL_BY_KIND[kind].objects.filter(state__in=states)
@@ -65,10 +66,10 @@ def collect_submission_rows(
 
 def normalise_collection_controls(request):
     kind = request.GET.get("kind", "").strip()
-    if kind not in {"", *(item.value for item in SubmissionKind)}:
+    if kind not in {"", *(item.value for item in ENABLED_SUBMISSION_KINDS)}:
         kind = ""
     state = request.GET.get("pending_state", "").strip()
-    if state not in {"", "pending_review", "pending_reapproval"}:
+    if state not in {"", *PROFILE_PENDING_STATES}:
         state = ""
     sort = request.GET.get("sort", "-submitted").strip()
     if sort not in VALID_SORTS:

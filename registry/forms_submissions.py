@@ -50,7 +50,8 @@ class BaseSubmissionForm(forms.Form):
     @property
     def lineage_states(self):
         if self.allow_withdrawn_lineage or (
-            self.record is not None and self.record.state == "pending_reapproval"
+            self.record is not None
+            and self.record.state in {"pending_reapproval", "changes_requested"}
         ):
             return ["published", "withdrawn"]
         return ["published"]
