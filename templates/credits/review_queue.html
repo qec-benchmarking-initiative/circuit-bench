@@ -14,7 +14,7 @@
               <td>{{ row.claim.name_credit.display_name }}</td>
               <td>{{ row.claim.claimant_account.display_name }}</td>
               <td>{{ row.subject.kind }} · {{ row.subject.label }}</td>
-              <td>{{ row.claim.created_at }}</td>
+              <td>{{ row.claim.created_at|date:"Y-m-d H:i" }} UTC</td>
               <td><a class="table-action" href="{% url 'credits:claim-review' claim_id=row.claim.id %}">Review</a></td>
             </tr>
           {% empty %}

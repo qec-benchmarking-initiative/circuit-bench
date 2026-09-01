@@ -10,22 +10,13 @@
       <p><a href="{% url 'submissions:record' kind=kind record_id=record.id %}">{{ record_label }}</a> · {{ record.get_state_display }}</p>
     </header>
 
-    <form method="post" class="submission-form-sections">
+    {% if decision == "reject" %}<aside class="submission-policy-bar"><strong>Final decision:</strong> Rejection leaves this exact candidate private and read-only.</aside>{% endif %}
+    <form method="post" class="form-bar-shell">
       {% csrf_token %}
-      <section class="submission-form-section">
-        {% if decision == "reject" %}
-          <p>Rejection is final for this exact candidate. The record will remain private and read-only.</p>
-        {% else %}
-          <p>The uploader may edit this exact candidate and explicitly resubmit it for review.</p>
-        {% endif %}
-        {{ form.non_field_errors }}
-        <label for="{{ form.note.id_for_label }}"><strong>{{ form.note.label }}</strong></label>
-        {{ form.note.errors }}
-        {{ form.note }}
-      </section>
+      {% include "components/form_bar_list.html" with form=form only %}
       <div class="submission-actions">
-        <button class="table-action{% if decision == 'reject' %} table-action-danger{% endif %}" type="submit">{{ decision_label }}</button>
-        <a class="table-action" href="{% url 'submissions:record' kind=kind record_id=record.id %}">Cancel</a>
+        <button{% if decision == 'reject' %} class="button button-danger"{% endif %} type="submit">{{ decision_label }}</button>
+        <a class="button button-secondary" href="{% url 'submissions:record' kind=kind record_id=record.id %}">Cancel</a>
       </div>
     </form>
   </div>

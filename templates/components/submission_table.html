@@ -38,8 +38,10 @@
             </td>
           {% endif %}
           {% if show_actions %}
-            <td class="submission-row-actions">
-              {% for action in row.actions %}<a class="table-action{% if action.danger %} table-action-danger{% endif %}" href="{{ action.url }}">{{ action.label }}</a>{% empty %}<span class="null-value">—</span>{% endfor %}
+            <td>
+              <span class="submission-row-actions">
+                {% for action in row.actions %}<a class="table-action{% if action.danger %} table-action-danger{% endif %}" href="{{ action.url }}">{{ action.label }}</a>{% empty %}<span class="null-value">—</span>{% endfor %}
+              </span>
             </td>
           {% endif %}
         </tr>

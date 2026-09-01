@@ -10,12 +10,13 @@
       <div><dt>Scientific record</dt><dd>{{ subject.label }}</dd></div>
       <div><dt>Uploader</dt><dd>{{ subject.uploader.display_name }}</dd></div>
     </dl>
-    <form method="post" class="submission-form-sections">
+    <form method="post" class="form-bar-shell">
       {% csrf_token %}
-      {{ form.non_field_errors }}
-      <fieldset><legend>{{ form.attribution_mode.label }}</legend>{{ form.attribution_mode }}{{ form.attribution_mode.errors }}</fieldset>
-      <button type="submit">Submit claim</button>
-      <a class="table-action" href="{% url 'credits:search' %}">Cancel</a>
+      {% include "components/form_bar_list.html" with form=form only %}
+      <div class="submission-actions">
+        <button type="submit">Submit claim</button>
+        <a class="button button-secondary" href="{% url 'credits:search' %}">Cancel</a>
+      </div>
     </form>
   </div>
 {% endblock %}

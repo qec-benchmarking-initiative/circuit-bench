@@ -6,11 +6,12 @@
   <div class="page-shell submission-shell">
     <header class="page-heading submission-heading">
       <h1>Claim a credit</h1>
-      <p><a class="table-action" href="{% url 'credits:claims' %}">Your credit claims</a></p>
+      <p><a class="button button-secondary" href="{% url 'credits:claims' %}">Your credit claims</a></p>
     </header>
 
-    <form method="get" class="submission-collection-controls">
-      {{ form.q.label_tag }} {{ form.q }}
+    <form method="get" class="compact-search-form">
+      <label for="{{ form.q.id_for_label }}">{{ form.q.label }}</label>
+      {{ form.q }}
       <button type="submit">Search</button>
     </form>
 

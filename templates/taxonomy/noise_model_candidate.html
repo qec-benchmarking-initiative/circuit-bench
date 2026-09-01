@@ -13,7 +13,7 @@
       <div><dt>Randomises priors</dt><dd>{{ noise_model.randomises_priors|yesno:"Yes,No" }}</dd></div>
     </dl>
     {% if can_approve %}
-      <form method="post" action="{% url 'taxonomy:noise-model-approve' noise_model.id %}">{% csrf_token %}<button class="table-action" type="submit">Approve and publish</button></form>
+      <form class="submission-actions" method="post" action="{% url 'taxonomy:noise-model-approve' noise_model.id %}">{% csrf_token %}<button type="submit">Approve and publish</button></form>
     {% endif %}
   </div>
 {% endblock %}

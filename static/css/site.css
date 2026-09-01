@@ -1021,7 +1021,29 @@ code {
 .profile-header-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.45rem;
+}
+
+.page-action-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.submission-kind-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.submission-kind-actions .button {
+  min-height: 1.8rem;
+  padding: 0.22rem 0.5rem;
+  font-size: 0.75rem;
 }
 
 .submission-policy {
@@ -1386,6 +1408,7 @@ code {
 .submission-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.65rem;
 }
@@ -1654,6 +1677,159 @@ code {
   white-space: nowrap;
 }
 
+.compact-search-form {
+  display: grid;
+  grid-template-columns: minmax(9rem, 0.22fr) minmax(18rem, 1fr) auto;
+  align-items: stretch;
+  border-top: 1px solid var(--line-strong);
+  border-left: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+
+.compact-search-form > label,
+.compact-search-form > input,
+.compact-search-form > button {
+  min-width: 0;
+  min-height: 2.35rem;
+  margin: 0;
+  border-top: 0;
+  border-left: 0;
+  border-radius: 0;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.compact-search-form > label {
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  font: 700 0.74rem/1.2 var(--font-interface);
+}
+
+.compact-search-form > input {
+  width: 100%;
+  padding-inline: 0.5rem;
+}
+
+.compact-search-form > button {
+  padding-inline: 0.75rem;
+}
+
+.form-bar-list {
+  border-top: 1px solid var(--line-strong);
+  border-left: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+
+.form-bar-row {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.28fr) minmax(0, 1fr);
+}
+
+.form-bar-label,
+.form-bar-control {
+  min-width: 0;
+  padding: 0.5rem 0.55rem;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.form-bar-label {
+  background: var(--surface-muted);
+}
+
+.form-bar-label label {
+  display: block;
+  font: 700 0.75rem/1.25 var(--font-interface);
+}
+
+.form-bar-label p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font: 0.7rem/1.3 var(--font-interface);
+}
+
+.form-bar-control > input:not([type="checkbox"]):not([type="radio"]),
+.form-bar-control > select,
+.form-bar-control > textarea {
+  width: 100%;
+  border-radius: 0;
+}
+
+.form-bar-control > ul {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.form-bar-control > ul label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: 0.78rem/1.3 var(--font-interface);
+}
+
+.form-bar-control input[type="checkbox"],
+.form-bar-control input[type="radio"] {
+  width: 1rem;
+  min-height: 1rem;
+  margin: 0;
+}
+
+.form-bar-row-error .form-bar-label {
+  color: var(--danger);
+}
+
+.form-bar-shell {
+  max-width: 62rem;
+}
+
+.benchmark-manifest-field {
+  margin-top: 0.75rem;
+  padding: 0.55rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+
+.benchmark-manifest-field h2 {
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
+}
+
+.benchmark-recognition-form {
+  margin-top: 0.75rem;
+}
+
+.account-provider-actions {
+  padding: 0.55rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+
+.account-provider-actions form {
+  margin: 0;
+}
+
+.review-outcome {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-muted);
+  font: 0.78rem/1.4 var(--font-interface);
+}
+
+.review-outcome p {
+  margin: 0;
+}
+
+.review-outcome p + p {
+  margin-top: 0.25rem;
+}
+
 .data-table .table-action {
   min-height: 0;
   margin: 0;
@@ -1733,26 +1909,38 @@ code {
 
 .settings-provider-actions {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .settings-provider-actions form {
   margin: 0;
 }
 
-.settings-provider-actions .table-action {
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  color: var(--accent);
-  background: transparent;
-  font: 0.8rem/1.3 var(--font-interface);
-  text-decoration: underline;
-  text-underline-offset: 0.12em;
-}
-
 .data-table .table-action-danger {
   color: var(--danger);
+}
+
+.data-table .table-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.data-table .table-inline-form label {
+  min-width: 0;
+}
+
+.data-table .table-inline-form input,
+.data-table .table-inline-form select {
+  width: auto;
+  min-width: 7.5rem;
+  max-width: 15rem;
+  min-height: 1.65rem;
+  padding: 0.12rem 0.3rem;
+  border-radius: 0;
+  font-size: 0.74rem;
 }
 
 .submission-pagination {
@@ -3762,16 +3950,20 @@ code {
 .table-scroll {
   max-height: calc(100vh - 14rem);
   overflow: auto;
-  border: 0;
-  border-inline: 1px solid var(--line-strong);
-  border-bottom: 1px solid var(--line-strong);
+  border: 1px solid var(--line-strong);
   border-radius: 0;
   background: var(--surface);
+}
+
+.explorer-toolbar + .table-scroll {
+  border-top: 0;
 }
 
 .data-table {
   min-width: 100%;
   width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
   font: 0.84rem/1.25 var(--font-reference);
 }
 

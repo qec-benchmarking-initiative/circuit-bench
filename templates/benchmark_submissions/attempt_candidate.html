@@ -8,7 +8,7 @@
       <p class="eyebrow">Benchmark attempt</p>
       <h1>{{ attempt.decoder_version }} on {{ attempt.benchmark_revision }}</h1>
     </header>
-    <dl class="stacked-metadata compact-technical-metadata">
+    <dl class="metadata-list">
       <div><dt>Attempt UUID</dt><dd><code>{{ attempt.id }}</code></dd></div>
       <div><dt>State</dt><dd>{{ attempt.get_state_display }}</dd></div>
       <div><dt>Submitted by</dt><dd>{{ attempt.submitted_by.display_name }}</dd></div>
@@ -30,9 +30,9 @@
       </div>
     </section>
     {% if can_approve %}
-      <form method="post" action="{% url 'benchmark-submissions:attempt-approve' attempt.id %}">
+      <form class="submission-actions" method="post" action="{% url 'benchmark-submissions:attempt-approve' attempt.id %}">
         {% csrf_token %}
-        <button class="table-action" type="submit">Approve and publish</button>
+        <button type="submit">Approve and publish</button>
       </form>
     {% endif %}
   </div>

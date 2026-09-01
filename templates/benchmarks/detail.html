@@ -38,7 +38,7 @@
           <div><dt>Schema</dt><dd><a href="{% url 'artifacts:schema-release-detail' benchmark.schema_release.record_type benchmark.schema_release.version %}">{{ benchmark.schema_release.public_name }}</a></dd></div>
           <div><dt>Manifest</dt><dd><a href="{% url 'artifacts:download' benchmark.manifest_artifact.id %}">{{ benchmark.manifest_artifact.original_filename }}</a></dd></div>
           <div><dt>Revision UUID</dt><dd><code>{{ benchmark.id }}</code></dd></div>
-          <div><dt>Published</dt><dd>{{ benchmark.published_at }}</dd></div>
+          <div><dt>Published</dt><dd>{{ benchmark.published_at|date:"Y-m-d H:i" }} UTC</dd></div>
         </dl>
       </aside>
     </div>
@@ -72,7 +72,7 @@
     <section class="record-related" aria-labelledby="benchmark-attempts-heading">
       <h2 id="benchmark-attempts-heading">Published attempts</h2>
       <p>Attempts group existing circuit results. The site does not pool them or calculate an aggregate benchmark score.</p>
-      {% if request.user.is_authenticated %}<p><a class="table-action" href="{% url 'benchmark-submissions:attempt-create' %}?benchmark_revision={{ benchmark.id }}">Submit an attempt</a></p>{% endif %}
+      {% if request.user.is_authenticated %}<p><a class="button button-secondary button-compact" href="{% url 'benchmark-submissions:attempt-create' %}?benchmark_revision={{ benchmark.id }}">Submit an attempt</a></p>{% endif %}
       {% for summary in attempt_summaries %}
         <article class="record-section benchmark-attempt" id="attempt-{{ summary.attempt.id }}">
           <h3>{{ summary.attempt.decoder_version.name }} {{ summary.attempt.decoder_version.version }}</h3>

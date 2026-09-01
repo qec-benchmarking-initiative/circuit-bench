@@ -8,7 +8,7 @@
       <p class="eyebrow">Admin</p>
       <h1>Submission review</h1>
       <p><a href="{% url 'pages:static-reference' slug='submission-policy' %}">Submission and approval policy 0.1</a></p>
-      <p class="profile-header-actions"><a class="table-action" href="{% url 'benchmark-submissions:review' %}">Benchmark review</a> <a class="table-action" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a> <a class="table-action" href="{% url 'credits:review-queue' %}">Credit claims</a></p>
+      <p class="profile-header-actions"><a class="button button-secondary" href="{% url 'benchmark-submissions:review' %}">Benchmark review</a> <a class="button button-secondary" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a> <a class="button button-secondary" href="{% url 'credits:review-queue' %}">Credit claims</a></p>
     </header>
 
     <section class="daily-quote-schedule" id="daily-quote-schedule" aria-labelledby="daily-quote-schedule-heading">
@@ -58,7 +58,6 @@
 
     <section class="submission-table-section" id="recently-withdrawn">
       <h2>Recently withdrawn</h2>
-      <p>This table shows records withdrawn during the preceding seven days.</p>
       {% include "components/submission_table.html" with rows=recently_withdrawn.page.object_list show_kind=True show_submitter=True show_approver=True show_withdrawn=True table_label="Recently withdrawn records" empty_message="No records were withdrawn in the last seven days." csrf_token=csrf_token sort_links=sort_links only %}
       {% include "components/pagination.html" with page=recently_withdrawn.page page_prefix=recently_withdrawn.page_prefix page_parameter=recently_withdrawn.page_parameter label="Recently withdrawn" only %}
     </section>

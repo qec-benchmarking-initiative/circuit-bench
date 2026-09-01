@@ -3,18 +3,10 @@
 {% block title %}Identity not linked · Circuit Bench{% endblock %}
 
 {% block content %}
-  <section class="page-intro flow">
-    <p class="eyebrow">Account safety</p>
-    <h1>We could not link that identity</h1>
-    <p class="lede">
-      The provider details overlap an existing account. Circuit Bench will not
-      guess that two accounts belong to the same person.
-    </p>
-    <p>{{ identity_error }}</p>
-    <p>
-      Sign in with an identity already attached to the intended account, then
-      link the new provider from its identity page.
-    </p>
-    <p><a href="{% url 'account_login' %}">Return to sign in</a></p>
-  </section>
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading"><p class="eyebrow">Account safety</p><h1>We could not link that identity</h1></header>
+    <aside class="submission-policy-bar"><strong>Identity conflict:</strong> {{ identity_error }}</aside>
+    <p>The provider details overlap an existing account. Sign in with an identity already attached to the intended account, then link the new provider from Settings.</p>
+    <div class="submission-actions"><a class="button" href="{% url 'account_login' %}">Return to sign in</a></div>
+  </div>
 {% endblock %}

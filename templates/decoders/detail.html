@@ -94,7 +94,7 @@
             </ul>
           {% endif %}
         {% else %}
-          {{ credit.display_name }}{% if user.is_authenticated %} · <a class="table-action" href="{% url 'credits:claim' credit_id=credit.id %}">Claim this credit</a>{% endif %}
+          {{ credit.display_name }}{% if user.is_authenticated %} · <a href="{% url 'credits:claim' credit_id=credit.id %}">Claim this credit</a>{% endif %}
         {% endif %}
       </li>
     {% empty %}

@@ -6,7 +6,7 @@
   <div class="page-shell submission-shell">
     <header class="page-heading submission-heading">
       <h1>{{ title }}</h1>
-      {% if user.is_admin %}<p><a class="table-action" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a></p>{% endif %}
+      {% if user.is_admin %}<p><a class="button button-secondary" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a></p>{% endif %}
     </header>
     {% include "components/submission_policy_bar.html" with policy=policy only %}
 

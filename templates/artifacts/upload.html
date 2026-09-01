@@ -3,17 +3,15 @@
 {% block title %}Upload development file — Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell">
-    <header class="page-heading">
-      <p class="eyebrow">Development inspection</p>
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
       <h1>Upload a small file</h1>
     </header>
-    <section class="gallery-section">
+    <section class="form-bar-shell">
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Store and verify</button>
-        <a class="button button-secondary" href="{% url 'artifacts:index' %}">Cancel</a>
+        {% include "components/form_bar_list.html" with form=form only %}
+        <div class="submission-actions"><button type="submit">Store and verify</button><a class="button button-secondary" href="{% url 'artifacts:index' %}">Cancel</a></div>
       </form>
     </section>
   </div>

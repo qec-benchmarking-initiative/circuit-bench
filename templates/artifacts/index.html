@@ -4,16 +4,15 @@
 {% block title %}Files — Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell gallery">
-    <header class="page-heading">
-      <p class="eyebrow">Development inspection</p>
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
       <h1>Files and schema releases</h1>
       <p><a class="button" href="{% url 'artifacts:upload' %}">Upload a small file</a></p>
     </header>
 
-    <section class="gallery-section">
+    <section class="submission-table-section">
       <h2>Schema releases</h2>
-      <div class="table-scroll">
+      <div class="table-scroll" tabindex="0" aria-label="Schema releases">
         <table class="data-table">
           <thead><tr><th>Release</th><th>State</th><th>JSON Schema</th><th>Definitions</th></tr></thead>
           <tbody>
@@ -32,9 +31,9 @@
       </div>
     </section>
 
-    <section class="gallery-section">
+    <section class="submission-table-section">
       <h2>Latest local files</h2>
-      <div class="table-scroll">
+      <div class="table-scroll" tabindex="0" aria-label="Latest local files">
         <table class="data-table">
           <thead><tr><th>File</th><th>Bytes</th><th>SHA-256</th><th>Uploaded by</th></tr></thead>
           <tbody>

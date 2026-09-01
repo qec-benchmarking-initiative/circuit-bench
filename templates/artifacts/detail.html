@@ -4,18 +4,17 @@
 {% block title %}{{ artifact.original_filename }} — Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell gallery">
-    <header class="page-heading">
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
       <p class="eyebrow">Immutable file</p>
       <h1>{{ artifact.original_filename }}</h1>
       {% if verification %}
-        <span class="status-badge">Integrity verified</span>
+        <p><span class="status-badge">Integrity verified</span></p>
       {% else %}
-        <span class="status-badge status-error">Integrity failed</span>
-        <p>{{ verification_error }}</p>
+        <p><span class="status-badge status-error">Integrity failed</span> {{ verification_error }}</p>
       {% endif %}
     </header>
-    <section class="gallery-section">
+    <section class="submission-table-section">
       <h2>Stored metadata</h2>
       <dl class="metadata-list">
         <div><dt>File ID</dt><dd>{{ artifact.id }}</dd></div>
@@ -25,12 +24,9 @@
         <div><dt>SHA-256</dt><dd><code>{{ artifact.sha256 }}</code></dd></div>
         <div><dt>Object key</dt><dd><code>{{ artifact.object_key }}</code></dd></div>
         <div><dt>Uploaded by</dt><dd>{{ artifact.uploaded_by }}</dd></div>
-        <div><dt>Created</dt><dd>{{ artifact.created_at }}</dd></div>
+        <div><dt>Created</dt><dd>{{ artifact.created_at|date:"Y-m-d H:i" }} UTC</dd></div>
       </dl>
-      {% if verification %}
-        <p><a class="button" href="{% url 'artifacts:download' artifact_id=artifact.id %}">Download verified bytes</a></p>
-      {% endif %}
-      <p><a href="{% url 'artifacts:index' %}">Back to files</a></p>
+      <div class="submission-actions">{% if verification %}<a class="button" href="{% url 'artifacts:download' artifact_id=artifact.id %}">Download verified bytes</a>{% endif %}<a class="button button-secondary" href="{% url 'artifacts:index' %}">Back to files</a></div>
     </section>
   </div>
 {% endblock %}

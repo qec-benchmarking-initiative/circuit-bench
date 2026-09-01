@@ -5,7 +5,6 @@
 {% block content %}
   <div class="page-shell submission-shell">
     <header class="page-heading submission-heading">
-      <p class="eyebrow">Write-side registry</p>
       <h1>Submit data</h1>
     </header>
     <div class="submission-kind-grid">
@@ -18,13 +17,11 @@
       {% endfor %}
       <section class="submission-kind">
         <h2>Benchmark</h2>
-        <p><a class="button" href="{% url 'benchmark-submissions:create' %}">Submit benchmark revision</a></p>
-        <p><a class="table-action" href="{% url 'benchmark-submissions:attempt-create' %}">Submit benchmark attempt</a></p>
+        <div class="submission-kind-actions"><a class="button" href="{% url 'benchmark-submissions:create' %}">Submit benchmark revision</a><a class="button button-secondary" href="{% url 'benchmark-submissions:attempt-create' %}">Submit benchmark attempt</a></div>
       </section>
       <section class="submission-kind">
         <h2>Taxonomy</h2>
-        <p><a class="button" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a></p>
-        <p><a class="table-action" href="{% url 'taxonomy:tag-create' %}">Create custom tag</a></p>
+        <div class="submission-kind-actions"><a class="button" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a><a class="button button-secondary" href="{% url 'taxonomy:tag-create' %}">Create custom tag</a></div>
       </section>
     </div>
   </div>

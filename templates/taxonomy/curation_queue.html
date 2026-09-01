@@ -6,7 +6,7 @@
   <div class="page-shell submission-shell">
     <header class="page-heading submission-heading">
       <h1>Taxonomy curation</h1>
-      <p><a class="table-action" href="{% url 'taxonomy:tag-create' %}">Create custom tag</a> · <a class="table-action" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a></p>
+      <p class="page-action-bar"><a class="button button-secondary" href="{% url 'taxonomy:tag-create' %}">Create custom tag</a><a class="button button-secondary" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a></p>
     </header>
 
     <section class="submission-table-section">
@@ -41,12 +41,12 @@
                 <td>{{ row.tag.get_status_display }}</td>
                 <td>
                   {% if row.tag.status == "custom" %}
-                    <form method="post" action="{% url 'taxonomy:tag-promote' tag_id=row.tag.id %}">{% csrf_token %}<label><span class="visually-hidden">Official colour</span><input name="display_color" size="8" maxlength="7" pattern="#[0-9A-Fa-f]{6}" placeholder="#315F7D" required></label> <button class="table-action" type="submit">Promote</button></form>
+                    <form class="table-inline-form" method="post" action="{% url 'taxonomy:tag-promote' tag_id=row.tag.id %}">{% csrf_token %}<label><span class="visually-hidden">Official colour</span><input name="display_color" size="8" maxlength="7" pattern="#[0-9A-Fa-f]{6}" placeholder="#315F7D" required></label><button class="table-action" type="submit">Promote</button></form>
                   {% else %}<span class="null-value">—</span>{% endif %}
                 </td>
                 <td>
                   {% if row.canonical_options %}
-                    <form method="post" action="{% url 'taxonomy:tag-deprecate' tag_id=row.tag.id %}">{% csrf_token %}<label><span class="visually-hidden">Canonical replacement</span><select name="canonical_tag" required><option value="">Choose replacement</option>{% for candidate in row.canonical_options %}<option value="{{ candidate.id }}">{{ candidate.label }}</option>{% endfor %}</select></label> <button class="table-action" type="submit">Deprecate</button></form>
+                    <form class="table-inline-form" method="post" action="{% url 'taxonomy:tag-deprecate' tag_id=row.tag.id %}">{% csrf_token %}<label><span class="visually-hidden">Canonical replacement</span><select name="canonical_tag" required><option value="">Choose replacement</option>{% for candidate in row.canonical_options %}<option value="{{ candidate.id }}">{{ candidate.label }}</option>{% endfor %}</select></label><button class="table-action" type="submit">Deprecate</button></form>
                   {% else %}<span class="null-value">No replacement available</span>{% endif %}
                 </td>
               </tr>
@@ -67,7 +67,7 @@
                 <td>{{ noise_model.name }}<br><small>{{ noise_model.slug }}</small></td>
                 <td>{{ noise_model.get_curation_status_display }}</td>
                 <td>{% if noise_model.curation_status == "community" %}<form method="post" action="{% url 'taxonomy:noise-model-promote' noise_model_id=noise_model.id %}">{% csrf_token %}<button class="table-action" type="submit">Promote to official</button></form>{% else %}<span class="null-value">—</span>{% endif %}</td>
-                <td><form method="post" action="{% url 'taxonomy:noise-model-deprecate' noise_model_id=noise_model.id %}">{% csrf_token %}<label><span class="visually-hidden">Deprecation reason</span><input name="note" required placeholder="Reason"></label> <button class="table-action" type="submit">Deprecate</button></form></td>
+                <td><form class="table-inline-form" method="post" action="{% url 'taxonomy:noise-model-deprecate' noise_model_id=noise_model.id %}">{% csrf_token %}<label><span class="visually-hidden">Deprecation reason</span><input name="note" required placeholder="Reason"></label><button class="table-action" type="submit">Deprecate</button></form></td>
               </tr>
             {% empty %}<tr><td class="table-empty" colspan="4">There are no published noise models to curate.</td></tr>{% endfor %}
           </tbody>

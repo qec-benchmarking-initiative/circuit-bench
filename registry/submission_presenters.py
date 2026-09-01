@@ -1,9 +1,11 @@
 """Reusable table and preview presentation for write-side records."""
 
 import json
+from datetime import datetime
 
 from django import forms
 from django.urls import reverse
+from django.utils import timezone
 
 from registry.forms_submissions import submission_form_for_payload
 from registry.models.common import EDITABLE_CANDIDATE_STATES, REVIEW_QUEUE_STATES
@@ -290,6 +292,10 @@ def _display(value) -> str:
         return "Not supplied"
     if isinstance(value, bool):
         return "Yes" if value else "No"
+    if isinstance(value, datetime):
+        if timezone.is_aware(value):
+            value = timezone.localtime(value)
+        return value.strftime("%Y-%m-%d %H:%M %Z").rstrip()
     if hasattr(value, "all"):
         values = [str(item) for item in value.all()]
         return ", ".join(values) if values else "None"

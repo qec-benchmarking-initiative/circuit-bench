@@ -10,13 +10,13 @@
       <div><dt>Identity</dt><dd>{% if record_kind == "tag" %}{{ record.namespace }}:{{ record.slug }}{% else %}{{ record.slug }}{% endif %}</dd></div>
       <div><dt>Status</dt><dd>{% if record_kind == "tag" %}Custom and available{% else %}Pending review · Community{% endif %}</dd></div>
     </dl>
-    <p>
+    <p class="page-action-bar">
       {% if record_kind == "tag" %}
-        <a class="table-action" href="{% url 'taxonomy:tag-create' %}">Create another custom tag</a>
+        <a class="button button-secondary" href="{% url 'taxonomy:tag-create' %}">Create another custom tag</a>
       {% else %}
-        <a class="table-action" href="{% url 'taxonomy:noise-model-create' %}">Submit another noise model</a>
+        <a class="button button-secondary" href="{% url 'taxonomy:noise-model-create' %}">Submit another noise model</a>
       {% endif %}
-      {% if user.is_admin %} · <a class="table-action" href="{% url 'taxonomy:curation' %}">Open taxonomy curation</a>{% endif %}
+      {% if user.is_admin %}<a class="button button-secondary" href="{% url 'taxonomy:curation' %}">Open taxonomy curation</a>{% endif %}
     </p>
   </div>
 {% endblock %}

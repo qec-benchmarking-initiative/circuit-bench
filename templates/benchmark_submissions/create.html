@@ -18,16 +18,16 @@
       <input type="hidden" name="mode" value="structured">
       {{ form.items_json }}
       {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-      {% for field in form.visible_fields %}
-        <div class="submission-field">
-          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field }}
-          {% if field.help_text %}<p class="field-help">{{ field.help_text }}</p>{% endif %}
-          {% if field.errors %}<div class="field-errors" role="alert">{{ field.errors }}</div>{% endif %}
-        </div>
-      {% endfor %}
+      <div class="form-bar-list">
+        {% for field in form.visible_fields %}
+          <div class="form-bar-row{% if field.errors %} form-bar-row-error{% endif %}">
+            <div class="form-bar-label"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.help_text %}<p>{{ field.help_text }}</p>{% endif %}</div>
+            <div class="form-bar-control">{{ field }}{% if field.errors %}<div class="submission-errors" role="alert">{{ field.errors }}</div>{% endif %}</div>
+          </div>
+        {% endfor %}
+      </div>
 
-      <section class="submission-field" aria-labelledby="benchmark-circuits-heading">
+      <section class="benchmark-manifest-field" aria-labelledby="benchmark-circuits-heading">
         <h2 id="benchmark-circuits-heading">Ordered circuit manifest</h2>
         <div class="table-scroll">
           <table class="data-table" data-benchmark-items-table>
@@ -35,7 +35,7 @@
             <tbody data-benchmark-items><tr><td colspan="5" class="table-empty">No circuits selected.</td></tr></tbody>
           </table>
         </div>
-        <button type="button" class="button button-secondary" data-open-circuit-picker>Choose circuits</button>
+        <div class="submission-actions"><button type="button" class="button button-secondary" data-open-circuit-picker>Choose circuits</button></div>
       </section>
 
       <div class="submission-actions"><button type="submit">Preview</button></div>

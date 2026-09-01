@@ -9,17 +9,12 @@
       <h1>Resubmit {{ record_label }}</h1>
     </header>
 
-    <form method="post" class="submission-form-sections">
+    <form method="post" class="form-bar-shell">
       {% csrf_token %}
-      <section class="submission-form-section">
-        <p>Resubmission records a complete snapshot of the current candidate and returns it to the appropriate review queue.</p>
-        {{ form.non_field_errors }}
-        {{ form.confirm.errors }}
-        <label for="{{ form.confirm.id_for_label }}">{{ form.confirm }} {{ form.confirm.label }}</label>
-      </section>
+      {% include "components/form_bar_list.html" with form=form only %}
       <div class="submission-actions">
-        <button class="table-action" type="submit">Resubmit for review</button>
-        <a class="table-action" href="{% url 'submissions:record' kind=kind record_id=record.id %}">Cancel</a>
+        <button type="submit">Resubmit for review</button>
+        <a class="button button-secondary" href="{% url 'submissions:record' kind=kind record_id=record.id %}">Cancel</a>
       </div>
     </form>
   </div>

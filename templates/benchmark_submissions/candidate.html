@@ -5,7 +5,7 @@
 {% block content %}
   <div class="page-shell submission-shell">
     <header class="page-heading submission-heading"><p class="eyebrow">Benchmark submission</p><h1>{{ benchmark.name }} {{ benchmark.version }}</h1></header>
-    <dl class="stacked-metadata">
+    <dl class="metadata-list">
       <div><dt>State</dt><dd>{{ benchmark.get_state_display }}</dd></div>
       <div><dt>Recognition</dt><dd>{{ benchmark.get_recognition_status_display }}</dd></div>
       <div><dt>Submitted by</dt><dd>{{ benchmark.submitted_by.display_name }}</dd></div>
@@ -13,7 +13,7 @@
       <div><dt>UUID</dt><dd><code>{{ benchmark.id }}</code></dd></div>
     </dl>
     <section class="submission-table-section"><h2>Ordered circuit manifest</h2><div class="table-scroll"><table class="data-table"><thead><tr><th>Position</th><th>Circuit</th><th>Requirement</th></tr></thead><tbody>{% for item in items %}<tr><td>{{ item.position }}</td><td>{{ item.circuit_revision.name }}</td><td>{{ item.is_required|yesno:"Required,Optional" }}</td></tr>{% endfor %}</tbody></table></div></section>
-    {% if can_approve %}<form method="post" action="{% url 'benchmark-submissions:approve' benchmark.id %}">{% csrf_token %}<button class="table-action" type="submit">Approve and publish</button></form>{% endif %}
-    {% if can_promote %}<form method="post" action="{% url 'benchmark-submissions:promote' benchmark.id %}" class="submission-vertical-form">{% csrf_token %}<label>Official-recognition note<textarea name="note" rows="3" required></textarea></label><button class="table-action" type="submit">Mark official</button></form>{% endif %}
+    {% if can_approve %}<form class="submission-actions" method="post" action="{% url 'benchmark-submissions:approve' benchmark.id %}">{% csrf_token %}<button type="submit">Approve and publish</button></form>{% endif %}
+    {% if can_promote %}<form method="post" action="{% url 'benchmark-submissions:promote' benchmark.id %}" class="form-bar-shell benchmark-recognition-form">{% csrf_token %}<div class="form-bar-list"><div class="form-bar-row"><div class="form-bar-label"><label for="recognition-note">Official-recognition note</label></div><div class="form-bar-control"><textarea id="recognition-note" name="note" rows="3" required></textarea></div></div></div><div class="submission-actions"><button type="submit">Mark official</button></div></form>{% endif %}
   </div>
 {% endblock %}
