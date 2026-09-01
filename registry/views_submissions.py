@@ -51,7 +51,11 @@ from registry.submission_form_layout import (
     ARTIFACT_FIELDS,
     submission_form_sections,
 )
-from registry.submission_policy import SubmissionKind, approval_decision
+from registry.submission_policy import (
+    SubmissionKind,
+    approval_decision,
+    approval_process,
+)
 from registry.submission_presenters import (
     preview_sections,
     stored_record_rows,
@@ -73,7 +77,14 @@ def submission_hub(request):
     cards = []
     for kind, spec in SUBMISSION_SPECS.items():
         decision = approval_decision(kind, request.user)
-        cards.append({"kind": kind.value, "spec": spec, "decision": decision})
+        cards.append(
+            {
+                "kind": kind.value,
+                "spec": spec,
+                "decision": decision,
+                "policy": approval_process(kind),
+            }
+        )
     return render(request, "submissions/hub.html", {"submission_cards": cards})
 
 
@@ -123,7 +134,11 @@ def _submission_editor(request, kind, *, operation, record=None):
 
     validation_record = record if operation == "edit" else None
     allow_withdrawn_lineage = operation == "successor" and record.state == "withdrawn"
-    initial = submission_initial(kind, initial_payload)
+    structured_initial_payload = initial_payload.copy()
+    if not restored and operation in {"create", "successor"}:
+        for field_name in ARTIFACT_FIELDS:
+            structured_initial_payload[field_name] = None
+    initial = submission_initial(kind, structured_initial_payload)
     form_options = {
         "record": validation_record,
         "allow_withdrawn_lineage": allow_withdrawn_lineage,
@@ -238,24 +253,8 @@ def _submission_editor(request, kind, *, operation, record=None):
             "revision_control": _revision_control(
                 kind, operation, record, revision_mode
             ),
-            "inherits_artifacts": bool(
-                operation == "successor"
-                and any(
-                    initial_payload.get(field_name)
-                    for field_name in ARTIFACT_FIELDS.intersection(
-                        structured_form.fields
-                    )
-                )
-            ),
-            "policy_explanation": (
-                f"This exact candidate remains {record.get_state_display().lower()} "
-                "after the edit."
-                if operation == "edit"
-                else approval_decision(
-                    kind,
-                    request.user,
-                    reapproval=allow_withdrawn_lineage,
-                ).explanation
+            "policy_statement": approval_process(
+                kind, reapproval=allow_withdrawn_lineage
             ),
         },
     )
@@ -312,6 +311,7 @@ def submission_preview(request, preview_id):
             "revision_control": _revision_control(
                 kind, operation, record, revision_mode
             ),
+            "policy_statement": approval_process(kind, reapproval=reapproval),
             "back_url": _preview_back_url(kind, preview_id, operation, record),
         },
     )

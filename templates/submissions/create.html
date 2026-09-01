@@ -8,17 +8,16 @@
     <header class="page-heading submission-heading">
       <p class="eyebrow"><a href="{% if operation == 'create' %}{% url 'submissions:hub' %}{% else %}{% url 'submissions:profile' %}{% endif %}">{% if operation == "create" %}Submit data{% else %}Your records{% endif %}</a></p>
       <h1>{% if operation == "edit" %}Edit pending {{ spec.label }}{% elif operation == "successor" %}{% if record.state == "withdrawn" %}Revise and resubmit{% else %}Create successor revision{% endif %}{% else %}Submit {{ spec.label }}{% endif %}</h1>
-      <p>{% if record_label %}Based on {{ record_label }}.{% else %}{{ spec.summary }}{% endif %}</p>
-      <p class="submission-policy"><strong>On submit:</strong> {{ policy_explanation }}</p>
+      {% if record_label %}<p>Based on {{ record_label }}.</p>{% endif %}
     </header>
+    {% include "components/submission_policy_bar.html" with policy=policy_statement only %}
 
     <div class="submission-entry-grid">
       <section class="submission-entry-panel">
-        <header><h2>Structured form</h2><p>Use labelled fields and existing registry references.</p></header>
+        <header><h2>Structured form</h2></header>
         <form method="post" enctype="multipart/form-data" novalidate>
           <input type="hidden" name="mode" value="structured">
           {% include "components/revision_disposition.html" with revision_control=revision_control only %}
-          {% if inherits_artifacts %}<p class="submission-inheritance-note">Existing frozen artifacts are carried into this revision. Keep their selections to reuse them, or replace a selection or upload new bytes where the artifact itself changed.</p>{% endif %}
           {% include "components/submission_form_vertical.html" with form=structured_form sections=form_sections csrf_token=csrf_token only %}
           <div class="submission-actions"><button class="button" type="submit">Preview {% if operation == "edit" %}edit{% elif operation == "successor" %}successor{% else %}structured submission{% endif %}</button></div>
         </form>
@@ -27,7 +26,7 @@
       <section class="submission-entry-panel submission-json-panel">
         <header>
           <h2>JSON entry</h2>
-          <p>Validated against the <a href="{% url 'submissions:schema' kind=kind %}">{{ spec.label }} submission schema 0.1</a>, then by the same semantic rules as the form.</p>
+          <p>Circuit Bench validates this entry against the <a href="{% url 'submissions:schema' kind=kind %}">{{ spec.label }} submission schema 0.1</a> and the same semantic rules as the form.</p>
         </header>
         <form method="post" novalidate>
           {% csrf_token %}
@@ -46,4 +45,5 @@
 {% block extra_scripts %}
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
   <script src="{% static 'js/explorer.js' %}" defer></script>
+  <script src="{% static 'js/submission-schema-reuse.js' %}" defer></script>
 {% endblock %}

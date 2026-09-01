@@ -1,6 +1,6 @@
 ---
 title: Submission, revision, and withdrawal policy 0.1
-summary: How candidate records are reviewed, published, revised, withdrawn, and attributed.
+summary: This page explains how candidate records are reviewed, published, revised, withdrawn, and attributed.
 ---
 
 This is the user-facing governance policy for the Circuit Bench 0.1 development prototype.

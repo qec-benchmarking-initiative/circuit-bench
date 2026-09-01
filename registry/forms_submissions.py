@@ -93,7 +93,10 @@ class DecoderSubmissionForm(BaseSubmissionForm):
         required=False, widget=forms.Textarea(attrs={"rows": 4})
     )
     hyperparameter_schema_artifact = ArtifactChoiceField(
-        queryset=Artifact.objects.none(), required=False
+        queryset=Artifact.objects.none(),
+        required=False,
+        label="Hyperparameter JSON Schema",
+        widget=forms.HiddenInput(),
     )
     algorithm_tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.none(), required=False
@@ -101,12 +104,23 @@ class DecoderSubmissionForm(BaseSubmissionForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["previous_version"].queryset = DecoderVersion.objects.filter(
-            state__in=self.lineage_states
-        ).order_by("name", "version")
+        previous_versions = (
+            DecoderVersion.objects.filter(state__in=self.lineage_states)
+            .select_related("hyperparameter_schema_artifact")
+            .order_by("name", "version")
+        )
+        self.fields["previous_version"].queryset = previous_versions
         self.fields[
             "hyperparameter_schema_artifact"
         ].queryset = Artifact.objects.order_by("original_filename", "id")
+        self.previous_schema_choices = {
+            str(version.id): {
+                "identifier": str(version.hyperparameter_schema_artifact_id),
+                "label": version.hyperparameter_schema_artifact.original_filename,
+            }
+            for version in previous_versions
+            if version.hyperparameter_schema_artifact_id
+        }
         self.fields["algorithm_tags"].queryset = Tag.objects.filter(
             namespace=Tag.Namespace.ALGORITHM
         ).order_by("status", "label", "id")
@@ -166,11 +180,21 @@ class CircuitSubmissionForm(BaseSubmissionForm):
     dem_block_decomposition_from_introducing_remnant_edges = forms.BooleanField(
         required=False
     )
-    sampling_circuit_artifact = ArtifactChoiceField(queryset=Artifact.objects.none())
-    detector_error_model_artifact = ArtifactChoiceField(
-        queryset=Artifact.objects.none()
+    sampling_circuit_artifact = ArtifactChoiceField(
+        queryset=Artifact.objects.none(),
+        label="Sampling circuit file",
+        widget=forms.HiddenInput(),
     )
-    manifest_artifact = ArtifactChoiceField(queryset=Artifact.objects.none())
+    detector_error_model_artifact = ArtifactChoiceField(
+        queryset=Artifact.objects.none(),
+        label="Detector error model file",
+        widget=forms.HiddenInput(),
+    )
+    manifest_artifact = ArtifactChoiceField(
+        queryset=Artifact.objects.none(),
+        label="Manifest file",
+        widget=forms.HiddenInput(),
+    )
     code_tags = forms.ModelMultipleChoiceField(queryset=Tag.objects.none())
     experiment_tags = forms.ModelMultipleChoiceField(queryset=Tag.objects.none())
 
@@ -249,7 +273,10 @@ class ResultSubmissionForm(BaseSubmissionForm):
         required=False, widget=forms.Textarea(attrs={"rows": 3})
     )
     hyperparameter_values_artifact = ArtifactChoiceField(
-        queryset=Artifact.objects.none(), required=False
+        queryset=Artifact.objects.none(),
+        required=False,
+        label="Hyperparameter values JSON file",
+        widget=forms.HiddenInput(),
     )
     shots_total = forms.IntegerField(min_value=1)
     successful_shots = forms.IntegerField(min_value=0)

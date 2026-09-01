@@ -172,7 +172,11 @@ def test_submission_forms_use_vertical_sections_and_shared_choosers(
     assert 'class="submission-form-sections"' in content
     assert 'class="submission-field-group submission-field-group-inline"' in content
     assert 'data-search-url="/pickers/submission-noise-models/"' in content
-    assert content.count('data-search-url="/pickers/artifacts/"') == 3
+    assert 'data-search-url="/pickers/artifacts/"' not in content
+    assert content.count("data-submission-file-upload") == 3
+    assert "Sampling circuit file" in content
+    assert "Detector error model file" in content
+    assert "Manifest file" in content
     assert content.count('data-mode="submission"') == 2
     assert "Use selected tags" in content
     assert "submission-field-grid" not in content
@@ -186,6 +190,21 @@ def test_submission_forms_use_vertical_sections_and_shared_choosers(
         content.count("/definitions/circuit/0.1/#css-and-detector-basis-classification")
         == 3
     )
+    assert "Approval process v0.1" in content
+    assert "All circuit submissions are subject to admin review." in content
+    assert "Describe one frozen circuit" not in content
+
+
+def test_machine_submission_explains_automatic_publication(client, workflow_data):
+    client.force_login(workflow_data["contributor"])
+
+    content = client.get(
+        reverse("submissions:create", args=["machine"])
+    ).content.decode()
+
+    assert "Approval process v0.1" in content
+    assert "Machine submissions are validated and published immediately." in content
+    assert "Publication is attributed to System." in content
 
 
 def test_successor_form_prefills_and_locks_exact_predecessor(client, workflow_data):
@@ -210,7 +229,7 @@ def test_successor_form_prefills_and_locks_exact_predecessor(client, workflow_da
     assert f"Withdraw {predecessor.name} {predecessor.version} and submit" in content
 
 
-def test_circuit_successor_inherits_all_frozen_artifacts(client, workflow_data):
+def test_circuit_successor_requires_fresh_file_uploads(client, workflow_data):
     predecessor = CircuitRevision.objects.get(id=demo_id("circuit/rotated-memory-d5"))
     client.force_login(workflow_data["contributor"])
 
@@ -218,13 +237,40 @@ def test_circuit_successor_inherits_all_frozen_artifacts(client, workflow_data):
         reverse("submissions:successor", args=["circuit", predecessor.id])
     ).content.decode()
 
-    assert "Existing frozen artifacts are carried into this revision." in content
-    for artifact_id in (
-        predecessor.sampling_circuit_artifact_id,
-        predecessor.detector_error_model_artifact_id,
-        predecessor.manifest_artifact_id,
-    ):
-        assert f'value="{artifact_id}"' in content
+    assert "Current file:" not in content
+    assert content.count("data-submission-file-upload") == 3
+    assert content.count('type="file"') == 3
+
+
+def test_decoder_schema_can_only_be_reused_through_previous_revision_control(
+    client, workflow_data
+):
+    predecessor = DecoderVersion.objects.get(id=demo_id("decoder/clear-matcher/0.2"))
+    schema_file = Artifact.objects.order_by("created_at").first()
+    predecessor.hyperparameter_schema_artifact = schema_file
+    predecessor.save(update_fields=["hyperparameter_schema_artifact"])
+    client.force_login(workflow_data["admin"])
+
+    first_version = client.get(
+        reverse("submissions:create", args=["decoder"])
+    ).content.decode()
+    first_control = first_version.split("data-use-previous-schema", 1)[1].split(">", 1)[
+        0
+    ]
+    assert "disabled" in first_control
+    assert "Choose a previous decoder revision first." in first_version
+    assert 'data-search-url="/pickers/artifacts/"' not in first_version
+    assert "Upload a new JSON Schema file" in first_version
+
+    successor = client.get(
+        reverse("submissions:successor", args=["decoder", predecessor.id])
+    ).content.decode()
+    successor_control = successor.split("data-use-previous-schema", 1)[1].split(">", 1)[
+        0
+    ]
+    assert "disabled" not in successor_control
+    assert f'data-schema-id="{schema_file.id}"' in successor
+    assert f"Available: {schema_file.original_filename}." in successor
 
 
 def test_structured_upload_is_frozen_and_snapshotted_before_preview(

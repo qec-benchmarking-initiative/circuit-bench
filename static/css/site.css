@@ -878,6 +878,26 @@ code {
   border-left: 3px solid var(--accent);
 }
 
+.submission-heading + .submission-policy-bar {
+  margin-top: -1rem;
+}
+
+.submission-policy-bar {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.22fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  padding: 0.48rem 0.58rem;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface-muted);
+  font: 0.78rem/1.35 var(--font-interface);
+}
+
+.submission-policy-bar strong {
+  color: var(--accent-hover);
+  text-transform: none;
+}
+
 .submission-kind-grid,
 .submission-entry-grid {
   display: grid;
@@ -911,9 +931,21 @@ code {
   font-size: 0.82rem;
 }
 
-.submission-kind .submission-policy {
-  min-height: 5.1rem;
-  color: var(--ink);
+.submission-kind .submission-policy-bar {
+  display: block;
+  min-height: 9.2rem;
+  margin: 0.55rem -0.8rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.submission-kind .submission-policy-bar strong,
+.submission-kind .submission-policy-bar span {
+  display: block;
+}
+
+.submission-kind .submission-policy-bar span {
+  margin-top: 0.3rem;
 }
 
 .submission-entry-grid {
@@ -978,17 +1010,9 @@ code {
   display: block;
 }
 
-.revision-disposition-options small,
-.submission-inheritance-note {
+.revision-disposition-options small {
   color: var(--muted);
   font: 0.7rem/1.3 var(--font-interface);
-}
-
-.submission-inheritance-note {
-  margin: 0 0 0.5rem;
-  padding: 0.4rem 0.5rem;
-  border-left: 0.18rem solid var(--accent);
-  background: var(--surface-muted);
 }
 
 .submission-form-section > header {
@@ -1071,63 +1095,61 @@ code {
   font-weight: 400;
 }
 
-.submission-field-reference .related-record-picker,
-.submission-field-artifact .related-record-picker {
+.submission-field-reference .related-record-picker {
   min-height: 3.1rem;
   border: 1px solid var(--line);
   background: var(--paper);
 }
 
-.submission-field-reference .related-record-picker[data-enhanced="true"] > .filter-grid-trigger,
-.submission-field-artifact .related-record-picker[data-enhanced="true"] > .filter-grid-trigger {
+.submission-field-reference .related-record-picker[data-enhanced="true"] > .filter-grid-trigger {
   display: grid;
   min-height: 3.1rem;
 }
 
-.submission-field-reference .related-record-picker[data-enhanced="true"] > .filter-grid-fallback,
-.submission-field-artifact .related-record-picker[data-enhanced="true"] > .filter-grid-fallback {
+.submission-field-reference .related-record-picker[data-enhanced="true"] > .filter-grid-fallback {
   display: none;
 }
 
-.submission-field-reference .filter-grid-trigger:disabled,
-.submission-field-artifact .filter-grid-trigger:disabled {
+.submission-field-reference .filter-grid-trigger:disabled {
   opacity: 1;
   cursor: default;
   background: var(--surface-muted);
 }
 
-.submission-artifact-input {
-  display: grid;
-  grid-template-columns: minmax(16rem, 1fr) minmax(16rem, 1fr);
-  border: 1px solid var(--line);
-}
-
-.submission-artifact-input > div {
-  min-width: 0;
-  padding: 0.42rem;
-}
-
-.submission-artifact-input > div + div {
-  border-left: 1px solid var(--line);
-}
-
-.submission-artifact-input select,
-.submission-artifact-input input {
+.submission-file-input input[type="file"] {
   width: 100%;
 }
 
-.submission-input-caption,
-.submission-artifact-input label,
-.submission-artifact-input small {
+.submission-file-input label,
+.submission-file-input small {
   display: block;
   margin-bottom: 0.2rem;
   font: 700 0.68rem/1.25 var(--font-interface);
 }
 
-.submission-artifact-input small {
+.submission-file-input small {
   margin: 0.2rem 0 0;
   color: var(--muted);
   font-weight: 400;
+}
+
+.submission-previous-schema-reuse {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.3rem;
+}
+
+.submission-previous-schema-reuse span,
+.submission-current-file {
+  margin: 0;
+  color: var(--muted);
+  font: 0.74rem/1.3 var(--font-interface);
+}
+
+.submission-previous-schema > .field-help {
+  margin: 0 0 0.55rem;
 }
 
 .submission-field {
@@ -1387,6 +1409,85 @@ code {
 .data-table .table-action:hover {
   color: var(--accent-hover);
   background: transparent;
+}
+
+.data-table .table-action:disabled {
+  color: var(--muted);
+  text-decoration: none;
+  cursor: not-allowed;
+}
+
+.settings-shell {
+  padding-top: 1rem;
+}
+
+.settings-heading {
+  margin-bottom: 0;
+}
+
+.settings-heading h1 {
+  margin: 0.1rem 0 0;
+  font-size: 1.7rem;
+}
+
+.settings-section {
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.settings-section-heading {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.25fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+
+.settings-section-heading h2,
+.settings-section-heading p {
+  margin: 0;
+}
+
+.settings-section-heading h2 {
+  font-size: 0.92rem;
+}
+
+.settings-section-heading p,
+.settings-note {
+  color: var(--muted);
+  font: 0.76rem/1.35 var(--font-interface);
+}
+
+.settings-identity-table form {
+  margin: 0;
+}
+
+.settings-note,
+.settings-provider-actions {
+  margin: 0;
+  padding: 0.48rem 0.55rem;
+  border-top: 1px solid var(--line);
+}
+
+.settings-provider-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.settings-provider-actions form {
+  margin: 0;
+}
+
+.settings-provider-actions .table-action {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  font: 0.8rem/1.3 var(--font-interface);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
 }
 
 .data-table .table-action-danger {
@@ -3495,10 +3596,13 @@ code {
 }
 
 .table-empty {
-  height: 6rem !important;
+  height: auto !important;
+  padding: 0.72rem 0.55rem !important;
   color: var(--muted);
-  font-style: italic;
-  text-align: center !important;
+  background: var(--surface-muted);
+  font: 0.86rem/1.4 var(--font-reference);
+  font-style: normal;
+  text-align: left !important;
 }
 
 .column-dialog {

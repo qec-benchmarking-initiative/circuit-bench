@@ -58,7 +58,7 @@ def test_development_upload_inspection_and_deduplication(
         follow=True,
     )
     assert second_response.status_code == 200
-    assert b"Reused existing bytes" in second_response.content
+    assert b"Reused the existing file" in second_response.content
     assert Artifact.objects.count() == 1
     assert b"Integrity verified" in second_response.content
 

@@ -55,20 +55,20 @@ def local_artifact_path(artifact: Artifact) -> Path:
     """Resolve an artifact object key without allowing it to escape MEDIA_ROOT."""
     if artifact.storage_backend != Artifact.StorageBackend.LOCAL:
         raise ArtifactIntegrityError(
-            f"Artifact {artifact.id} is not stored by the local backend."
+            f"File {artifact.id} is not stored by the local backend."
         )
 
     root = Path(settings.MEDIA_ROOT).resolve()
     object_key = Path(artifact.object_key)
     if object_key.is_absolute():
-        raise UnsafeObjectKeyError("Absolute artifact object keys are forbidden.")
+        raise UnsafeObjectKeyError("Absolute file object keys are forbidden.")
 
     candidate = root / object_key
     resolved = candidate.resolve(strict=False)
     if resolved == root or root not in resolved.parents:
-        raise UnsafeObjectKeyError("Artifact object key escapes MEDIA_ROOT.")
+        raise UnsafeObjectKeyError("File object key escapes MEDIA_ROOT.")
     if candidate.is_symlink():
-        raise UnsafeObjectKeyError("Artifact object keys may not be symbolic links.")
+        raise UnsafeObjectKeyError("File object keys may not be symbolic links.")
     return resolved
 
 
@@ -92,7 +92,7 @@ def open_verified_artifact(
         path = local_artifact_path(artifact)
         if not path.is_file():
             raise ArtifactIntegrityError(
-                f"Artifact object is missing: {artifact.object_key}"
+                f"File object is missing: {artifact.object_key}"
             )
         stored_file = path.open("rb")
         try:
@@ -109,7 +109,7 @@ def open_verified_artifact(
 
     if artifact.storage_backend != Artifact.StorageBackend.R2:
         raise ArtifactIntegrityError(
-            f"Artifact {artifact.id} uses an unsupported storage backend."
+            f"File {artifact.id} uses an unsupported storage backend."
         )
 
     temporary = tempfile.SpooledTemporaryFile(max_size=2 * 1024 * 1024)
@@ -138,7 +138,7 @@ def open_verified_artifact(
     except (ArtifactError, BotoCoreError, ClientError, KeyError, OSError) as error:
         temporary.close()
         raise ArtifactIntegrityError(
-            f"Artifact object could not be read: {artifact.object_key}"
+            f"File object could not be read: {artifact.object_key}"
         ) from error
     except Exception:
         temporary.close()
@@ -179,7 +179,7 @@ def store_file_artifact(
 ) -> tuple[Artifact, bool]:
     source = Path(source_path)
     if source.is_symlink() or not source.is_file():
-        raise ArtifactError(f"Artifact source is not a regular file: {source}")
+        raise ArtifactError(f"The source is not a regular file: {source}")
 
     with source.open("rb") as source_file:
         return store_artifact_chunks(
@@ -234,7 +234,7 @@ def store_artifact_chunks(
                 byte_size += len(chunk)
                 if byte_size > max_bytes:
                     raise ArtifactTooLargeError(
-                        f"Artifact exceeds the {max_bytes}-byte upload limit."
+                        f"File exceeds the {max_bytes}-byte upload limit."
                     )
                 digest.update(chunk)
                 temporary.write(chunk)
@@ -351,7 +351,7 @@ def _verify_file(
 def _configured_storage_backend() -> str:
     backend = settings.ARTIFACT_STORAGE_BACKEND
     if backend not in Artifact.StorageBackend.values:
-        raise ArtifactError(f"Unsupported artifact storage backend: {backend}")
+        raise ArtifactError(f"Unsupported file storage backend: {backend}")
     return backend
 
 
@@ -394,7 +394,7 @@ def _persist_object(
             )
     except (BotoCoreError, ClientError, OSError) as error:
         raise ArtifactError(
-            "Artifact could not be written to Cloudflare R2."
+            "The file could not be written to Cloudflare R2."
         ) from error
 
 
@@ -447,11 +447,11 @@ def _r2_client():
 
 
 def _safe_filename(filename: str | None) -> str:
-    candidate = (filename or "artifact.bin").replace("\\", "/").split("/")[-1]
+    candidate = (filename or "file.bin").replace("\\", "/").split("/")[-1]
     candidate = "".join(character for character in candidate if ord(character) >= 32)
     candidate = candidate.strip()
     if not candidate or candidate in {".", ".."}:
-        return "artifact.bin"
+        return "file.bin"
     return candidate[:255]
 
 

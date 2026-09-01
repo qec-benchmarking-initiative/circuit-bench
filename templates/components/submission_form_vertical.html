@@ -3,7 +3,7 @@
 <div class="submission-form-sections">
   {% for section in sections %}
     <section class="submission-form-section">
-      <header><h3>{{ section.title }}</h3><p>{{ section.description }}</p></header>
+      <header><h3>{{ section.title }}</h3>{% if section.description %}<p>{{ section.description }}</p>{% endif %}</header>
       {% for group in section.groups %}
         <div class="submission-field-group submission-field-group-{{ group.layout }}">
           {% for item in group.fields %}

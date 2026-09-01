@@ -101,7 +101,7 @@
 
     {% if result.display_external_links or result.display_artifact_attachments %}
       <section class="record-section">
-        <h2>Links and supporting artifacts</h2>
+        <h2>Links and supporting files</h2>
         <ul>
           {% for link in result.display_external_links %}
             <li><a href="{{ link.url }}">{{ link.label|default:link.get_kind_display }}</a> — {{ link.get_kind_display }}</li>
@@ -140,7 +140,7 @@
     {% endfor %}
   </dl>
   <p>
-    Frozen source bundle:
+    Frozen source file:
     {% if evaluator_bundle_url %}<a href="{{ evaluator_bundle_url }}">{% endif %}{{ result.evaluator_version.source_bundle_artifact.original_filename }}{% if evaluator_bundle_url %}</a>{% endif %}
     · SHA-256 <code>{{ result.evaluator_version.source_bundle_artifact.sha256 }}</code>
   </p>

@@ -113,11 +113,12 @@ def test_identity_list_shows_public_identity_and_missing_provider(client):
     assert "<title>Settings · Circuit Bench</title>" in content
     assert "<h1>Settings</h1>" in content
     assert '<h2 id="identities-heading">Sign-in identities</h2>' in content
+    assert 'class="data-table settings-identity-table"' in content
     assert 'href="/profile/">Profile: Ada Decoder</a>' in content
     assert 'class="account-link active" href="/accounts/">Settings</a>' in content
     assert identity.public_identifier in content
     assert "Link ORCID" in content
-    assert "demonstration record" not in content
+    assert "Demonstration record only" not in content
     assert response.context["identities"][0].can_unlink is False
 
 

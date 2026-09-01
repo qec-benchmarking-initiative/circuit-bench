@@ -20,11 +20,6 @@ REFERENCE_PICKERS = {
     "machine": "machines",
     "supersedes_result": "results",
     "supersedes_machine": "machines",
-    "hyperparameter_schema_artifact": "artifacts",
-    "sampling_circuit_artifact": "artifacts",
-    "detector_error_model_artifact": "artifacts",
-    "manifest_artifact": "artifacts",
-    "hyperparameter_values_artifact": "artifacts",
 }
 
 TAG_FIELDS = {"algorithm_tags", "code_tags", "experiment_tags"}
@@ -51,7 +46,7 @@ LAYOUTS = {
     SubmissionKind.DECODER: (
         (
             "Identity",
-            "Names and permanent URL identity for this exact version.",
+            "",
             (("stack", ("slug", "name", "version")),),
         ),
         (
@@ -88,14 +83,17 @@ LAYOUTS = {
         ),
         (
             "Machine-readable hyperparameters",
-            "Select an existing frozen schema or upload one now.",
+            (
+                "Choose a schema from a previous decoder revision, or upload a "
+                "new JSON Schema file."
+            ),
             (("stack", ("hyperparameter_schema_artifact",)),),
         ),
     ),
     SubmissionKind.CIRCUIT: (
         (
             "Identity",
-            "Names and permanent URL identity for this exact revision.",
+            "",
             (("stack", ("slug", "name")),),
         ),
         (
@@ -117,7 +115,7 @@ LAYOUTS = {
             "Circuit quantities",
             (
                 "Counts are reported in 0.1; a future evaluator will derive and "
-                "verify them from frozen artifacts."
+                "verify them from the uploaded files."
             ),
             (
                 (
@@ -160,11 +158,8 @@ LAYOUTS = {
             ),
         ),
         (
-            "Frozen artifacts",
-            (
-                "Uploads are content-addressed immediately; preview and history "
-                "retain their immutable UUID and SHA-256 identity."
-            ),
+            "Files",
+            ("Each upload is hashed and frozen before the preview is created."),
             (
                 (
                     "stack",
@@ -304,7 +299,35 @@ def _field_context(form, name, kind, section_index):
             else None
         ),
     }
-    if name in REFERENCE_PICKERS:
+    if name in ARTIFACT_FIELDS:
+        value = bound.value()
+        current_file = None
+        if value:
+            current_file = bound.field.queryset.filter(pk=value).first()
+        context.update(
+            type=(
+                "previous_schema"
+                if kind is SubmissionKind.DECODER
+                and name == "hyperparameter_schema_artifact"
+                else "file"
+            ),
+            upload_name=f"upload__{name}",
+            upload_limit="1 MiB",
+            current_file=current_file,
+        )
+        if context["type"] == "previous_schema":
+            previous_schema_choices = getattr(form, "previous_schema_choices", {})
+            previous_version_id = str(form["previous_version"].value() or "")
+            previous_schema = previous_schema_choices.get(previous_version_id)
+            context.update(
+                previous_schema_choices=previous_schema_choices.items(),
+                previous_schema_available=bool(previous_schema),
+                previous_schema_label=(
+                    previous_schema["label"] if previous_schema else None
+                ),
+                has_previous_version=bool(previous_version_id),
+            )
+    elif name in REFERENCE_PICKERS:
         values = _bound_values(bound.value())
         picker = record_picker_context(
             REFERENCE_PICKERS[name],
@@ -338,15 +361,7 @@ def _field_context(form, name, kind, section_index):
                 "disabled": bound.field.disabled,
             }
         )
-        if name in ARTIFACT_FIELDS:
-            context.update(
-                type="artifact",
-                picker_cell=cell,
-                upload_name=f"upload__{name}",
-                upload_limit="1 MiB",
-            )
-        else:
-            context.update(type="reference", picker_cell=cell)
+        context.update(type="reference", picker_cell=cell)
     elif name in TAG_FIELDS:
         tags = list(bound.field.queryset)
         for tag in tags:

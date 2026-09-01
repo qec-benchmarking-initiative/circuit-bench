@@ -19,25 +19,25 @@ SUBMISSION_SPECS = {
         SubmissionKind.DECODER,
         "decoder version",
         "decoder versions",
-        "Describe one exact, versioned decoding algorithm record.",
+        "This form records one versioned decoding algorithm.",
     ),
     SubmissionKind.CIRCUIT: SubmissionSpec(
         SubmissionKind.CIRCUIT,
         "circuit revision",
         "circuit revisions",
-        "Describe one frozen circuit, DEM, manifest, and their provenance.",
+        "This form records one circuit revision, its DEM, and its manifest.",
     ),
     SubmissionKind.RESULT: SubmissionSpec(
         SubmissionKind.RESULT,
         "result",
         "results",
-        "Report one decoder–circuit evaluation on an existing machine.",
+        "This form records one decoder–circuit evaluation.",
     ),
     SubmissionKind.MACHINE: SubmissionSpec(
         SubmissionKind.MACHINE,
         "machine",
         "machines",
-        "Register the execution environment referenced by results.",
+        "This form records an execution environment used by results.",
     ),
 }
 

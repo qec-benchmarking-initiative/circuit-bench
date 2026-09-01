@@ -7,10 +7,28 @@
       {% include "components/filters/related_record_picker.html" with cell=item.picker_cell only %}
     {% elif item.type == "tags" %}
       {% include "components/tag_picker.html" with picker_id=item.picker_id label=item.bound.label input_name=item.bound.html_name tags=item.tags selected_keys=item.selected_keys mode="submission" open_label="Choose tags…" only %}
-    {% elif item.type == "artifact" %}
-      <div class="submission-artifact-input">
-        <div><span class="submission-input-caption">Use an existing frozen artifact</span>{% include "components/filters/related_record_picker.html" with cell=item.picker_cell only %}</div>
-        <div><label for="id_{{ item.upload_name }}">Or upload a new file</label><input id="id_{{ item.upload_name }}" type="file" name="{{ item.upload_name }}"><small>Maximum {{ item.upload_limit }}. The bytes are hashed and frozen before preview.</small></div>
+    {% elif item.type == "previous_schema" %}
+      <div class="submission-file-input submission-previous-schema" data-previous-schema-control data-previous-version-input="previous_version">
+        {{ item.bound }}
+        <div class="submission-previous-schema-reuse">
+          <button class="button-secondary button-compact" type="button" data-use-previous-schema{% if not item.previous_schema_available %} disabled{% endif %}>Use previous schema</button>
+          <span data-previous-schema-status>{% if item.current_file %}Selected: {{ item.current_file.original_filename }}.{% elif item.previous_schema_available %}Available: {{ item.previous_schema_label }}.{% elif item.has_previous_version %}The selected previous revision has no schema file.{% else %}Choose a previous decoder revision first.{% endif %}</span>
+        </div>
+        <div data-previous-schema-options hidden>
+          {% for version_id, schema in item.previous_schema_choices %}<span data-previous-version-id="{{ version_id }}" data-schema-id="{{ schema.identifier }}" data-schema-label="{{ schema.label }}"></span>{% endfor %}
+        </div>
+        <p class="field-help">Choose a schema from a previous decoder revision.</p>
+        <label for="id_{{ item.upload_name }}">Upload a new JSON Schema file</label>
+        <input id="id_{{ item.upload_name }}" type="file" name="{{ item.upload_name }}" accept="application/json,application/schema+json,.json" data-submission-file-upload>
+        <small>Maximum {{ item.upload_limit }}. The file is hashed and frozen before preview.</small>
+      </div>
+    {% elif item.type == "file" %}
+      <div class="submission-file-input">
+        {{ item.bound }}
+        {% if item.current_file %}<p class="submission-current-file">Current file: <strong>{{ item.current_file.original_filename }}</strong>. Upload a replacement only if it has changed.</p>{% endif %}
+        <label for="id_{{ item.upload_name }}">{% if item.current_file %}Replace file{% else %}Upload file{% endif %}</label>
+        <input id="id_{{ item.upload_name }}" type="file" name="{{ item.upload_name }}" data-submission-file-upload{% if item.required and not item.current_file %} required{% endif %}>
+        <small>Maximum {{ item.upload_limit }}. The file is hashed and frozen before preview.</small>
       </div>
     {% else %}
       {{ item.bound }}

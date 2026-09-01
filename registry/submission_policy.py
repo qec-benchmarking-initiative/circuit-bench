@@ -39,6 +39,47 @@ class ApprovalDecision:
 POLICY_VERSION = "0.1"
 
 
+def approval_process(
+    kind: SubmissionKind | str, *, reapproval: bool = False
+) -> dict[str, str]:
+    """Return concise, versioned public copy for the current approval route."""
+
+    kind = SubmissionKind(kind)
+    if reapproval:
+        return {
+            "version": POLICY_VERSION,
+            "text": (
+                "This revision is subject to admin review. It may be edited while "
+                "pending review and is automatically published once approved. It "
+                "may then be withdrawn, and later revisions are also subject to review."
+            ),
+        }
+    if kind is SubmissionKind.MACHINE:
+        return {
+            "version": POLICY_VERSION,
+            "text": (
+                "Machine submissions are validated and published immediately. "
+                "Publication is attributed to System. Published machines may be "
+                "withdrawn, and revisions of withdrawn machines are subject to admin "
+                "review."
+            ),
+        }
+    noun = {
+        SubmissionKind.DECODER: "decoder",
+        SubmissionKind.CIRCUIT: "circuit",
+        SubmissionKind.RESULT: "result",
+    }[kind]
+    return {
+        "version": POLICY_VERSION,
+        "text": (
+            f"All {noun} submissions are subject to admin review. Submissions may "
+            "be edited while pending review and are automatically published once "
+            "approved. They may then be withdrawn, and future revisions are also "
+            "subject to review."
+        ),
+    }
+
+
 def approval_decision(
     kind: SubmissionKind | str,
     submitter: Account,

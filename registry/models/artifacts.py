@@ -231,7 +231,7 @@ class ExternalLink(UUIDModel):
         PAPER = "paper", "Paper"
         SOURCE = "source", "Source"
         DOCUMENTATION = "documentation", "Documentation"
-        ARTIFACT = "artifact", "Artifact"
+        ARTIFACT = "artifact", "File"
         CONFIGURATION = "configuration", "Configuration"
         RAW_TRACE = "raw_trace", "Raw trace"
         OTHER = "other", "Other"

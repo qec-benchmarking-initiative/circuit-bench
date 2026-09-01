@@ -308,15 +308,17 @@ def _query_status(error, scripted, result_count):
         return {
             "kind": "success",
             "message": (
-                f"Valid ResultRecord 0.1 query · {result_count} matching results."
+                f"The ResultRecord 0.1 query is valid. {result_count} "
+                f"result{'s' if result_count != 1 else ''} match."
             ),
         }
     plural = "s" if result_count != 1 else ""
     return {
         "kind": "plain",
         "message": (
-            f"{result_count} exact published result{plural} · "
-            "filters, query, plot, and sort describe one population."
+            f"The current population contains {result_count} exact published "
+            f"result{plural}. Its filters, query, plot, and sort describe the "
+            "same population."
         ),
     }
 

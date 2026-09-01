@@ -51,7 +51,7 @@ def artifact_upload(request):
                 form.add_error("file", str(error))
             else:
                 outcome = (
-                    "Stored a new artifact." if created else "Reused existing bytes."
+                    "Stored a new file." if created else "Reused the existing file."
                 )
                 messages.success(request, outcome)
                 return redirect("artifacts:detail", artifact_id=artifact.id)
@@ -100,7 +100,7 @@ def artifact_download(request, artifact_id):
         stored_file, verification = open_verified_artifact(artifact)
     except ArtifactIntegrityError as error:
         return HttpResponse(
-            f"Artifact integrity verification failed: {error}",
+            f"File integrity verification failed: {error}",
             status=409,
             content_type="text/plain; charset=utf-8",
         )
@@ -125,4 +125,4 @@ def _require_development() -> None:
 def _download_filename(filename: str) -> str:
     candidate = filename.replace("\\", "/").split("/")[-1]
     candidate = "".join(character for character in candidate if ord(character) >= 32)
-    return candidate.strip()[:255] or "artifact.bin"
+    return candidate.strip()[:255] or "file.bin"

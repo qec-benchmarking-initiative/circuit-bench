@@ -4,65 +4,54 @@
 {% block title %}Settings · Circuit Bench{% endblock %}
 
 {% block content %}
-  <section class="page-intro flow">
-    <p class="eyebrow">Account</p>
-    <h1>Settings</h1>
-  </section>
+  <div class="page-shell settings-shell">
+    <header class="record-heading settings-heading">
+      <p class="eyebrow">Account</p>
+      <h1>Settings</h1>
+    </header>
 
-  <section class="flow" aria-labelledby="identities-heading">
-    <h2 id="identities-heading">Sign-in identities</h2>
-    <p class="lede">
-      These public provider identities can be used to sign in as
-      {{ request.user.display_name }}. Circuit Bench stores no password.
-    </p>
-  </section>
-
-  <section class="panel flow" aria-labelledby="linked-heading">
-    <h3 id="linked-heading">Linked identities</h3>
-    {% if identities %}
-      <ul class="flow">
-        {% for identity in identities %}
-          <li>
-            <strong>{{ identity.get_provider_display }}</strong>:
-            <a href="{{ identity.profile_url }}">{{ identity.public_identifier }}</a>
-            {% if not identity.oauth_connected %}
-              <span class="supporting-text">(demonstration record; not sign-in enabled)</span>
-            {% endif %}
-            <form
-              method="post"
-              action="{% url 'account-identity-unlink' identity.id %}"
-            >
-              {% csrf_token %}
-              <button type="submit" {% if not identity.can_unlink %}disabled{% endif %}>
-                Unlink {{ identity.get_provider_display }}
-              </button>
-            </form>
-          </li>
-        {% endfor %}
-      </ul>
-      {% if has_unlink_guard %}
-        <p class="supporting-text">
-          Your final public identity cannot be removed, and a working provider
-          connection cannot be removed until another provider is connected.
-        </p>
-      {% endif %}
-    {% else %}
-      <p>No public sign-in identity is recorded. An administrator must repair this account.</p>
-    {% endif %}
-  </section>
-
-  {% if missing_providers %}
-    <section class="panel flow" aria-labelledby="link-heading">
-      <h3 id="link-heading">Link another provider</h3>
-      {% for provider in missing_providers %}
-        <form
-          method="post"
-          action="{% provider_login_url provider.id process='connect' next=request.path %}"
-        >
-          {% csrf_token %}
-          <button type="submit">Link {{ provider.label }}</button>
-        </form>
-      {% endfor %}
+    <section class="settings-section" aria-labelledby="identities-heading">
+      <header class="settings-section-heading">
+        <h2 id="identities-heading">Sign-in identities</h2>
+        <p>GitHub and ORCID can be used to sign in as {{ request.user.display_name }}. Circuit Bench stores no password.</p>
+      </header>
+      <div class="table-scroll">
+        <table class="data-table settings-identity-table">
+          <thead><tr><th>Provider</th><th>Public identity</th><th>Sign-in status</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for identity in identities %}
+              <tr>
+                <td>{{ identity.get_provider_display }}</td>
+                <td><a href="{{ identity.profile_url }}">{{ identity.public_identifier }}</a></td>
+                <td>{% if identity.oauth_connected %}Connected{% else %}Demonstration record only{% endif %}</td>
+                <td>
+                  <form method="post" action="{% url 'account-identity-unlink' identity.id %}">
+                    {% csrf_token %}
+                    <button class="table-action" type="submit" {% if not identity.can_unlink %}disabled{% endif %}>Unlink</button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td class="table-empty" colspan="4">No sign-in identity is recorded. An administrator must repair this account.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if has_unlink_guard %}<p class="settings-note">The final sign-in identity cannot be removed. Connect another provider before unlinking it.</p>{% endif %}
     </section>
-  {% endif %}
+
+    {% if missing_providers %}
+      <section class="settings-section" aria-labelledby="link-heading">
+        <header class="settings-section-heading"><h2 id="link-heading">Add a sign-in identity</h2></header>
+        <div class="settings-provider-actions">
+          {% for provider in missing_providers %}
+            <form method="post" action="{% provider_login_url provider.id process='connect' next=request.path %}">
+              {% csrf_token %}
+              <button class="table-action" type="submit">Link {{ provider.label }}</button>
+            </form>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  </div>
 {% endblock %}

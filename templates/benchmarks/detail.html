@@ -119,13 +119,13 @@
         {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
         {% for name, value in plot_control_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
         {% include "components/result_query.html" with query_id="benchmark-result-odata" scripted_query_text=scripted_query_text last_valid_scripted_query=last_valid_scripted_query only %}
-        <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
         {% include "components/filters/grid.html" with grid=algorithm_filter_grid only %}
         {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
         {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
         <div class="leaderboard-filter-actions">
           {% include "components/filters/query_actions.html" with show_reset=result_filters_active reset_url=result_reset_url reset_label="Reset filters" only %}
         </div>
+        <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
       </form>
       <div class="collection-results" aria-live="polite">
         {% include "components/result_comparison.html" with result_plot=result_plot only %}
