@@ -192,7 +192,7 @@ def _create_submission(
             record=record,
             actor=submitter,
             action=RecordEvent.Action.REVISION_CREATED,
-            note="Created this exact record as a successor revision.",
+            note="Created this record as a successor revision.",
             details={
                 "policy_version": decision.policy_version,
                 "predecessor_id": str(predecessor.id),
@@ -301,6 +301,10 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
             "code_tags": [
                 str(item)
                 for item in record.code_tags.order_by("id").values_list("id", flat=True)
+            ],
+            "ecz_terms": [
+                str(item)
+                for item in record.ecz_terms.order_by("id").values_list("id", flat=True)
             ],
             "experiment_tags": [
                 str(item)
@@ -437,7 +441,7 @@ def update_pending_submission(
         record=record,
         actor=actor,
         action=RecordEvent.Action.EDITED,
-        note="Edited while awaiting review; the exact candidate UUID was retained.",
+        note="Edited while awaiting review; the candidate UUID was retained.",
         details={"policy_version": "0.1", "state": record.state},
         payload_snapshot=submission_snapshot(kind.value, payload),
     )
@@ -621,7 +625,7 @@ def _assert_successor_available(kind, source, *, excluding=None):
     except ObjectDoesNotExist:
         return
     if excluding is None or successor.id != excluding.id:
-        raise SubmissionStateError("This exact record already has a successor.")
+        raise SubmissionStateError("This record already has a successor.")
 
 
 def _assert_form_lineage_available(kind, cleaned, *, excluding=None):
@@ -687,6 +691,7 @@ def _update_record(kind, record, cleaned):
         record.full_clean(exclude=_full_clean_exclusions(kind))
         record.save()
         record.code_tags.set(cleaned["code_tags"])
+        record.ecz_terms.set(cleaned["ecz_terms"])
         record.experiment_tags.set(cleaned["experiment_tags"])
         return
     if kind is SubmissionKind.RESULT:
@@ -802,6 +807,7 @@ def _create_circuit(cleaned, submitter, release, decision, published_at, history
         published_at=published_at,
     )
     record.code_tags.set(cleaned["code_tags"])
+    record.ecz_terms.set(cleaned["ecz_terms"])
     record.experiment_tags.set(cleaned["experiment_tags"])
     Credit.objects.create(circuit_revision=record, position=1, account=submitter)
     return record
@@ -943,8 +949,8 @@ def _revalidate_record_for_publication(kind: SubmissionKind, record) -> None:
             or record.predecessor.circuit_revision_id != record.circuit_revision_id
         ):
             raise SubmissionStateError(
-                "A result successor must use the same exact decoder version and "
-                "circuit revision as its predecessor."
+                "A result successor must use the same decoder version and circuit "
+                "revision as its predecessor."
             )
     elif kind is SubmissionKind.MACHINE:
         if record.predecessor and record.predecessor.state not in PUBLIC_HISTORY_STATES:
@@ -1015,7 +1021,7 @@ def _full_clean_exclusions(kind: SubmissionKind) -> list[str]:
     if kind is SubmissionKind.DECODER:
         return ["algorithm_tags"]
     if kind is SubmissionKind.CIRCUIT:
-        return ["code_tags", "experiment_tags"]
+        return ["code_tags", "ecz_terms", "experiment_tags"]
     return []
 
 

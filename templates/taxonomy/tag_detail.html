@@ -1,0 +1,95 @@
+{% extends "layouts/record_detail.html" %}
+{% load static record_history %}
+
+{% block title %}{{ tag.label }} · Circuit Bench{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/tag-taxonomy-graph.css' %}?v=0.1.20260902q">
+{% endblock %}
+
+{% block record_heading %}
+  {% include "components/record_header.html" with record=record hide_tags=True only %}
+  {% if can_edit or can_retire %}
+    <p class="page-action-bar">
+      {% if can_edit %}<a class="button button-secondary" href="{% url 'taxonomy:tag-edit' namespace=tag.namespace slug=tag.slug %}">Edit tag</a>{% endif %}
+      {% if can_retire %}<a class="button button-danger" href="{% url 'taxonomy:tag-delete' namespace=tag.namespace slug=tag.slug %}">Delete tag</a>{% endif %}
+    </p>
+  {% endif %}
+{% endblock %}
+
+{% block record_main %}
+  <div class="record-sections">
+    <section class="record-section">
+      <h2>Description</h2>
+      <p>{{ tag.description|urlize|linebreaksbr }}</p>
+    </section>
+    <section class="record-section">
+      <h2>Aliases</h2>
+      {% if tag.display_aliases %}
+        <ul class="tag-alias-list">{% for alias in tag.display_aliases %}<li>{{ alias.alias }}</li>{% endfor %}</ul>
+      {% else %}
+        <p class="null-value">No active aliases.</p>
+      {% endif %}
+    </section>
+    <section class="record-section tag-taxonomy-section">
+      <h2>Taxonomy</h2>
+      {% include "components/tag_taxonomy_graph.html" with graph=tag_graph only %}
+    </section>
+    {% if ecz_mappings %}
+      <section class="record-section">
+        <h2>Error Correction Zoo equivalence</h2>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>ECZ term</th><th>Status</th><th>Rationale</th></tr></thead>
+            <tbody>{% for mapping in ecz_mappings %}<tr><td><a href="{{ mapping.ecz_term.get_absolute_url }}">{{ mapping.ecz_term.display_name }} (ECZ)</a></td><td>{{ mapping.get_status_display }}</td><td>{{ mapping.mapping_note }}{% if mapping.revocation_note %}<br><span class="muted">Demerged: {{ mapping.revocation_note }}</span>{% endif %}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </section>
+    {% endif %}
+    {% if tag.canonical_tag %}
+      <section class="record-section">
+        <h2>Canonical replacement</h2>
+        <p><a href="{{ tag.canonical_tag.get_absolute_url }}">{{ tag.canonical_tag.label }}</a></p>
+      </section>
+    {% endif %}
+  </div>
+  {% record_history tag "tag" %}
+{% endblock %}
+
+{% block record_aside %}
+  <h2>Tag identity</h2>
+  <dl class="stacked-metadata compact-technical-metadata">
+    <div><dt>Namespace</dt><dd>{{ tag.get_namespace_display }}</dd></div>
+    <div><dt>Permanent slug</dt><dd><code>{{ tag.slug }}</code></dd></div>
+    <div><dt>UUID</dt><dd><code>{{ tag.id }}</code></dd></div>
+    <div><dt>Submitted by</dt><dd>{{ tag.submitted_by.display_name }}</dd></div>
+    <div><dt>Created</dt><dd>{{ tag.created_at }}</dd></div>
+    {% if tag.curated_by %}<div><dt>Curated by</dt><dd>{{ tag.curated_by.display_name }}</dd></div>{% endif %}
+  </dl>
+  <p><a href="{{ tag.schema_release.permanent_url }}">Schema contract {{ tag.schema_release.version }}</a></p>
+{% endblock %}
+
+{% block record_related %}
+  <h2>{{ usage_label }}</h2>
+  <form class="leaderboard-filter-form" method="get" data-filter-form>
+    {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+    {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+    {% include "components/taxonomy_usage_controls.html" %}
+    {% include "components/filters/grid.html" with grid=usage_grid only %}
+    <div class="leaderboard-filter-actions">
+      {% include "components/filters/query_actions.html" with show_reset=usage_filters_active reset_url=usage_reset_url only %}
+    </div>
+  </form>
+  <div class="table-region" aria-live="polite">
+    {% include "components/table_toolbar.html" with table_id="tag-usage" %}
+    {% include "components/data_table.html" with columns=table_columns rows=usage_rows empty_message=usage_empty only %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902e" defer></script>
+  <script src="{% static 'js/filter-query.js' %}?v=0.1.20260902c" defer></script>
+  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902b" defer></script>
+  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902c" defer></script>
+  <script src="{% static 'js/tag-taxonomy-graph.js' %}?v=0.1.20260902q" defer></script>
+{% endblock %}

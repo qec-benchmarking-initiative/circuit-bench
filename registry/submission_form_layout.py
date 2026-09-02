@@ -24,6 +24,12 @@ REFERENCE_PICKERS = {
 
 TAG_FIELDS = {"algorithm_tags", "code_tags", "experiment_tags"}
 
+TAG_NAMESPACE_BY_FIELD = {
+    "algorithm_tags": "algorithm",
+    "code_tags": "code",
+    "experiment_tags": "experiment",
+}
+
 ARTIFACT_FIELDS = {
     "hyperparameter_schema_artifact",
     "sampling_circuit_artifact",
@@ -51,12 +57,12 @@ LAYOUTS = {
         ),
         (
             "Revision lineage",
-            "Choose the exact predecessor, if this is not the first version.",
+            "Choose the predecessor, if this is not the first version.",
             (("stack", ("previous_version",)),),
         ),
         (
             "Scientific description",
-            "Describe the decoder and what changed in this exact version.",
+            "Describe the decoder and what changed in this version.",
             (("stack", ("description", "revision_description")),),
         ),
         (
@@ -77,7 +83,7 @@ LAYOUTS = {
             "Algorithmic description",
             (
                 "Tags are searchable shared vocabulary; hyperparameters remain "
-                "exact prose."
+                "free text."
             ),
             (("stack", ("algorithm_tags", "hyperparameter_definitions")),),
         ),
@@ -98,7 +104,7 @@ LAYOUTS = {
         ),
         (
             "Revision lineage and noise model",
-            "Both references point to exact registry records.",
+            "Both references point to versioned registry records.",
             (("stack", ("previous_revision", "noise_model")),),
         ),
         (
@@ -109,7 +115,7 @@ LAYOUTS = {
         (
             "Code and experiment classification",
             "Use the shared coloured tag vocabulary.",
-            (("stack", ("code_tags", "experiment_tags")),),
+            (("stack", ("code_tags", "ecz_terms", "experiment_tags")),),
         ),
         (
             "Circuit quantities",
@@ -174,7 +180,7 @@ LAYOUTS = {
     ),
     SubmissionKind.RESULT: (
         (
-            "Exact scientific references",
+            "Scientific references",
             "A result can only reference already-published records.",
             (
                 (
@@ -190,7 +196,7 @@ LAYOUTS = {
         ),
         (
             "Result lineage",
-            "A successor is a new exact result; its predecessor remains immutable.",
+            "A successor is a new result; its predecessor remains immutable.",
             (("stack", ("supersedes_result",)),),
         ),
         (
@@ -221,7 +227,7 @@ LAYOUTS = {
         ),
         (
             "Execution and preparation",
-            "Timing and workload evidence for this exact run.",
+            "Timing and workload evidence for this run.",
             (
                 (
                     "stack",
@@ -246,12 +252,12 @@ LAYOUTS = {
     SubmissionKind.MACHINE: (
         (
             "Machine identity",
-            "Describe the exact hardware or execution environment.",
+            "Describe the hardware or execution environment.",
             (("stack", ("slug", "machine_class", "status", "description")),),
         ),
         (
             "Revision lineage",
-            "Choose the exact machine record superseded by this one, if any.",
+            "Choose the machine record superseded by this one, if any.",
             (("stack", ("supersedes_machine",)),),
         ),
     ),
@@ -363,15 +369,29 @@ def _field_context(form, name, kind, section_index):
         )
         context.update(type="reference", picker_cell=cell)
     elif name in TAG_FIELDS:
-        tags = list(bound.field.queryset)
+        selected_values = tuple(_bound_values(bound.value()))
+        tags = list(bound.field.queryset.filter(id__in=selected_values))
         for tag in tags:
             tag.picker_key = str(tag.id)
         context.update(
             type="tags",
             tags=tags,
-            selected_keys=tuple(_bound_values(bound.value())),
+            selected_keys=selected_values,
             picker_id=f"submission-{kind.value}-{section_index}-{name}",
+            tag_namespace=TAG_NAMESPACE_BY_FIELD[name],
         )
+        if name == "code_tags" and "ecz_terms" in form.fields:
+            ecz_bound = form["ecz_terms"]
+            ecz_values = tuple(_bound_values(ecz_bound.value()))
+            context.update(
+                selected_ecz_terms=list(
+                    ecz_bound.field.queryset.filter(id__in=ecz_values)
+                ),
+                ecz_input_name=ecz_bound.html_name,
+                errors=(*bound.errors, *ecz_bound.errors),
+            )
+    elif name == "ecz_terms":
+        context.update(type="hidden_companion")
     elif getattr(bound.field.widget, "input_type", None) == "checkbox":
         context["type"] = "boolean"
     return context

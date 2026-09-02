@@ -1,16 +1,16 @@
-{% extends "layouts/entity_detail.html" %}
-{% load scientific submission_history %}
+{% extends "layouts/record_detail.html" %}
+{% load scientific record_history %}
 
 {% block title %}Result {{ result.id }} · Circuit Bench{% endblock %}
 
-{% block entity_heading %}
-  {% include "components/entity_header.html" with entity=entity only %}
+{% block record_heading %}
+  {% include "components/record_header.html" with record=record only %}
   {% if result.state == "withdrawn" %}
-    <p class="record-warning"><strong>Withdrawn record.</strong> This exact page remains available as immutable scientific history and is excluded from public leaderboards.</p>
+    <p class="record-warning"><strong>Withdrawn record.</strong> This page remains available as immutable scientific history and is excluded from public leaderboards.</p>
   {% endif %}
 {% endblock %}
 
-{% block entity_main %}
+{% block record_main %}
   <div class="record-sections">
     {% if result.description %}
       <section class="record-section">
@@ -116,11 +116,11 @@
       </section>
     {% endif %}
   </div>
-  {% submission_history result "result" %}
+  {% record_history result "result" %}
 {% endblock %}
 
-{% block entity_aside %}
-  <h2>Exact provenance</h2>
+{% block record_aside %}
+  <h2>Provenance</h2>
   <dl class="metadata-list">
     {% for item in provenance %}
       <div>
@@ -150,12 +150,12 @@
     <div><dt>Result UUID</dt><dd><code>{{ result.id }}</code></dd></div>
     <div><dt>Schema</dt><dd><a href="{{ result.schema_release.permanent_url }}">{{ result.schema_release.public_name }}</a></dd></div>
     <div><dt>Submitted by</dt><dd>{{ result.submitted_by.display_name }}</dd></div>
-    <div><dt>Created</dt><dd>{{ result.created_at }}</dd></div>
-    <div><dt>Published</dt><dd>{{ result.published_at }}</dd></div>
-    {% if result.withdrawn_at %}<div><dt>Withdrawn</dt><dd>{{ result.withdrawn_at }}</dd></div>{% endif %}
+    <div><dt>Created</dt><dd>{{ result.created_at|date:"Y-m-d H:i" }} UTC</dd></div>
+    <div><dt>Published</dt><dd>{{ result.published_at|date:"Y-m-d H:i" }} UTC</dd></div>
+    {% if result.withdrawn_at %}<div><dt>Withdrawn</dt><dd>{{ result.withdrawn_at|date:"Y-m-d H:i" }} UTC</dd></div>{% endif %}
     {% if result.predecessor %}<div><dt>Supersedes result</dt><dd><code>{{ result.predecessor_id }}</code></dd></div>{% endif %}
   </dl>
   {% if can_review_author_status %}
-    <p><a class="table-action" href="{% url 'credits:result-author-approval' result.id %}">{% if current_author_approval.action == "approve" %}Review or revoke decoder-author approval{% else %}Record decoder-author approval{% endif %}</a></p>
+    <p><a class="button button-secondary button-compact" href="{% url 'credits:result-author-approval' result.id %}">{% if current_author_approval.action == "approve" %}Review or revoke decoder-author approval{% else %}Record decoder-author approval{% endif %}</a></p>
   {% endif %}
 {% endblock %}

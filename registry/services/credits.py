@@ -117,7 +117,7 @@ def submit_credit_claim(
     _require_claimable_name_credit(name_credit)
     subject = describe_credit_subject(name_credit)
     if _account_credit_exists(subject.field, subject.record, claimant):
-        raise CreditStateError("This account is already credited on that exact record.")
+        raise CreditStateError("This account is already credited on that record.")
     existing = CreditClaim.objects.filter(
         name_credit=name_credit,
         claimant_account=claimant,
@@ -208,7 +208,7 @@ def review_credit_claim(
     ):
         raise CreditStateError("That name credit has already been claimed.")
     if _account_credit_exists(subject.field, subject.record, claim.claimant_account):
-        raise CreditStateError("The claimant is already credited on that exact record.")
+        raise CreditStateError("The claimant is already credited on that record.")
 
     if claim.retain_name_credit:
         position = _next_visible_position(subject.field, subject.record)
@@ -284,7 +284,7 @@ def set_result_author_approval(
         raise CreditStateError("Only published results may receive author approval.")
     if not is_exact_decoder_author(account, result):
         raise CreditPermissionError(
-            "Only an author credited on this exact decoder version may act."
+            "Only an author credited on this decoder version may act."
         )
 
     action = (

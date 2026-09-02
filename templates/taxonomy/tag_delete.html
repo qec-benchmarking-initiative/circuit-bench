@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Delete {{ tag.label }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
+      <p class="eyebrow"><a href="{{ tag.get_absolute_url }}">{{ tag.label }}</a></p>
+      <h1>Delete tag</h1>
+    </header>
+    <section class="form-bar-shell submission-withdraw-panel">
+      <dl class="form-bar-list">
+        <div class="form-bar-row"><dt class="form-bar-label">Tag</dt><dd class="form-bar-control">{{ tag.label }}</dd></div>
+        <div class="form-bar-row"><dt class="form-bar-label">Current status</dt><dd class="form-bar-control">{{ tag.get_status_display }}</dd></div>
+        <div class="form-bar-row"><dt class="form-bar-label">Effect</dt><dd class="form-bar-control">The tag will no longer be available for new selections. Its page, history, aliases, existing uses, and taxonomy relationships will remain available.</dd></div>
+      </dl>
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-actions">
+          <a class="button button-secondary" href="{{ tag.get_absolute_url }}">Cancel</a>
+          <button class="button-danger" type="submit">Delete tag</button>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

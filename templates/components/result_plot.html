@@ -193,7 +193,7 @@
     <div class="result-plot-sidebar-body">
       <section class="result-plot-selection" aria-live="polite">
       <h3>Selected point</h3>
-      <p data-plot-selection-empty>Select a point to inspect its exact result.</p>
+      <p data-plot-selection-empty>Select a point to inspect its result.</p>
       {% for point in plot.points %}
         <article id="{{ plot.id }}-summary-{{ point.id }}" data-plot-summary hidden>
           <p><a href="{{ point.link_url }}">{{ point.link_label }} →</a></p>
@@ -207,7 +207,7 @@
             <div><dt>{{ plot.y_axis.label_with_unit }}</dt><dd>{% scientific_number point.y_value profile=plot.y_axis.number_profile unit=plot.y_axis.unit %}</dd></div>
             {% if point.y_interval %}<div><dt>y stored interval{% if point.y_interval.confidence_display %} ({{ point.y_interval.confidence_display }}){% endif %}</dt><dd>{{ point.y_interval.lower_display }}–{{ point.y_interval.upper_display }}</dd></div>{% endif %}
           </dl>
-          {% if point.link_url != point.result_url %}<p><a href="{{ point.result_url }}">Open exact result record</a></p>{% endif %}
+          {% if point.link_url != point.result_url %}<p><a href="{{ point.result_url }}">Open result record</a></p>{% endif %}
         </article>
       {% endfor %}
       </section>

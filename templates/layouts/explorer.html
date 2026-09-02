@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+  <div class="page-shell explorer-layout">
+    <h1 class="visually-hidden">{% block explorer_name %}{% endblock %}</h1>
+    <form class="explorer-form" method="get">
+      <section class="explorer-query" aria-label="Search">
+        {% block explorer_query %}{% endblock %}
+      </section>
+      <section class="explorer-filters" aria-label="Filters">
+        {% block explorer_filters %}{% endblock %}
+      </section>
+      <p class="explorer-query-status" role="status">{% block explorer_status %}{% endblock %}</p>
+    </form>
+    <section class="table-region" aria-live="polite" aria-label="Matching records">
+      {% block explorer_results %}{% endblock %}
+    </section>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902e" defer></script>
+  <script src="{% static 'js/related-record-picker.js' %}" defer></script>
+  <script src="{% static 'js/filter-query.js' %}?v=0.1.20260902c" defer></script>
+  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902b" defer></script>
+  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902c" defer></script>
+{% endblock %}

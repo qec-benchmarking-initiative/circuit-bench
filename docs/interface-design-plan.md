@@ -356,11 +356,15 @@ all official tags ∪ non-official tags attached to at least one searchable reco
 Unused custom tags therefore do not clutter discovery, while the complete
 official vocabulary remains discoverable.
 
-Once at least one tag is selected, the modal offers two explicit commit
-actions: `Filter for records with all selected tags` (AND) and `Filter for
-records with any selected tag` (OR). The former is visually primary. The
-buttons replace a separate All/Any mode control and apply the explorer form
-immediately. With no selected tags both actions are disabled.
+Once at least one tag is selected, the modal offers three explicit commit
+actions in one row: `Filter for records with all selected tags` (AND), `Filter
+for records with any selected tag` (OR), and `Filter for records with any child
+of selected tags`. The third rule matches any selected tag or any of its active
+descendants at arbitrary depth, so the populations are nested as
+`all ⊆ any ⊆ any child of`. The first action is visually primary. The buttons
+replace a separate match-mode control and commit the chosen mode to the filter
+bar. Autoquery applies it immediately; otherwise the user applies it with the
+bar's normal button. With no selected tags all three actions are disabled.
 
 The implemented component uses the platform modal `<dialog>`, search input,
 checkboxes and buttons. This delegates modal focus containment and option

@@ -3,23 +3,21 @@
 {% block title %}{{ release.public_name }} — Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell gallery">
-    <header class="page-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <p class="eyebrow">Schema release</p>
       <h1>{{ release.public_name }}</h1>
-      <span class="status-badge status-{{ release.state }}">{{ release.get_state_display }}</span>
+      <p><span class="status-badge status-{{ release.state }}">{{ release.get_state_display }}</span></p>
     </header>
-    <section class="gallery-section">
+    <section class="table-section">
       <h2>Permanent definition binding</h2>
       <dl class="metadata-list">
         <div><dt>Record type</dt><dd>{{ release.get_record_type_display }}</dd></div>
         <div><dt>Version</dt><dd>{{ release.version }}</dd></div>
         <div><dt>Permanent URL</dt><dd><a href="{{ release.permanent_url }}">{{ release.permanent_url }}</a></dd></div>
-        <div><dt>Frozen at</dt><dd>{{ release.frozen_at|default:'—' }}</dd></div>
+        <div><dt>Frozen at</dt><dd>{% if release.frozen_at %}{{ release.frozen_at|date:"Y-m-d H:i" }} UTC{% else %}<span class="null-value">—</span>{% endif %}</dd></div>
       </dl>
-      <p><a href="{% url 'artifacts:download' artifact_id=release.json_schema_artifact_id %}">Download exact JSON Schema</a></p>
-      <p><a href="{% url 'artifacts:download' artifact_id=release.definitions_artifact_id %}">Download exact human-readable definitions</a></p>
-      {% if debug %}<p><a href="{% url 'artifacts:index' %}">Back to file inspection</a></p>{% endif %}
+      <div class="page-action-bar"><a class="button" href="{% url 'artifacts:download' artifact_id=release.json_schema_artifact_id %}">Download JSON Schema</a><a class="button button-secondary" href="{% url 'artifacts:download' artifact_id=release.definitions_artifact_id %}">Download definitions</a>{% if debug %}<a class="button button-secondary" href="{% url 'artifacts:index' %}">Back to files</a>{% endif %}</div>
     </section>
   </div>
 {% endblock %}

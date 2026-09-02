@@ -1,5 +1,3 @@
-from urllib.parse import urlencode
-
 from django.urls import NoReverseMatch, reverse
 from django.views.generic import DetailView, ListView
 
@@ -10,15 +8,6 @@ from registry.curation import (
     apply_search_relevance,
     ordering_metadata,
     select_catalogue_ordering,
-)
-from registry.explorer import (
-    ColumnSpec,
-    apply_sort,
-    cells_for_visible_columns,
-    parse_nonnegative_int,
-    parse_sort,
-    table_context,
-    url_without,
 )
 from registry.filter_grids import algorithm_grid as build_algorithm_grid
 from registry.filter_grids import (
@@ -47,6 +36,15 @@ from registry.services.decoders import (
 )
 from registry.services.filter_options import public_circuit_filter_options
 from registry.services.results import public_result_catalogue
+from registry.table_controls import (
+    ColumnSpec,
+    apply_sort,
+    cells_for_visible_columns,
+    parse_nonnegative_int,
+    parse_sort,
+    table_context,
+    url_without,
+)
 
 DECODER_RESULT_COLUMNS = (
     ColumnSpec("result", "Result UUID", default_visible=False),
@@ -103,7 +101,7 @@ class DecoderCatalogueView(ListView):
             )
         )
         self.tag_match = self.request.GET.get("tag_match", "all").strip()
-        if self.tag_match not in {"all", "any"}:
+        if self.tag_match not in {"all", "any", "children"}:
             self.tag_match = "all"
         self.skeleton_preparation = self.request.GET.get("skeleton", "").strip()
         self.priors_preparation = self.request.GET.get("priors", "").strip()
@@ -149,7 +147,8 @@ class DecoderCatalogueView(ListView):
             tag_cells = [
                 {
                     "label": tag.label,
-                    "url": f"{reverse('decoders:list')}?{urlencode({'tag': tag.slug})}",
+                    "url": tag.get_absolute_url(),
+                    "status": tag.status,
                     "display_color": tag.display_color,
                 }
                 for tag in decoder.display_algorithm_tags
@@ -253,12 +252,11 @@ class DecoderDetailView(DetailView):
         description_source = inherited_description_source(decoder)
         predecessor = public_predecessor(decoder)
         successor = public_successor(decoder)
-        list_url = reverse("decoders:list")
         result_context = self._result_context(decoder)
 
         context.update(
             {
-                "entity": {
+                "record": {
                     "kind": "Decoder version",
                     "name": decoder.name,
                     "version": decoder.version,
@@ -269,7 +267,7 @@ class DecoderDetailView(DetailView):
                             "label": tag.label,
                             "status": tag.status,
                             "display_color": tag.display_color,
-                            "url": f"{list_url}?{urlencode({'tag': tag.slug})}",
+                            "url": tag.get_absolute_url(),
                         }
                         for tag in decoder.display_algorithm_tags
                     ],
@@ -485,4 +483,4 @@ class DecoderDetailView(DetailView):
 
     def _match(self, name: str) -> str:
         value = self.request.GET.get(name, "all").strip()
-        return value if value in {"all", "any"} else "all"
+        return value if value in {"all", "any", "children"} else "all"

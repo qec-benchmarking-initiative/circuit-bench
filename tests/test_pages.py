@@ -211,7 +211,7 @@ def test_component_gallery_renders_difficult_states(client, settings):
     response = client.get(reverse("pages:component-gallery"))
     assert response.status_code == 200
     assert b"Component gallery" in response.content
-    assert b"Valid query" in response.content
+    assert b"Record heading" in response.content
     assert b"No matching results" in response.content
 
 

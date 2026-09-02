@@ -18,7 +18,8 @@ from registry.forms_taxonomy import (
     TagDeprecationForm,
     TagPromotionForm,
 )
-from registry.models import NoiseModel, Tag
+from registry.models import EczTerm, NoiseModel, Tag
+from registry.services.tags import active_tag_queryset
 from registry.services.taxonomy import (
     TaxonomyError,
     TaxonomyPermissionError,
@@ -66,6 +67,8 @@ def custom_tag_create(request):
             "kind": "tag",
             "title": "Create custom tag",
             "policy": TAG_POLICY,
+            "picker_tags": list(active_tag_queryset()),
+            "namespace_choices": Tag.Namespace.choices,
         },
     )
 
@@ -148,6 +151,25 @@ def custom_tag_preview(request, preview_id):
                 ("Slug", payload["slug"]),
                 ("Label", payload["label"]),
                 ("Description", payload["description"]),
+                ("Aliases", payload.get("aliases") or "None"),
+                (
+                    "Parent tags",
+                    ", ".join(
+                        Tag.objects.filter(id__in=payload.get("parents", ()))
+                        .order_by("label")
+                        .values_list("label", flat=True)
+                    )
+                    or "None",
+                ),
+                (
+                    "Error Correction Zoo parents",
+                    ", ".join(
+                        EczTerm.objects.filter(id__in=payload.get("ecz_parents", ()))
+                        .order_by("display_name")
+                        .values_list("display_name", flat=True)
+                    )
+                    or "None",
+                ),
                 ("Initial status", "Custom"),
             ),
             "back_url": f"/taxonomy/tags/new/?preview={preview_id}",
@@ -224,14 +246,14 @@ def noise_model_preview(request, preview_id):
 def curation_queue(request):
     _require_admin_view(request)
     active_tags = list(
-        Tag.objects.exclude(status=Tag.Status.DEPRECATED)
+        Tag.objects.exclude(status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED))
         .select_related("submitted_by", "curated_by")
         .order_by("namespace", "status", "label", "id")
     )
     canonical_by_namespace = {
         namespace: list(
             Tag.objects.filter(namespace=namespace)
-            .exclude(status=Tag.Status.DEPRECATED)
+            .exclude(status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED))
             .filter(canonical_tag__isnull=True)
             .order_by("status", "label", "id")
         )

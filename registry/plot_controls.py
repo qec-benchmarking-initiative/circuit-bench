@@ -205,7 +205,6 @@ def _choice_cell(*, key, label, name, value, choices):
         "value": value,
         "display_value": labels[value],
         "choices": normalized,
-        "filtered": True,
         "span": 1,
     }
 
@@ -257,7 +256,7 @@ def _range_cell(
             format_scientific_value(maximum_value) if maximum_value else "auto"
         ),
         "display_value": display_value,
-        "filtered": bool(minimum_value or maximum_value),
+        "explicit": bool(minimum_value or maximum_value),
         "allow_negative": True,
         "histogram_label": histogram_label,
         "number_profile": number_profile,

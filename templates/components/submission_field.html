@@ -1,12 +1,13 @@
-<div class="submission-field submission-field-{{ item.type }}{% if item.errors %} submission-field-error{% endif %}">
+{% if item.type != "hidden_companion" %}<div class="submission-field submission-field-{{ item.type }}{% if item.errors %} submission-field-error{% endif %}">
   {% if item.type == "boolean" %}
     <label class="submission-boolean-field" for="{{ item.bound.id_for_label }}">{{ item.bound }} <span>{{ item.bound.label }}{% if item.required %} <span aria-label="required">*</span>{% endif %}</span>{% if item.definition_url %} <a class="field-definition-link" href="{{ item.definition_url }}">Definition</a>{% endif %}</label>
   {% else %}
     <label for="{{ item.bound.id_for_label }}">{{ item.bound.label }}{% if item.required %} <span aria-label="required">*</span>{% endif %}{% if item.definition_url %} <a class="field-definition-link" href="{{ item.definition_url }}">Definition</a>{% endif %}</label>
     {% if item.type == "reference" %}
-      {% include "components/filters/related_record_picker.html" with cell=item.picker_cell only %}
+      {% include "components/pickers/related_record.html" with cell=item.picker_cell only %}
     {% elif item.type == "tags" %}
-      {% include "components/tag_picker.html" with picker_id=item.picker_id label=item.bound.label input_name=item.bound.html_name tags=item.tags selected_keys=item.selected_keys mode="submission" open_label="Choose tags…" only %}
+      {% url 'taxonomy:tag-create-json' as tag_create_url %}
+      {% include "components/pickers/tag.html" with picker_id=item.picker_id label=item.bound.label input_name=item.bound.html_name tags=item.tags selected_keys=item.selected_keys selected_ecz_terms=item.selected_ecz_terms ecz_input_name=item.ecz_input_name mode="submission" open_label="Choose tags…" allow_create=True tag_namespace=item.tag_namespace create_url=tag_create_url only %}
     {% elif item.type == "previous_schema" %}
       <div class="submission-file-input submission-previous-schema" data-previous-schema-control data-previous-version-input="previous_version">
         {{ item.bound }}
@@ -36,4 +37,4 @@
   {% endif %}
   {% if item.help_text %}<p class="field-help">{{ item.help_text }}</p>{% endif %}
   {% if item.errors %}<div class="field-errors" role="alert">{{ item.errors }}</div>{% endif %}
-</div>
+</div>{% endif %}

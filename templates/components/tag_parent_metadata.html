@@ -1,0 +1,13 @@
+<span hidden data-tag-parents>
+  {% for parent in tag.display_parents %}
+    <span
+      data-tag-parent
+      data-parent-id="{{ parent.id }}"
+      data-parent-label="{{ parent.label }}"
+      data-parent-status="{{ parent.status }}"
+      data-parent-color="{{ parent.display_color|default:'' }}"
+      data-parent-url="{{ parent.get_absolute_url }}"
+      data-parent-namespace="{{ parent.namespace }}"
+    ></span>
+  {% endfor %}
+</span>

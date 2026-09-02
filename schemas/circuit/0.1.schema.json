@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:decoderbench:schema:circuit:0.1",
   "title": "Circuit-revision record 0.1",
-  "description": "One immutable sampling circuit, generated detector error model, and exact provenance.",
+  "description": "One immutable sampling circuit, generated detector error model, and complete provenance.",
   "type": "object",
   "additionalProperties": false,
   "$defs": {
@@ -131,14 +131,22 @@
     "noise_model_id": {
       "type": "string",
       "format": "uuid",
-      "x-definition": "../../definitions/circuit/0.1.md#noise-model-and-exact-priors"
+      "x-definition": "../../definitions/circuit/0.1.md#noise-model-and-realised-priors"
     },
     "code_tags": {
       "type": "array",
-      "minItems": 1,
       "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/tagSlug"
+      },
+      "x-definition": "../../definitions/circuit/0.1.md#code-and-experiment-tags"
+    },
+    "ecz_code_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9_-]*$"
       },
       "x-definition": "../../definitions/circuit/0.1.md#code-and-experiment-tags"
     },
@@ -269,6 +277,7 @@
     "revision_description",
     "noise_model_id",
     "code_tags",
+    "ecz_code_ids",
     "experiment_tags",
     "is_css",
     "code_distance_upper_bound",

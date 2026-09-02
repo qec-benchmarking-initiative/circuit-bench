@@ -7,17 +7,28 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
 
-from registry.demo import _artifact, _demo_history, demo_id, seed_demo_data
+from registry.demo import (
+    _artifact,
+    _demo_history,
+    _ensure_demo_history_events,
+    _ensure_demo_tag_aliases,
+    demo_id,
+    reconcile_demo_code_taxonomy,
+    seed_demo_data,
+)
+from registry.demo_algorithm_taxonomy import reconcile_demo_algorithm_taxonomy
 from registry.models import (
     CircuitRevision,
-    CircuitRevisionCodeTag,
+    CircuitRevisionEczTerm,
     CircuitRevisionExperimentTag,
     Credit,
     DecoderVersion,
     DecoderVersionAlgorithmTag,
+    EczTerm,
     EvaluatorRelease,
     Machine,
     NoiseModel,
+    RecordHistory,
     Result,
     ResultScore,
     SchemaRelease,
@@ -113,7 +124,7 @@ CIRCUIT_SPECS = (
         "slug": "rotated-memory-d3",
         "name": "Rotated surface-code memory d=3",
         "noise": "fixed-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 3,
@@ -128,7 +139,7 @@ CIRCUIT_SPECS = (
         "slug": "rotated-memory-d7",
         "name": "Rotated surface-code memory d=7",
         "noise": "randomised-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 7,
@@ -143,7 +154,7 @@ CIRCUIT_SPECS = (
         "slug": "rotated-memory-d9",
         "name": "Rotated surface-code memory d=9",
         "noise": "randomised-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 9,
@@ -158,7 +169,7 @@ CIRCUIT_SPECS = (
         "slug": "planar-stability-d5",
         "name": "Planar stability experiment d=5",
         "noise": "fixed-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "stability",
         "is_css": True,
         "distance": 5,
@@ -173,7 +184,7 @@ CIRCUIT_SPECS = (
         "slug": "colour-memory-d5",
         "name": "Triangular colour-code memory d=5",
         "noise": "fixed-phenomenological",
-        "code_tag": "colour-code",
+        "ecz_code_id": "triangular_color",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 5,
@@ -188,7 +199,7 @@ CIRCUIT_SPECS = (
         "slug": "bicycle-memory-144",
         "name": "Bivariate bicycle 144 memory",
         "noise": "randomised-phenomenological",
-        "code_tag": "bivariate-bicycle-144",
+        "ecz_code_id": "gross",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 12,
@@ -203,7 +214,7 @@ CIRCUIT_SPECS = (
         "slug": "surface-cnot-d3",
         "name": "Surface-code logical CNOT d=3",
         "noise": "fixed-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "logical-operation",
         "is_css": True,
         "distance": 3,
@@ -244,6 +255,9 @@ def seed_plot_demo_data() -> dict[str, int]:
     published_at = evaluator.published_at
 
     tags = _seed_tags(releases["tag"], uploader, published_at)
+    _ensure_demo_history_events(tags.values())
+    _ensure_demo_tag_aliases(uploader)
+    reconcile_demo_algorithm_taxonomy()
     machines = _seed_machines(releases["machine"], uploader, published_at)
     decoders = _seed_decoders(releases["decoder"], uploader, published_at, tags)
     circuits = _seed_circuits(
@@ -260,6 +274,7 @@ def seed_plot_demo_data() -> dict[str, int]:
         decoders,
         circuits,
     )
+    reconcile_demo_code_taxonomy()
     return plot_demo_counts()
 
 
@@ -280,6 +295,17 @@ def _account(key):
     return Account.objects.get(id=demo_id(key))
 
 
+def _history_for_seed_record(model, record_id, name: str, kind: str):
+    """Reuse an existing record's history without creating an eager orphan."""
+
+    history_id = (
+        model.objects.filter(id=record_id).values_list("history_id", flat=True).first()
+    )
+    if history_id is not None:
+        return RecordHistory.objects.get(id=history_id)
+    return _demo_history(name, kind)
+
+
 def _seed_tags(schema_release, uploader, published_at):
     specifications = (
         ("algorithm", "union-find", "Union find", "#567d46"),
@@ -288,22 +314,39 @@ def _seed_tags(schema_release, uploader, published_at):
         ("algorithm", "cellular-automaton", "Cellular automaton", "#387c7a"),
         ("algorithm", "tensor-network", "Tensor network", "#80612e"),
         ("algorithm", "clustering", "Clustering", "#4e6695"),
-        ("code", "colour-code", "Colour code", "#8d4771"),
-        ("code", "bivariate-bicycle-144", "Bivariate bicycle 144", "#526e3d"),
+        ("algorithm", "fallback", "Fallback", "#755844"),
+        ("algorithm", "predecoder", "Predecoder", "#497178"),
+        ("algorithm", "ensemble", "Ensemble", "#765278"),
         ("experiment", "stability", "Stability", "#93622f"),
         ("experiment", "logical-operation", "Logical operation", "#445f91"),
     )
+    descriptions = {
+        "fallback": (
+            "A secondary decoding method invoked when another decoding stage "
+            "declines or fails."
+        ),
+        "predecoder": "A preliminary decoding stage applied before the main decoder.",
+        "ensemble": ("Combines outputs from multiple decoders or decoding hypotheses."),
+    }
     tags = {tag.slug: tag for tag in Tag.objects.all()}
     for namespace, slug, label, colour in specifications:
+        tag_id = demo_id(f"tag/{namespace}/{slug}")
         tag, _ = Tag.objects.get_or_create(
-            id=demo_id(f"tag/{namespace}/{slug}"),
+            id=tag_id,
             defaults={
                 "schema_release": schema_release,
-                "history": _demo_history(f"tag/{namespace}/{slug}", "tag"),
+                "history": _history_for_seed_record(
+                    Tag,
+                    tag_id,
+                    f"tag/{namespace}/{slug}",
+                    "tag",
+                ),
                 "namespace": namespace,
                 "slug": slug,
                 "label": label,
-                "description": f"Synthetic {label.lower()} tag for development data.",
+                "description": descriptions.get(
+                    slug, f"Synthetic {label.lower()} tag for development data."
+                ),
                 "status": "official",
                 "display_color": colour,
                 "submitted_by": uploader,
@@ -332,11 +375,14 @@ def _seed_machines(schema_release, uploader, published_at):
     )
     machines = {machine.slug: machine for machine in Machine.objects.all()}
     for slug, machine_class, description, status in specifications:
+        machine_id = demo_id(f"machine/{slug}")
         machine, _ = Machine.objects.get_or_create(
-            id=demo_id(f"machine/{slug}"),
+            id=machine_id,
             defaults={
                 "schema_release": schema_release,
-                "history": _demo_history(f"machine/{slug}", "machine"),
+                "history": _history_for_seed_record(
+                    Machine, machine_id, f"machine/{slug}", "machine"
+                ),
                 "slug": slug,
                 "machine_class": machine_class,
                 "description": description,
@@ -361,11 +407,17 @@ def _seed_decoders(schema_release, uploader, published_at, tags):
         }
     }
     for spec in DECODER_SPECS:
+        decoder_id = demo_id(f"decoder/{spec['key']}/0.1")
         decoder, _ = DecoderVersion.objects.get_or_create(
-            id=demo_id(f"decoder/{spec['key']}/0.1"),
+            id=decoder_id,
             defaults={
                 "schema_release": schema_release,
-                "history": _demo_history(f"decoder/{spec['key']}", "decoder"),
+                "history": _history_for_seed_record(
+                    DecoderVersion,
+                    decoder_id,
+                    f"decoder/{spec['key']}",
+                    "decoder",
+                ),
                 "slug": spec["slug"],
                 "name": spec["name"],
                 "version": "0.1",
@@ -483,10 +535,15 @@ def _seed_circuits(schema_release, contributor, published_at, tags, noises):
                 state="published",
                 published_at=published_at,
             )
-        CircuitRevisionCodeTag.objects.get_or_create(
-            circuit_revision=circuit,
-            tag=tags[spec["code_tag"]],
-        )
+        ecz_term = EczTerm.objects.filter(
+            ecz_code_id=spec["ecz_code_id"],
+            status=EczTerm.Status.CURRENT,
+        ).first()
+        if ecz_term is not None:
+            CircuitRevisionEczTerm.objects.get_or_create(
+                circuit_revision=circuit,
+                ecz_term=ecz_term,
+            )
         CircuitRevisionExperimentTag.objects.get_or_create(
             circuit_revision=circuit,
             tag=tags[spec["experiment_tag"]],
@@ -555,7 +612,9 @@ def _seed_results(
                 id=result_id,
                 defaults={
                     "schema_release": schema_release,
-                    "history": _demo_history(history_key, "result"),
+                    "history": _history_for_seed_record(
+                        Result, result_id, history_key, "result"
+                    ),
                     "decoder_version": decoder["record"],
                     "circuit_revision": circuit["record"],
                     "evaluator_version": evaluator,

@@ -39,10 +39,37 @@ def test_catalogue_searches_exact_name_and_algorithm_tag(client, demo_decoders):
     assert 'data-selected-tag="belief-propagation"' in content
     assert "Filter for records with all selected tags" in content
     assert "Filter for records with any selected tag" in content
-    assert [tag.label for tag in response.context["filter_tags"]] == [
-        "Matching",
-        "Belief propagation",
+    assert "Filter for records with any child of selected tags" in content
+    filter_labels = {tag.label for tag in response.context["filter_tags"]}
+    assert {"Matching", "Belief propagation", "Message passing"} <= filter_labels
+
+
+def test_any_child_algorithm_match_includes_root_and_descendant_tags(
+    client, demo_decoders
+):
+    exact = client.get(
+        reverse("decoders:list"),
+        {"tag": "message-passing", "tag_match": "any"},
+    )
+    descendants = client.get(
+        reverse("decoders:list"),
+        {"tag": "message-passing", "tag_match": "children"},
+    )
+    selected_root = client.get(
+        reverse("decoders:list"),
+        {"tag": "matching", "tag_match": "children"},
+    )
+
+    assert list(exact.context["decoders"]) == []
+    assert [decoder.slug for decoder in descendants.context["decoders"]] == [
+        "clear-matcher-0-2"
     ]
+    assert [decoder.slug for decoder in selected_root.context["decoders"]] == [
+        "clear-matcher-0-2",
+        "clear-matcher-0-1",
+    ]
+    assert descendants.context["tag_match"] == "children"
+    assert "any child of" in descendants.content.decode()
 
 
 def test_catalogue_tag_picker_supports_all_and_any_matching(client, demo_decoders):
@@ -63,8 +90,14 @@ def test_catalogue_tag_picker_supports_all_and_any_matching(client, demo_decoder
         "clear-matcher-0-1",
     ]
 
+    no_selection = client.get(reverse("decoders:list"), {"tag_match": "children"})
+    assert {decoder.slug for decoder in no_selection.context["decoders"]} == {
+        "clear-matcher-0-1",
+        "clear-matcher-0-2",
+    }
 
-def test_tag_picker_includes_unused_official_but_not_unused_custom_tags(
+
+def test_tag_picker_search_includes_unused_official_and_custom_tags(
     client, demo_decoders
 ):
     source = Tag.objects.get(slug="matching")
@@ -89,10 +122,14 @@ def test_tag_picker_includes_unused_official_but_not_unused_custom_tags(
         status="custom",
     )
 
-    content = client.get(reverse("decoders:list")).content.decode()
+    payload = client.get(
+        reverse("pickers:taxonomy-terms"),
+        {"namespace": "algorithm", "q": "unused"},
+    ).json()
+    labels = [item["label"] for item in payload["circuit_bench"]["shown"]]
 
-    assert "Unused official" in content
-    assert "Unused custom" not in content
+    assert "Unused official" in labels
+    assert "Unused custom" in labels
 
 
 def test_catalogue_table_state_is_reproducible_in_the_url(client, demo_decoders):
@@ -119,9 +156,10 @@ def test_catalogue_table_state_is_reproducible_in_the_url(client, demo_decoders)
     assert "Table view options (2/8)" in content
     assert 'aria-current="page"' in content
     assert 'id="decoder-algorithm-filters"' in content
-    assert 'class="filter-grid"' in content
+    assert "data-filter-grid" in content
     assert "selected values shown in the theme colour" not in content
-    assert 'data-filter-range-cell data-filter-key="result_count"' in content
+    assert "data-control-range-cell" in content
+    assert "Published results" in content
     assert ">active<" not in content
 
 
@@ -176,7 +214,7 @@ def test_detail_result_leaderboard_filters_by_circuit_and_machine(
 
     matching = client.get(
         url,
-        {"code_tag": "rotated-surface-code", "machine_class": "cpu"},
+        {"experiment_tag": "memory", "machine_class": "cpu"},
     )
     wrong_machine = client.get(url, {"machine_class": "gpu"})
 
@@ -188,14 +226,28 @@ def test_detail_result_leaderboard_filters_by_circuit_and_machine(
 def test_official_tag_colour_is_rendered_but_custom_tag_stays_neutral(
     client, demo_decoders
 ):
+    source = Tag.objects.get(slug="matching")
+    custom = Tag.objects.create(
+        schema_release=source.schema_release,
+        history=RecordHistory.objects.create(record_kind="tag"),
+        namespace=Tag.Namespace.ALGORITHM,
+        slug="custom-visual-test",
+        label="Custom visual test",
+        description="Used to verify neutral custom-tag rendering.",
+        status=Tag.Status.CUSTOM,
+        submitted_by=source.submitted_by,
+    )
+    demo_decoders["clear-matcher-0-2"].algorithm_tags.add(custom)
     response = client.get(reverse("decoders:list"))
     content = response.content.decode()
 
-    assert 'style="--tag-color: #315f7d"' in content
-    custom_choice = content.split('data-tag-label="belief propagation"', 1)[1].split(
-        "</label>", 1
-    )[0]
-    assert "--tag-color" not in custom_choice
+    assert 'style="--tag-color: #315F7D"' in content
+    custom_tag = content.split(
+        '<a class="table-tag table-tag-custom" '
+        'href="/tags/algorithm/custom-visual-test/">',
+        1,
+    )[0].rsplit("<li", 1)[1]
+    assert "--tag-color" not in custom_tag
 
 
 def test_root_version_has_no_predecessor_and_an_empty_results_state(

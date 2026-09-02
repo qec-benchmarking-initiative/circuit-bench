@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:decoderbench:schema:benchmark:0.1",
   "title": "Benchmark-revision record 0.1",
-  "description": "An immutable ordered collection of exact circuit revisions and its attempts.",
+  "description": "An immutable ordered collection of circuit revisions and its attempts.",
   "type": "object",
   "additionalProperties": false,
   "$defs": {

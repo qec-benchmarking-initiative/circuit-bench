@@ -43,8 +43,27 @@
       "maxLength": 10000,
       "x-definition": "../../definitions/tag/0.1.md#scientific-meaning"
     },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "uniqueItems": true,
+      "x-definition": "../../definitions/tag/0.1.md#aliases-and-parent-tags"
+    },
+    "parent_tag_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "uniqueItems": true,
+      "x-definition": "../../definitions/tag/0.1.md#aliases-and-parent-tags"
+    },
     "status": {
-      "enum": ["custom", "official", "deprecated"],
+      "enum": ["custom", "official", "deprecated", "retired"],
       "x-definition": "../../definitions/tag/0.1.md#curation-status"
     },
     "display_color": {
@@ -81,6 +100,8 @@
     "slug",
     "label",
     "description",
+    "aliases",
+    "parent_tag_ids",
     "status",
     "display_color",
     "canonical_tag_id",

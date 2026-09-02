@@ -1,0 +1,5 @@
+code_id: planar
+name: Planar \(2D\) code
+relations:
+  parents:
+    - code_id: surface

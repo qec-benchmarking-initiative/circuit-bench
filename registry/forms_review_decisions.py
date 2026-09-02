@@ -13,5 +13,5 @@ class ReviewNoteForm(forms.Form):
 
 class ResubmissionForm(forms.Form):
     confirm = forms.BooleanField(
-        label="Return this exact candidate to the admin review queue",
+        label="Return this candidate to the admin review queue",
     )

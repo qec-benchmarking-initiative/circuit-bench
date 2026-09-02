@@ -1,0 +1,13 @@
+<div class="record-title-row">
+  <div>
+    <p class="eyebrow">{{ record.kind }}</p>
+    <h1>
+      {{ record.name }}
+      {% if record.version %}<span class="record-version">v{{ record.version }}</span>{% endif %}
+    </h1>
+  </div>
+  {% include "components/status_badge.html" with status=record.status label=record.status_label only %}
+</div>
+{% if not hide_tags %}
+  {% include "components/tag_list.html" with tags=record.tags label="Classification tags" only %}
+{% endif %}

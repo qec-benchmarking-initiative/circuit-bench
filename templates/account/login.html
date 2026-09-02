@@ -4,42 +4,30 @@
 {% block title %}Sign in · Circuit Bench{% endblock %}
 
 {% block content %}
-  <section class="page-intro flow">
-    <p class="eyebrow">Account</p>
-    <h1>Sign in</h1>
-    <p class="lede">
-      Use an existing scientific identity. Circuit Bench does not create or
-      store a password.
-    </p>
-  </section>
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
+      <p class="eyebrow">Account</p>
+      <h1>Sign in</h1>
+      <p>Circuit Bench uses GitHub or ORCID and stores no password.</p>
+    </header>
 
-  <section class="panel flow" aria-labelledby="provider-heading">
-    <h2 id="provider-heading">Choose a provider</h2>
-    <form method="post" action="{% provider_login_url 'github' process='login' next=request.GET.next %}">
-      {% csrf_token %}
-      <button type="submit">Continue with GitHub</button>
-    </form>
-    <form method="post" action="{% provider_login_url 'orcid' process='login' next=request.GET.next %}">
-      {% csrf_token %}
-      <button type="submit">Continue with ORCID</button>
-    </form>
-    <p class="supporting-text">
-      The provider confirms who you are. Circuit Bench retains the provider
-      identifier and public profile link, but not the OAuth access token.
-    </p>
-  </section>
-
-  {% if demo_accounts %}
-    <section class="panel flow" aria-labelledby="development-heading">
-      <h2 id="development-heading">Local prototype accounts</h2>
-      <p class="supporting-text">Development mode only. These controls exercise permissions without registering live OAuth applications.</p>
-      {% for account in demo_accounts %}
-        <form method="post" action="{% url 'account-development-login' account_id=account.id %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.GET.next }}">
-          <button type="submit">Continue as {{ account.display_name }}{% if account.is_admin %} (admin){% endif %}</button>
-        </form>
-      {% endfor %}
+    <section class="table-section" aria-labelledby="provider-heading">
+      <h2 id="provider-heading">Sign-in provider</h2>
+      <div class="page-action-bar account-provider-actions">
+        <form method="post" action="{% provider_login_url 'github' process='login' next=request.GET.next %}">{% csrf_token %}<button type="submit">Continue with GitHub</button></form>
+        <form method="post" action="{% provider_login_url 'orcid' process='login' next=request.GET.next %}">{% csrf_token %}<button class="button button-secondary" type="submit">Continue with ORCID</button></form>
+      </div>
     </section>
-  {% endif %}
+
+    {% if demo_accounts %}
+      <section class="table-section" aria-labelledby="development-heading">
+        <h2 id="development-heading">Local prototype accounts</h2>
+        <div class="page-action-bar account-provider-actions">
+          {% for account in demo_accounts %}
+            <form method="post" action="{% url 'account-development-login' account_id=account.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.GET.next }}"><button class="button button-secondary" type="submit">Continue as {{ account.display_name }}{% if account.is_admin %} (admin){% endif %}</button></form>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  </div>
 {% endblock %}

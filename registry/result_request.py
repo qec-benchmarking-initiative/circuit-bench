@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 from django.http import QueryDict
 
-from registry.explorer import parse_nonnegative_int
 from registry.models import Machine
+from registry.table_controls import parse_nonnegative_int
 
 
 @dataclass(frozen=True)
@@ -84,4 +84,4 @@ def _selected(parameters: QueryDict, name: str) -> tuple[str, ...]:
 
 def _match(parameters: QueryDict, name: str) -> str:
     value = parameters.get(name, "all").strip()
-    return value if value in {"all", "any"} else "all"
+    return value if value in {"all", "any", "children"} else "all"

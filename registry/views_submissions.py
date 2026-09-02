@@ -671,7 +671,7 @@ def submission_withdraw(request, kind, record_id):
         else:
             messages.success(
                 request,
-                "Record withdrawn. Its exact history remains available and a revised "
+                "Record withdrawn. Its history remains available and a revised "
                 "successor can be submitted for reapproval.",
             )
             return redirect("submissions:profile")
@@ -748,7 +748,7 @@ def _restored_preview(request, kind, *, operation="create", record_id=None):
         raise Http404("Preview belongs to a different editing operation.")
     expected_record_id = str(record_id) if record_id else None
     if preview.get("record_id") != expected_record_id:
-        raise Http404("Preview belongs to a different exact record.")
+        raise Http404("Preview belongs to a different record.")
     return preview
 
 
@@ -950,7 +950,7 @@ def _example_payload(kind: SubmissionKind) -> dict:
         return {
             "slug": "example-cpu",
             "machine_class": "cpu",
-            "description": "Describe the exact hardware and execution environment.",
+            "description": "Describe the hardware and execution environment.",
             "status": "physical",
             "supersedes_machine": None,
         }
@@ -963,7 +963,7 @@ def _example_payload(kind: SubmissionKind) -> dict:
                 "detector_error_model_artifact",
                 "manifest_artifact",
             )
-            .prefetch_related("code_tags", "experiment_tags")
+            .prefetch_related("code_tags", "ecz_terms", "experiment_tags")
             .first()
         )
         noise = (
@@ -973,7 +973,10 @@ def _example_payload(kind: SubmissionKind) -> dict:
             .values_list("id", flat=True)
             .first()
         )
-        code = example.code_tags.first().id if example else None
+        code_tag = example.code_tags.first() if example else None
+        ecz_term = example.ecz_terms.first() if example else None
+        code = code_tag.id if code_tag else None
+        ecz_code = ecz_term.id if ecz_term else None
         experiment = example.experiment_tags.first().id if example else None
         sampling_artifact = example.sampling_circuit_artifact_id if example else None
         dem_artifact = example.detector_error_model_artifact_id if example else None
@@ -1013,6 +1016,7 @@ def _example_payload(kind: SubmissionKind) -> dict:
             if manifest_artifact
             else "00000000-0000-0000-0000-000000000000",
             "code_tags": [str(code)] if code else [],
+            "ecz_terms": [str(ecz_code)] if ecz_code else [],
             "experiment_tags": [str(experiment)] if experiment else [],
         }
     decoder = DecoderVersion.objects.filter(state="published").first()

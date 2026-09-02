@@ -1,5 +1,5 @@
-<details class="filter-grid scripted-query"{% if scripted_query_text %} open{% endif %}>
-  <summary><span class="filter-grid-title">Scripted query (OData 4.01 subset)</span></summary>
+<details class="control-panel scripted-query"{% if scripted_query_text %} open{% endif %}>
+  <summary><span class="control-grid-title">Scripted query (OData 4.01 subset)</span></summary>
   <div class="scripted-query-input">
     <label for="{{ query_id }}">Raw query options</label>
     <textarea id="{{ query_id }}" name="odata" rows="2" spellcheck="false" placeholder="$filter=machine_class eq 'cpu'&amp;$orderby=score_ler_upper_95_at_5pct_acceptance_v0_1 asc">{{ scripted_query_text }}</textarea>

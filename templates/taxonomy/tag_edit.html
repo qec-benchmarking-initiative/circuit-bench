@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ tag.label }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
+      <p class="eyebrow"><a href="{{ tag.get_absolute_url }}">{{ tag.label }}</a></p>
+      <h1>Edit tag</h1>
+    </header>
+    <section class="form-bar-shell">
+      <dl class="form-bar-list tag-identity-bars">
+        <div class="form-bar-row"><dt class="form-bar-label">Namespace</dt><dd class="form-bar-control">{{ tag.get_namespace_display }}</dd></div>
+        <div class="form-bar-row"><dt class="form-bar-label">Permanent slug</dt><dd class="form-bar-control"><code>{{ tag.slug }}</code></dd></div>
+      </dl>
+      <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="submission-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="form-bar-list">
+          <div class="form-bar-row">
+            <label class="form-bar-label" for="{{ form.label.id_for_label }}">{{ form.label.label }}</label>
+            <div class="form-bar-control">{{ form.label }}{% if form.label.errors %}<div class="field-errors" role="alert">{{ form.label.errors }}</div>{% endif %}</div>
+          </div>
+          <div class="form-bar-row">
+            <label class="form-bar-label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+            <div class="form-bar-control">{{ form.description }}{% if form.description.errors %}<div class="field-errors" role="alert">{{ form.description.errors }}</div>{% endif %}</div>
+          </div>
+          <div class="form-bar-row">
+            <label class="form-bar-label" for="{{ form.aliases.id_for_label }}">{{ form.aliases.label }}</label>
+            <div class="form-bar-control">{{ form.aliases }}{% if form.aliases.help_text %}<p class="field-help">{{ form.aliases.help_text }}</p>{% endif %}{% if form.aliases.errors %}<div class="field-errors" role="alert">{{ form.aliases.errors }}</div>{% endif %}</div>
+          </div>
+          <div class="form-bar-row">
+            <span class="form-bar-label">Parent tags <span class="muted">(optional)</span></span>
+            <div class="form-bar-control">
+              {% include "components/pickers/tag.html" with picker_id="tag-edit-parents" label="Parent tags" input_name="parents" ecz_input_name="ecz_parents" tags=parent_tags selected_keys=selected_parent_ids selected_ecz_terms=selected_ecz_parents mode="submission" open_label="Choose parent tags…" tag_namespace=tag.namespace excluded_key=excluded_taxonomy_key only %}
+              {% if form.parents.errors %}<div class="field-errors" role="alert">{{ form.parents.errors }}</div>{% endif %}
+              {% if form.ecz_parents.errors %}<div class="field-errors" role="alert">{{ form.ecz_parents.errors }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <a class="button button-secondary" href="{{ tag.get_absolute_url }}">Cancel</a>
+          <button type="submit">Save changes</button>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  {% load static %}<script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902c" defer></script>
+{% endblock %}

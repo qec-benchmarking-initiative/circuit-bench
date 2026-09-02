@@ -112,7 +112,7 @@
       resultsArea.replaceChildren();
       if (!currentResults.length) {
         const empty = document.createElement("p");
-        empty.className = "tag-no-results";
+        empty.className = "picker-empty";
         empty.textContent = "No matching records.";
         resultsArea.append(empty);
       } else {
@@ -164,7 +164,7 @@
         : emptyLabel;
       opener.title = fullSelection;
       opener.setAttribute("aria-label", `${picker.dataset.pluralLabel}: ${fullSelection}`);
-      gridCell?.classList.toggle("is-filtered", committed.length > 0);
+      gridCell?.classList.toggle("is-applied", committed.length > 0);
     };
 
     const loadResults = async () => {
@@ -270,17 +270,17 @@
       renderSummary();
       dialog.close();
       opener.setAttribute("aria-expanded", "false");
-      picker.dispatchEvent(new CustomEvent("filterquery:change", {
+      picker.dispatchEvent(new CustomEvent("control:commit", {
         bubbles: true,
       }));
     });
-    picker.addEventListener("filtergrid:clear", () => {
+    picker.addEventListener("control:clear", () => {
       committed = [];
       working = [];
       renderSummary();
       renderSelected();
       renderResults();
-      picker.dispatchEvent(new CustomEvent("filterquery:change", {
+      picker.dispatchEvent(new CustomEvent("control:commit", {
         bubbles: true,
       }));
     });

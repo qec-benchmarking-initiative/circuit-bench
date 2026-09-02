@@ -10,6 +10,8 @@ from .models import (
     Credit,
     CreditClaim,
     DecoderVersion,
+    EczSyncRun,
+    EczTerm,
     EvaluatorRelease,
     ExternalLink,
     Machine,
@@ -20,6 +22,7 @@ from .models import (
     SchemaRelease,
     ScoreDefinition,
     Tag,
+    TagEczMapping,
 )
 
 
@@ -75,6 +78,19 @@ class TagAdmin(admin.ModelAdmin):
     list_display = ("label", "namespace", "status", "display_color", "slug")
     list_filter = ("namespace", "status")
     search_fields = ("label", "slug", "description")
+
+
+@admin.register(EczTerm)
+class EczTermAdmin(AppendOnlyAdmin):
+    list_display = ("display_name", "ecz_code_id", "status", "updated_at")
+    list_filter = ("status",)
+    search_fields = ("display_name", "ecz_code_id", "raw_name")
+
+
+@admin.register(EczSyncRun)
+class EczSyncRunAdmin(AppendOnlyAdmin):
+    list_display = ("started_at", "status", "source_commit", "terms_added")
+    list_filter = ("status",)
 
 
 @admin.register(DecoderVersion)
@@ -153,6 +169,12 @@ class BenchmarkAttemptAdmin(PublishedRecordAdminMixin, admin.ModelAdmin):
 
 admin.site.register([ArtifactAttachment, Credit, ExternalLink])
 admin.site.register(
-    [ArtifactGrant, CreditClaim, RecordEvent, ResultAuthorApprovalEvent],
+    [
+        ArtifactGrant,
+        CreditClaim,
+        RecordEvent,
+        ResultAuthorApprovalEvent,
+        TagEczMapping,
+    ],
     AppendOnlyAdmin,
 )

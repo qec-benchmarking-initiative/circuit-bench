@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <article class="page-shell record-layout">
+    <header class="record-heading">{% block record_heading %}{% endblock %}</header>
+    <div class="record-columns">
+      <div class="record-main">{% block record_main %}{% endblock %}</div>
+      <aside class="record-aside" aria-label="Record metadata">
+        {% block record_aside %}{% endblock %}
+      </aside>
+    </div>
+    <section class="record-related">{% block record_related %}{% endblock %}</section>
+  </article>
+{% endblock %}

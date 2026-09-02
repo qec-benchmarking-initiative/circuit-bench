@@ -1,15 +1,15 @@
 <details
-  class="filter-grid control-grid"
+  class="control-panel control-grid plot-control-grid"
   id="{{ grid.id }}"
-  data-filter-grid
+  data-control-grid
   data-ui-state-key="{{ grid.id }}"
   {% if grid.open %}open{% endif %}
 >
   <summary>
-    <span class="filter-grid-title">{{ grid.title }}</span>
-    <span class="filter-grid-legend">{{ grid.legend }}</span>
+    <span class="control-grid-title">{{ grid.title }}</span>
+    <span class="control-grid-legend">{{ grid.legend }}</span>
   </summary>
-  <div class="filter-grid-cells control-grid-cells" data-filter-grid-cells>
+  <div class="control-grid-cells" data-control-grid-cells>
     {% for cell in grid.cells %}
       {% include "components/controls/grid_cell.html" with cell=cell only %}
     {% endfor %}

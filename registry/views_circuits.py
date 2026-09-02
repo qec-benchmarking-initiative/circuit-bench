@@ -1,5 +1,3 @@
-from urllib.parse import urlencode
-
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
@@ -10,15 +8,6 @@ from registry.curation import (
     apply_search_relevance,
     ordering_metadata,
     select_catalogue_ordering,
-)
-from registry.explorer import (
-    ColumnSpec,
-    apply_sort,
-    cells_for_visible_columns,
-    parse_nonnegative_int,
-    parse_sort,
-    table_context,
-    url_without,
 )
 from registry.filter_grids import (
     algorithm_grid as build_algorithm_grid,
@@ -46,7 +35,20 @@ from registry.services.circuits import (
     inherited_circuit_description,
 )
 from registry.services.decoders import catalogue_algorithm_tags
+from registry.services.ecz_taxonomy import (
+    circuit_code_taxonomy,
+    taxonomy_display_dict,
+)
 from registry.services.filter_options import public_circuit_filter_options
+from registry.table_controls import (
+    ColumnSpec,
+    apply_sort,
+    cells_for_visible_columns,
+    parse_nonnegative_int,
+    parse_sort,
+    table_context,
+    url_without,
+)
 
 CIRCUIT_RESULT_COLUMNS = (
     ColumnSpec("decoder", "Decoder"),
@@ -94,10 +96,10 @@ def circuit_list(request):
     ):
         experiment_tags = (*experiment_tags, legacy_slug)
     code_tag_match = request.GET.get("code_tag_match", "all").strip()
-    if code_tag_match not in {"all", "any"}:
+    if code_tag_match not in {"all", "any", "children"}:
         code_tag_match = "all"
     experiment_tag_match = request.GET.get("experiment_tag_match", "all").strip()
-    if experiment_tag_match not in {"all", "any"}:
+    if experiment_tag_match not in {"all", "any", "children"}:
         experiment_tag_match = "all"
     requested_noise_models = tuple(
         dict.fromkeys(
@@ -216,9 +218,11 @@ def circuit_list(request):
     ).as_context()
     if ordering_selection.mode != CatalogueOrderingMode.MANUAL:
         table["sort_summary"] = discovery_ordering["label"]
-    list_url = reverse("circuits:list")
     rows = []
     for circuit in circuits:
+        code_taxonomy = [
+            taxonomy_display_dict(item) for item in circuit_code_taxonomy(circuit)
+        ]
         cell_by_key = {
             "name": {
                 "key": "name",
@@ -227,21 +231,15 @@ def circuit_list(request):
             },
             "code_tags": {
                 "key": "code_tags",
-                "tags": [
-                    {
-                        "label": tag.label,
-                        "url": f"{list_url}?{urlencode({'code_tag': tag.slug})}",
-                        "display_color": tag.display_color,
-                    }
-                    for tag in circuit.code_tags.all()
-                ],
+                "tags": code_taxonomy,
             },
             "experiment_tags": {
                 "key": "experiment_tags",
                 "tags": [
                     {
                         "label": tag.label,
-                        "url": f"{list_url}?{urlencode({'experiment_tag': tag.slug})}",
+                        "url": tag.get_absolute_url(),
+                        "status": tag.status,
                         "display_color": tag.display_color,
                     }
                     for tag in circuit.experiment_tags.all()
@@ -343,13 +341,12 @@ def circuit_list(request):
 
 def circuit_detail(request, slug):
     circuit = get_object_or_404(circuit_detail_queryset(), slug=slug)
-    list_url = reverse("circuits:list")
     detail_url = reverse("circuits:detail", args=[circuit.slug])
     selected_tags = tuple(
         dict.fromkeys(tag.strip() for tag in request.GET.getlist("tag") if tag.strip())
     )
     tag_match = request.GET.get("tag_match", "all").strip()
-    if tag_match not in {"all", "any"}:
+    if tag_match not in {"all", "any", "children"}:
         tag_match = "all"
     skeleton_preparation = request.GET.get("skeleton", "").strip()
     priors_preparation = request.GET.get("priors", "").strip()
@@ -424,6 +421,9 @@ def circuit_detail(request, slug):
         ("Manifest", circuit.manifest_artifact),
     ]
     algorithm_filter_tags = list(catalogue_algorithm_tags())
+    code_taxonomy = [
+        taxonomy_display_dict(item) for item in circuit_code_taxonomy(circuit)
+    ]
     return render(
         request,
         "circuits/detail.html",
@@ -431,33 +431,20 @@ def circuit_detail(request, slug):
             "circuit": circuit,
             "description": inherited_circuit_description(circuit),
             "artifacts": artifacts,
-            "entity": {
+            "record": {
                 "kind": "Circuit revision",
                 "name": circuit.name,
                 "version": None,
                 "status": circuit.state,
                 "status_label": circuit.get_state_display(),
                 "tags": [
+                    *code_taxonomy,
                     *[
                         {
                             "label": tag.label,
                             "status": tag.status,
                             "display_color": tag.display_color,
-                            "url": (
-                                f"{list_url}?{urlencode({'tag': f'code:{tag.slug}'})}"
-                            ),
-                        }
-                        for tag in circuit.code_tags.all()
-                    ],
-                    *[
-                        {
-                            "label": tag.label,
-                            "status": tag.status,
-                            "display_color": tag.display_color,
-                            "url": (
-                                f"{list_url}?"
-                                f"{urlencode({'tag': f'experiment:{tag.slug}'})}"
-                            ),
+                            "url": tag.get_absolute_url(),
                         }
                         for tag in circuit.experiment_tags.all()
                     ],

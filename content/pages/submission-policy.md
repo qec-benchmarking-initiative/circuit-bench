@@ -15,7 +15,7 @@ This is the user-facing governance policy for the Circuit Bench 0.1 development 
 
 ## Editing and revisions
 
-- A `pending_review` or `pending_reapproval` candidate can be edited in place. Its exact candidate UUID is retained and the edit is recorded in its moderation history.
+- A `pending_review` or `pending_reapproval` candidate can be edited in place. Its candidate UUID is retained and the edit is recorded in its moderation history.
 - A published record is immutable. “Edit / new revision” creates a separate successor candidate. For decoder and circuit revisions, the uploader explicitly chooses either to leave the predecessor published alongside the candidate or to withdraw it while submitting the successor for reapproval. Neither choice changes the predecessor’s scientific content.
 - A withdrawn record is also immutable. “Revise and resubmit” creates a separate successor in `pending_reapproval`.
 - A successor to a withdrawn machine requires human reapproval even though an ordinary new machine publishes automatically.
@@ -23,7 +23,7 @@ This is the user-facing governance policy for the Circuit Bench 0.1 development 
 
 ## Withdrawal
 
-The uploader or an administrator can withdraw a published record after confirming the action and giving a reason. Withdrawal does not delete or rewrite the exact record: its permanent page, timestamps, lineage, and moderation history remain available, marked as withdrawn.
+The uploader or an administrator can withdraw a published record after confirming the action and giving a reason. Withdrawal does not delete or rewrite the record: its permanent page, timestamps, lineage, and moderation history remain available, marked as withdrawn.
 
 ## Approval attribution
 
@@ -31,11 +31,11 @@ Every publication made through this workflow records who approved it. Manual rev
 
 ## Credits and result authorship
 
-A signed-in user may claim a public name-only credit. The exact record uploader or an administrator reviews that claim. Decoder-author status on a result is derived by the server from exact-version credits and explicit approvals; it cannot be supplied in a result form.
+A signed-in user may claim a public name-only credit. The record uploader or an administrator reviews that claim. Decoder-author status on a result is derived by the server from version-specific credits and explicit approvals; it cannot be supplied in a result form.
 
 ## Files
 
-Files attached only to an unpublished candidate are private to the uploader and administrators. They become public when a published or withdrawn exact record refers to them. Uploading identical bytes does not grant access to another account’s private submission.
+Files attached only to an unpublished candidate are private to the uploader and administrators. They become public when a published or withdrawn record refers to them. Uploading identical bytes does not grant access to another account’s private submission.
 
 ## Administration
 

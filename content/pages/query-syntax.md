@@ -76,4 +76,4 @@ The browser query box accepts the same raw text. It reports either a successful 
 
 Invalid queries return a stable machine-readable error with a code and message. Filter errors also include a zero-based character position. Query text is parsed into a typed syntax tree and compiled only through whitelisted Django ORM expressions; it is never interpolated into SQL.
 
-Ordinary browser and API queries are live. Repeating a URL later may include newly published matching results. A response records its generation time, canonical query, schema version, count, and exact ordered result UUIDs, but that is not an immutable scientific snapshot. A future snapshot feature must create a frozen snapshot file explicitly.
+Ordinary browser and API queries are live. Repeating a URL later may include newly published matching results. A response records its generation time, canonical query, schema version, count, and ordered result UUIDs, but that is not an immutable scientific snapshot. A future snapshot feature must create a frozen snapshot file explicitly.

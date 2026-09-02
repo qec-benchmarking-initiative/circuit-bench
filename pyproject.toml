@@ -13,6 +13,7 @@ dependencies = [
     "jsonschema>=4.25,<5",
     "psycopg[binary]>=3.2,<4",
     "whitenoise[brotli]>=6.9,<7",
+    "pyyaml>=6.0,<7",
 ]
 
 [dependency-groups]

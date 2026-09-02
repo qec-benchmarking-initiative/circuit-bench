@@ -5,7 +5,19 @@ from collections.abc import Sequence
 from django.db.models import Case, IntegerField, Prefetch, Q, QuerySet, Value, When
 from django.db.models.functions import Lower
 
-from registry.models import CircuitRevision, DecoderVersion, Machine, Result, Tag
+from registry.models import (
+    CircuitRevision,
+    DecoderVersion,
+    EczTerm,
+    Machine,
+    Result,
+    Tag,
+    TagEczMapping,
+)
+from registry.services.tag_hierarchy import (
+    descendant_slug_groups,
+    inclusive_code_descendant_identities,
+)
 
 
 def public_result_catalogue(
@@ -63,6 +75,11 @@ def public_result_catalogue(
                 to_attr="display_code_tags",
             ),
             Prefetch(
+                "circuit_revision__ecz_terms",
+                queryset=EczTerm.objects.order_by("display_name", "ecz_code_id"),
+                to_attr="display_ecz_terms",
+            ),
+            Prefetch(
                 "circuit_revision__experiment_tags",
                 queryset=_display_tags(Tag.Namespace.EXPERIMENT),
                 to_attr="display_experiment_tags",
@@ -108,13 +125,7 @@ def public_result_catalogue(
         slugs=algorithm_tag_slugs,
         match=algorithm_tag_match,
     )
-    results = _filter_tags(
-        results,
-        relation="circuit_revision__code_tags",
-        namespace=Tag.Namespace.CODE,
-        slugs=code_tag_slugs,
-        match=code_tag_match,
-    )
+    results = _filter_code_taxonomy(results, code_tag_slugs, code_tag_match)
     results = _filter_tags(
         results,
         relation="circuit_revision__experiment_tags",
@@ -175,7 +186,7 @@ def public_result_catalogue(
 
 
 def _display_tags(namespace: str) -> QuerySet[Tag]:
-    return (
+    queryset = (
         Tag.objects.filter(namespace=namespace)
         .annotate(
             official_order=Case(
@@ -187,6 +198,17 @@ def _display_tags(namespace: str) -> QuerySet[Tag]:
         )
         .order_by("official_order", Lower("label"), "id")
     )
+    if namespace == Tag.Namespace.CODE:
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                "ecz_mappings",
+                queryset=TagEczMapping.objects.filter(
+                    status=TagEczMapping.Status.ACTIVE
+                ).select_related("ecz_term"),
+                to_attr="active_ecz_mappings",
+            )
+        )
+    return queryset
 
 
 def _filter_tags(
@@ -202,10 +224,61 @@ def _filter_tags(
         return results
     namespace_lookup = f"{relation}__namespace"
     slug_lookup = f"{relation}__slug"
+    if match == "children":
+        groups = descendant_slug_groups(namespace, selected)
+        return results.filter(
+            **{
+                namespace_lookup: namespace,
+                f"{slug_lookup}__in": {slug for group in groups for slug in group},
+            }
+        )
     if match == "any":
         return results.filter(
             **{namespace_lookup: namespace, f"{slug_lookup}__in": selected}
         )
     for slug in selected:
         results = results.filter(**{namespace_lookup: namespace, slug_lookup: slug})
+    return results
+
+
+def _filter_code_taxonomy(results, identities, match):
+    if match == "children":
+        identities = inclusive_code_descendant_identities(identities)
+        match = "any"
+    predicates = []
+    for identity in dict.fromkeys(item for item in identities if item):
+        source, separator, value = identity.partition(":")
+        if separator and source == "ecz" and value:
+            predicates.append(
+                Q(circuit_revision__ecz_terms__ecz_code_id=value)
+                | Q(
+                    circuit_revision__code_tags__ecz_mappings__status=(
+                        TagEczMapping.Status.ACTIVE
+                    ),
+                    circuit_revision__code_tags__ecz_mappings__ecz_term__ecz_code_id=(
+                        value
+                    ),
+                )
+            )
+        elif separator and source == "cb" and value:
+            predicates.append(
+                Q(
+                    circuit_revision__code_tags__namespace=Tag.Namespace.CODE,
+                    circuit_revision__code_tags__id=value,
+                )
+            )
+        elif not separator:
+            predicates.append(
+                Q(
+                    circuit_revision__code_tags__namespace=Tag.Namespace.CODE,
+                    circuit_revision__code_tags__slug=identity,
+                )
+            )
+    if match == "any" and predicates:
+        combined = Q()
+        for predicate in predicates:
+            combined |= predicate
+        return results.filter(combined)
+    for predicate in predicates:
+        results = results.filter(predicate)
     return results

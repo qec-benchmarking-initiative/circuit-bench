@@ -200,7 +200,7 @@ def result_author_approval(request, result_id):
         raise Http404("Result not found") from error
     if not is_exact_decoder_author(request.user, result):
         raise PermissionDenied(
-            "Only an author credited on this exact decoder version may act."
+            "Only an author credited on this decoder version may act."
         )
     current = current_result_author_approval(result, request.user)
     initial_action = (

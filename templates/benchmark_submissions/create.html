@@ -4,12 +4,12 @@
 {% block title %}Submit benchmark revision · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <p class="eyebrow">Submission</p>
       <h1>Submit benchmark revision</h1>
     </header>
-    <aside class="submission-policy-bar" aria-label="Approval process">
+    <aside class="policy-bar" aria-label="Approval process">
       <strong>Approval Process v0.1:</strong> Benchmark revisions are reviewed by an administrator before publication. Approval does not make a benchmark official; official recognition is a separate administrator decision.
     </aside>
 
@@ -18,16 +18,16 @@
       <input type="hidden" name="mode" value="structured">
       {{ form.items_json }}
       {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-      {% for field in form.visible_fields %}
-        <div class="submission-field">
-          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field }}
-          {% if field.help_text %}<p class="field-help">{{ field.help_text }}</p>{% endif %}
-          {% if field.errors %}<div class="field-errors" role="alert">{{ field.errors }}</div>{% endif %}
-        </div>
-      {% endfor %}
+      <div class="form-bar-list">
+        {% for field in form.visible_fields %}
+          <div class="form-bar-row{% if field.errors %} form-bar-row-error{% endif %}">
+            <div class="form-bar-label"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.help_text %}<p>{{ field.help_text }}</p>{% endif %}</div>
+            <div class="form-bar-control">{{ field }}{% if field.errors %}<div class="submission-errors" role="alert">{{ field.errors }}</div>{% endif %}</div>
+          </div>
+        {% endfor %}
+      </div>
 
-      <section class="submission-field" aria-labelledby="benchmark-circuits-heading">
+      <section class="benchmark-manifest-field" aria-labelledby="benchmark-circuits-heading">
         <h2 id="benchmark-circuits-heading">Ordered circuit manifest</h2>
         <div class="table-scroll">
           <table class="data-table" data-benchmark-items-table>
@@ -35,10 +35,10 @@
             <tbody data-benchmark-items><tr><td colspan="5" class="table-empty">No circuits selected.</td></tr></tbody>
           </table>
         </div>
-        <button type="button" class="button button-secondary" data-open-circuit-picker>Choose circuits</button>
+        <div class="form-actions"><button type="button" class="button button-secondary" data-open-circuit-picker>Choose circuits</button></div>
       </section>
 
-      <div class="submission-actions"><button type="submit">Preview</button></div>
+      <div class="form-actions"><button type="submit">Preview</button></div>
     </form>
 
     <details class="submission-json-entry"{% if mode == "json" %} open{% endif %}>
@@ -48,14 +48,14 @@
         <label for="benchmark-json">Benchmark submission JSON</label>
         <textarea id="benchmark-json" name="payload" rows="22" spellcheck="false">{{ json_text }}</textarea>
         {% if json_error %}<p role="alert">{{ json_error }}</p>{% endif %}
-        <div class="submission-actions"><button type="submit">Preview JSON</button></div>
+        <div class="form-actions"><button type="submit">Preview JSON</button></div>
       </form>
     </details>
 
-    <dialog class="record-picker-dialog" data-circuit-picker>
-      <div class="record-picker-dialog-body">
-        <header><h2>Choose circuit revisions</h2></header>
-        <label>Search <input type="search" data-circuit-search autocomplete="off"></label>
+    <dialog class="picker-dialog benchmark-circuit-picker" data-circuit-picker>
+      <div class="picker-body">
+        <div class="dialog-heading"><h2>Choose circuit revisions</h2></div>
+        <label class="picker-search-label">Search <input type="search" data-circuit-search autocomplete="off"></label>
         <div class="table-scroll">
           <table class="data-table">
             <thead><tr><th>Circuit</th><th>Slug</th><th>Add</th></tr></thead>
@@ -63,7 +63,7 @@
           </table>
         </div>
       </div>
-      <footer class="record-picker-footer"><button type="button" data-close-circuit-picker>Done</button></footer>
+      <footer class="picker-actions"><button type="button" data-close-circuit-picker>Done</button></footer>
     </dialog>
     {{ circuits|json_script:"benchmark-circuit-options" }}
   </div>

@@ -3,8 +3,8 @@
 {% block title %}Review credit claim · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading"><h1>Review credit claim</h1></header>
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><h1>Review credit claim</h1></header>
     <dl class="metadata-list">
       <div><dt>Claimant</dt><dd>{{ claim.claimant_account.display_name }}</dd></div>
       <div><dt>Credited name</dt><dd>{{ claim.name_credit.display_name }}</dd></div>
@@ -13,16 +13,13 @@
       <div><dt>State</dt><dd>{{ claim.get_state_display }}</dd></div>
     </dl>
     {% if claim.state == "pending" %}
-      <form method="post" class="submission-form-sections">
+      <form method="post" class="form-bar-shell">
         {% csrf_token %}
-        {{ form.non_field_errors }}
-        <fieldset><legend>Decision</legend>{{ form.action }}{{ form.action.errors }}</fieldset>
-        <p>{{ form.note.label_tag }} {{ form.note }} {{ form.note.errors }}</p>
-        <button type="submit">Record review</button>
+        {% include "components/form_bar_list.html" with form=form only %}
+        <div class="form-actions"><button type="submit">Record review</button><a class="button button-secondary" href="{% url 'credits:review-queue' %}">Cancel</a></div>
       </form>
     {% else %}
-      <p>Reviewed by {{ claim.reviewed_by.display_name }} on {{ claim.reviewed_at|date:"Y-m-d H:i" }} UTC.</p>
-      {% if claim.review_note %}<p>{{ claim.review_note }}</p>{% endif %}
+      <div class="review-outcome"><p>Reviewed by {{ claim.reviewed_by.display_name }} on {{ claim.reviewed_at|date:"Y-m-d H:i" }} UTC.</p>{% if claim.review_note %}<p>{{ claim.review_note }}</p>{% endif %}</div>
     {% endif %}
   </div>
 {% endblock %}

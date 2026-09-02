@@ -1,0 +1,5 @@
+code_id: b
+name: B code
+relations:
+  parents:
+    - code_id: a

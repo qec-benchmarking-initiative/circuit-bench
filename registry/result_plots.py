@@ -248,7 +248,7 @@ def build_result_scatter_plot(
             "x_interval_count": available_x_intervals,
             "y_interval_count": available_y_intervals,
             "explanation": (
-                "Only complete lower/upper intervals stored under the exact selected "
+                "Only complete lower/upper intervals stored under the selected "
                 "score definition are drawn; Circuit Bench does not infer missing "
                 "errors."
             ),
@@ -846,12 +846,12 @@ def _point_identity(result: Result, point_context: str) -> dict[str, object]:
         return {
             "label": f"{decoder_label} · {circuit_label}",
             "link_url": result_url,
-            "link_label": "Open exact result record",
+            "link_label": "Open result record",
         }
     return {
         "label": f"Result {result.id}",
         "link_url": result_url,
-        "link_label": "Open exact result record",
+        "link_label": "Open result record",
     }
 
 

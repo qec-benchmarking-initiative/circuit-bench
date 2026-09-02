@@ -12,13 +12,13 @@
     "id": {
       "type": "string",
       "format": "uuid",
-      "description": "Server-assigned identity of this exact decoder version."
+      "description": "Server-assigned identity of this decoder version."
     },
     "slug": {
       "type": "string",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
       "maxLength": 200,
-      "description": "Unique slug for this exact version; lineage membership is derived only from previous_version_id."
+      "description": "Unique slug for this version; lineage membership is derived only from previous_version_id."
     },
     "name": {
       "type": "string",

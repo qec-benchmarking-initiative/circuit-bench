@@ -1,0 +1,1 @@
+<span{% if tag.status == "retired" %} class="tag-deleted-label"{% endif %}>{{ tag.label }}</span>{% if tag.source_suffix %} <span class="tag-source-suffix">{{ tag.source_suffix }}</span>{% elif tag.source == "ecz" %} <span class="tag-source-suffix">(ECZ)</span>{% endif %}{% if tag.status == "retired" %} <span class="tag-deleted-note">(Deleted)</span>{% endif %}

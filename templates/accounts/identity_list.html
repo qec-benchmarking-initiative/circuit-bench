@@ -47,7 +47,7 @@
           {% for provider in missing_providers %}
             <form method="post" action="{% provider_login_url provider.id process='connect' next=request.path %}">
               {% csrf_token %}
-              <button class="table-action" type="submit">Link {{ provider.label }}</button>
+              <button class="button button-secondary button-compact" type="submit">Link {{ provider.label }}</button>
             </form>
           {% endfor %}
         </div>

@@ -1,35 +1,35 @@
 {% if cell.type == "axis" %}
-  <div class="filter-grid-cell control-grid-cell control-axis-cell is-filtered" style="--control-cell-span: {{ cell.span }}" data-filter-grid-cell data-filter-key="{{ cell.key }}">
-    {% include "components/controls/axis_picker.html" with cell=cell only %}
+  <div class="control-grid-cell control-axis-cell" style="--control-cell-span: {{ cell.span }}" data-control-grid-cell>
+    {% include "components/pickers/axis.html" with cell=cell only %}
   </div>
 {% elif cell.type == "choice" %}
-  <div class="filter-grid-cell control-grid-cell filter-grid-choice-cell is-filtered" style="--control-cell-span: {{ cell.span }}" data-filter-grid-cell data-filter-choice-cell data-filter-key="{{ cell.key }}">
-    <button class="filter-grid-trigger" type="button" data-filter-choice-trigger aria-expanded="false">
-      <span class="filter-grid-cell-title">{{ cell.label }}</span>
-      <span class="filter-grid-cell-value" data-filter-cell-value>{{ cell.display_value }}</span>
+  <div class="control-grid-cell control-choice-cell" style="--control-cell-span: {{ cell.span }}" data-control-grid-cell data-control-choice-cell>
+    <button class="control-grid-trigger" type="button" data-control-choice-trigger aria-expanded="false">
+      <span class="control-grid-cell-title">{{ cell.label }}</span>
+      <span class="control-grid-cell-value" data-control-cell-value>{{ cell.display_value }}</span>
     </button>
-    <label class="filter-grid-fallback">
+    <label class="control-grid-fallback">
       <span>{{ cell.label }}</span>
-      <select name="{{ cell.name }}" data-filter-choice-input>
+      <select name="{{ cell.name }}" data-control-choice-input>
         {% for choice in cell.choices %}<option value="{{ choice.value }}"{% if cell.value == choice.value %} selected{% endif %}>{{ choice.label }}</option>{% endfor %}
       </select>
     </label>
   </div>
 {% elif cell.type == "range" %}
-  <div class="filter-grid-cell control-grid-cell filter-grid-range-cell{% if cell.filtered %} is-filtered{% endif %}" style="--control-cell-span: {{ cell.span }}" data-filter-grid-cell data-filter-range-cell data-filter-key="{{ cell.key }}" data-domain-min="{{ cell.histogram.domain_min }}" data-domain-max="{{ cell.histogram.domain_max }}" data-histogram-counts="{{ cell.histogram.counts|join:',' }}" data-histogram-label="{{ cell.histogram_label }}" data-number-profile="{{ cell.number_profile|default:'default' }}" data-range-step="{{ cell.step }}" data-range-auto-empty="true" data-range-allow-negative="{% if cell.allow_negative %}true{% else %}false{% endif %}" data-range-empty-minimum-label="auto" data-range-empty-maximum-label="auto" data-range-default-display="Auto" data-range-reset-label="Auto range">
-    <button class="filter-grid-trigger" type="button" data-filter-range-trigger aria-expanded="false">
-      <span class="filter-grid-cell-title">{{ cell.label }}</span>
-      <span class="filter-grid-cell-value" data-filter-cell-value>{{ cell.display_value }}</span>
+  <div class="control-grid-cell control-range-cell{% if cell.explicit %} is-explicit{% endif %}" style="--control-cell-span: {{ cell.span }}" data-control-grid-cell data-control-range-cell data-control-state-class="is-explicit" data-domain-min="{{ cell.histogram.domain_min }}" data-domain-max="{{ cell.histogram.domain_max }}" data-histogram-counts="{{ cell.histogram.counts|join:',' }}" data-histogram-label="{{ cell.histogram_label }}" data-number-profile="{{ cell.number_profile|default:'default' }}" data-range-step="{{ cell.step }}" data-range-auto-empty="true" data-range-allow-negative="{% if cell.allow_negative %}true{% else %}false{% endif %}" data-range-empty-minimum-label="auto" data-range-empty-maximum-label="auto" data-range-default-display="Auto" data-range-reset-label="Auto range">
+    <button class="control-grid-trigger" type="button" data-control-range-trigger aria-expanded="false">
+      <span class="control-grid-cell-title">{{ cell.label }}</span>
+      <span class="control-grid-cell-value" data-control-cell-value>{{ cell.display_value }}</span>
     </button>
-    <button class="filter-grid-clear" type="button" data-filter-clear aria-label="Reset {{ cell.label }} to auto">×</button>
-    <span class="filter-grid-native-range">
-      <input name="{{ cell.minimum_name }}" type="number"{% if not cell.allow_negative %} min="0"{% endif %} step="{{ cell.step }}" value="{{ cell.minimum_value }}" data-filter-range-min>
-      <input name="{{ cell.maximum_name }}" type="number"{% if not cell.allow_negative %} min="0"{% endif %} step="{{ cell.step }}" value="{{ cell.maximum_value }}" data-filter-range-max>
+    <button class="control-grid-clear" type="button" data-control-clear aria-label="Reset {{ cell.label }} to auto">×</button>
+    <span class="control-grid-native-range">
+      <input name="{{ cell.minimum_name }}" type="number"{% if not cell.allow_negative %} min="0"{% endif %} step="{{ cell.step }}" value="{{ cell.minimum_value }}" data-control-range-min>
+      <input name="{{ cell.maximum_name }}" type="number"{% if not cell.allow_negative %} min="0"{% endif %} step="{{ cell.step }}" value="{{ cell.maximum_value }}" data-control-range-max>
     </span>
   </div>
 {% elif cell.type == "toggle" %}
-  <label class="filter-grid-cell control-grid-cell control-toggle-cell{% if cell.checked %} is-filtered{% endif %}" style="--control-cell-span: {{ cell.span }}" data-filter-grid-cell data-plot-toggle-cell data-filter-key="{{ cell.key }}">
-    <span class="filter-grid-cell-title">{{ cell.label }}</span>
+  <label class="control-grid-cell control-toggle-cell{% if cell.checked %} is-enabled{% endif %}" style="--control-cell-span: {{ cell.span }}" data-control-grid-cell data-plot-toggle-cell>
+    <span class="control-grid-cell-title">{{ cell.label }}</span>
     <span class="control-toggle-value">
       <input type="checkbox" name="{{ cell.name }}" value="1"{% if cell.checked %} checked{% endif %} data-plot-toggle>
       <span data-plot-toggle-label>{{ cell.display_value }}</span>

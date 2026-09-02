@@ -3,7 +3,7 @@ services:
     name: circuit-bench-staging
     runtime: python
     branch: staging
-    plan: free
+    plan: 0.5c-512mb
     region: frankfurt
     buildCommand: ./scripts/render-build.sh
     startCommand: ./scripts/render-start.sh
@@ -55,6 +55,25 @@ services:
         value: "1"
       - key: GUNICORN_THREADS
         value: "4"
+
+  - type: cron
+    name: circuit-bench-ecz-sync-staging
+    runtime: python
+    branch: staging
+    plan: 0.5c-512mb
+    region: frankfurt
+    schedule: "17 3 * * *"
+    buildCommand: ./scripts/render-build.sh
+    startCommand: python manage.py sync_ecz_taxonomy
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: circuit-bench-staging-db
+          property: connectionString
+      - key: ECZ_GITHUB_TOKEN
+        sync: false
 
 databases:
   - name: circuit-bench-staging-db

@@ -126,7 +126,11 @@ SUBMISSION_SCHEMAS: dict[SubmissionKind, dict[str, Any]] = {
             "code_tags": {
                 "type": "array",
                 "items": UUID,
-                "minItems": 1,
+                "uniqueItems": True,
+            },
+            "ecz_terms": {
+                "type": "array",
+                "items": UUID,
                 "uniqueItems": True,
             },
             "experiment_tags": {

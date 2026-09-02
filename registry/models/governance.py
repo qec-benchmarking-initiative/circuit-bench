@@ -70,7 +70,10 @@ class RecordEvent(UUIDModel):
         REVISION_CREATED = "revision_created", "Revision created"
         PROMOTED_OFFICIAL = "promoted_official", "Promoted official"
         DEPRECATED = "deprecated", "Deprecated"
+        RETIRED = "retired", "Retired"
         MERGED = "merged", "Merged"
+        ADDED_ALIAS = "added_alias", "Added alias"
+        REMOVED_ALIAS = "removed_alias", "Removed alias"
         ADMIN_CREDIT_OVERRIDE = (
             "admin_credit_claim_override",
             "Admin credit claim override",
@@ -200,7 +203,10 @@ class RecordEvent(UUIDModel):
                         "revision_created",
                         "promoted_official",
                         "deprecated",
+                        "retired",
                         "merged",
+                        "added_alias",
+                        "removed_alias",
                         "admin_credit_claim_override",
                     ]
                 ),

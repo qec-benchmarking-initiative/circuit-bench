@@ -1,0 +1,26 @@
+<div class="tag-parent-selector is-disabled" data-tag-parent-selector data-dynamic-tag-parent-selector aria-disabled="true">
+  <div class="tag-parent-selector-head">
+    <div class="tag-picker-summary" data-tag-parent-summary>
+      <span class="tag-picker-empty-summary">No parent tags selected</span>
+    </div>
+    <button class="button-secondary button-compact" type="button" data-tag-parent-toggle aria-expanded="false" disabled>Choose parent tags…</button>
+  </div>
+  <div class="tag-parent-selector-panel" data-tag-parent-panel hidden>
+    <label for="{{ picker_id }}-parent-search">Search possible parent tags</label>
+    <input id="{{ picker_id }}-parent-search" type="search" autocomplete="off" data-tag-parent-search disabled>
+    <section class="tag-available" aria-labelledby="{{ picker_id }}-parent-available-title">
+      <h3 id="{{ picker_id }}-parent-available-title">Available parent tags</h3>
+      <div class="taxonomy-source-results" data-tag-create-parent-source="circuit_bench">
+        <h4>Circuit Bench</h4>
+        <div class="tag-choice-grid" data-tag-create-parent-results="circuit_bench"></div>
+        <span class="taxonomy-result-remainder" data-tag-create-parent-remaining="circuit_bench" hidden></span>
+      </div>
+      <div class="taxonomy-source-results" data-tag-create-parent-source="ecz" hidden>
+        <h4>Error Correction Zoo</h4>
+        <div class="tag-choice-grid" data-tag-create-parent-results="ecz"></div>
+        <span class="taxonomy-result-remainder" data-tag-create-parent-remaining="ecz" hidden></span>
+      </div>
+      <p class="picker-empty hidden" data-tag-parent-no-results>No matching tags.</p>
+    </section>
+  </div>
+</div>

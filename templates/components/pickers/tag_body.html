@@ -1,0 +1,81 @@
+<div class="picker-body">
+  {% if namespace_choices %}
+    <label class="tag-namespace-label" for="{{ picker_id }}-namespace">Tag type</label>
+    <select id="{{ picker_id }}-namespace" data-tag-namespace-select>
+      {% for value, label in namespace_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+    </select>
+  {% endif %}
+
+  <label class="picker-search-label" for="{{ picker_id }}-search">{% if mode == "create" %}Tag name{% else %}Search tags{% endif %}</label>
+  <input id="{{ picker_id }}-search" type="search" placeholder="Type a tag name" autocomplete="off" data-tag-search{% if mode != 'create' %} autofocus{% endif %}>
+
+  {% if mode != "create" %}
+    <section class="tag-selection" aria-labelledby="{{ picker_id }}-selected-title">
+      <h3 id="{{ picker_id }}-selected-title">Selected</h3>
+      <div class="selected-tag-area" data-tag-selected-area>
+        {% for tag in tags %}{% if tag.picker_key|default:tag.slug in selected_keys %}{% include "components/selected_tag_chip.html" with tag=tag only %}{% endif %}{% endfor %}
+        {% if not selected_keys %}<span class="muted">No tags selected.</span>{% endif %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="tag-available" aria-labelledby="{{ picker_id }}-available-title">
+    <h3 id="{{ picker_id }}-available-title">{% if mode == "create" %}Existing tags{% else %}Available tags{% endif %}</h3>
+    <div class="taxonomy-source-results" data-taxonomy-source="circuit_bench">
+      <h4>Circuit Bench</h4>
+      <div class="tag-choice-grid" data-taxonomy-results="circuit_bench"></div>
+      <span class="taxonomy-result-remainder" data-taxonomy-load="circuit_bench" hidden></span>
+    </div>
+    <div class="taxonomy-source-results" data-taxonomy-source="ecz"{% if tag_namespace != 'code' and not namespace_choices %} hidden{% endif %}>
+      <h4>Error Correction Zoo</h4>
+      <div class="tag-choice-grid" data-taxonomy-results="ecz"></div>
+      <span class="taxonomy-result-remainder" data-taxonomy-load="ecz" hidden></span>
+    </div>
+    <p class="picker-empty hidden" data-tag-no-results role="status">No matching tags.</p>
+  </section>
+
+  <section class="tag-context-parents" data-tag-context-parents hidden aria-labelledby="{{ picker_id }}-context-parent-title">
+    <h3 id="{{ picker_id }}-context-parent-title">Unselected parent tags{% if mode == "create" %} <span class="muted">(recommended)</span>{% endif %}</h3>
+    <div class="taxonomy-source-results" data-taxonomy-parent-source="circuit_bench">
+      <h4>Circuit Bench</h4>
+      <div class="tag-choice-grid" data-taxonomy-parent-results="circuit_bench"></div>
+      <span class="taxonomy-result-remainder" data-taxonomy-parent-load="circuit_bench" hidden></span>
+    </div>
+    <div class="taxonomy-source-results" data-taxonomy-parent-source="ecz">
+      <h4>Error Correction Zoo</h4>
+      <div class="tag-choice-grid" data-taxonomy-parent-results="ecz"></div>
+      <span class="taxonomy-result-remainder" data-taxonomy-parent-load="ecz" hidden></span>
+    </div>
+  </section>
+
+  {% if allow_create %}
+    <section class="tag-create-section is-disabled" data-tag-create-section aria-disabled="true" aria-labelledby="{{ picker_id }}-create-title">
+      <h3 id="{{ picker_id }}-create-title">Add a new tag</h3>
+      <p>Please check carefully if there is an existing tag that describes this <span data-tag-concept>concept</span> well, to help with searching.</p>
+      <p class="tag-create-proposal">New tag: <strong data-tag-proposed-label>—</strong></p>
+      <div class="tag-create-fields">
+        <label for="{{ picker_id }}-description">Brief description - include references</label>
+        <textarea id="{{ picker_id }}-description" rows="3" data-tag-create-description disabled></textarea>
+        <label for="{{ picker_id }}-aliases">Aliases <span class="muted">(optional; one per line or separated by commas)</span></label>
+        <textarea id="{{ picker_id }}-aliases" rows="2" data-tag-create-aliases disabled></textarea>
+        <span class="tag-create-parent-label">Parent tags <span class="muted">(optional)</span></span>
+        <div class="tag-create-parent-control">
+          {% if mode == "create" %}
+            <div class="tag-picker-summary" data-tag-create-parent-summary><span class="tag-picker-empty-summary">No parent tags selected</span></div>
+            <p class="field-help">Select existing terms above to use them as direct parents.</p>
+          {% else %}
+            {% include "components/tag_parent_selector.html" with picker_id=picker_id|add:"-new-tag" only %}
+          {% endif %}
+        </div>
+      </div>
+      {% if mode != "create" %}
+        <div class="tag-create-footer">
+          <p class="tag-create-status" data-tag-create-status role="status">Type a proposed tag name above.</p>
+          <button class="button-compact" type="button" data-tag-create disabled>Add new tag</button>
+        </div>
+      {% else %}
+        <p class="tag-create-status" data-tag-create-status role="status">Type a proposed tag name above.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+</div>

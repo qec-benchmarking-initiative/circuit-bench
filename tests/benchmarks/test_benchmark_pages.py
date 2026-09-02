@@ -54,7 +54,7 @@ def test_catalogue_is_searchable_compact_and_deterministic(client, demo_benchmar
     text = " ".join(strip_tags(content).split())
     assert "Admin approved" in content
     assert "Table view options (5/7)" in content
-    assert "1 exact published benchmark revision" in text
+    assert "1 published benchmark revision" in text
 
 
 def test_catalogue_never_discovers_nonpublished_revisions(client, demo_benchmark):

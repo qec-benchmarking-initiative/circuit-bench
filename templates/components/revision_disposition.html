@@ -2,7 +2,7 @@
   <section class="submission-form-section revision-disposition">
     <header>
       <h3>Publication relationship</h3>
-      <p>Choose whether the existing exact revision remains published while this successor is reviewed.</p>
+      <p>Choose whether the existing revision remains published while this successor is reviewed.</p>
     </header>
     <div class="revision-disposition-options">
       <label>
@@ -11,7 +11,7 @@
       </label>
       <label>
         <input type="radio" name="revision_mode" value="replace"{% if revision_control.selected == "replace" %} checked{% endif %}>
-        <span><strong>Withdraw {{ revision_control.source_label }} and submit</strong><small>The old exact revision is withdrawn immediately; the successor enters pending reapproval.</small></span>
+        <span><strong>Withdraw {{ revision_control.source_label }} and submit</strong><small>The old revision is withdrawn immediately; the successor enters pending reapproval.</small></span>
       </label>
     </div>
   </section>

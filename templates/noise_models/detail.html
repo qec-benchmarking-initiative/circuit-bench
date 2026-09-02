@@ -1,22 +1,22 @@
-{% extends "layouts/entity_detail.html" %}
-{% load scientific submission_history %}
+{% extends "layouts/record_detail.html" %}
+{% load scientific record_history %}
 
 {% block title %}{{ noise_model.name }} — Circuit Bench{% endblock %}
 
-{% block entity_heading %}
-  {% include "components/entity_header.html" with entity=entity only %}
+{% block record_heading %}
+  {% include "components/record_header.html" with record=record only %}
 {% endblock %}
 
-{% block entity_main %}
+{% block record_main %}
   <section class="record-section">
     <h2>Definition</h2>
     <p>{{ noise_model.short_description }}</p>
     <p><a href="{{ noise_model.paper_url }}">Read the defining paper</a></p>
   </section>
-  {% submission_history noise_model "noise_model" %}
+  {% record_history noise_model "noise_model" %}
 {% endblock %}
 
-{% block entity_aside %}
+{% block record_aside %}
   <h2>Properties</h2>
   <dl class="stacked-metadata">
     <div><dt>Schema</dt><dd>{{ noise_model.schema_release.public_name }}</dd></div>
@@ -26,7 +26,7 @@
   {% if supersedes_noise_model %}<p>Supersedes <a href="{% url 'noise-models:detail' supersedes_noise_model.slug %}">{{ supersedes_noise_model.name }}</a>.</p>{% endif %}
 {% endblock %}
 
-{% block entity_related %}
+{% block record_related %}
   <h2>Circuits using this noise model</h2>
   {% if circuits %}
     <div class="table-scroll record-table-scroll">

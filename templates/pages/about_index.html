@@ -1,11 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}About and reference · Circuit Bench{% endblock %}
+{% block title %}{{ document.title }} · Circuit Bench{% endblock %}
 
 {% block content %}
   <article class="page-shell static-page">
     <header class="page-heading">
-      <p class="eyebrow">About and reference</p>
       <h1>{{ document.title }}</h1>
       {% if document.summary %}<p>{{ document.summary }}</p>{% endif %}
     </header>

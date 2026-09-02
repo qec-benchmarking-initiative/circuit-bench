@@ -82,7 +82,7 @@
     const cell = toggle.closest("[data-plot-toggle-cell]");
     const label = cell.querySelector("[data-plot-toggle-label]");
     toggle.addEventListener("change", () => {
-      cell.classList.toggle("is-filtered", toggle.checked);
+      cell.classList.toggle("is-enabled", toggle.checked);
       label.textContent = toggle.checked ? "Shown" : "Hidden";
     });
   });

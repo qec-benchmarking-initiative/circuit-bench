@@ -38,7 +38,7 @@
       }
     };
 
-    form.addEventListener("filterquery:change", () => render());
+    form.addEventListener("control:commit", () => render());
     button.addEventListener("click", () => {
       const choice = choices.get(selectedPreviousId());
       if (!choice) return;

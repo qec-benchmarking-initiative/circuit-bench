@@ -78,7 +78,7 @@ def canonical_benchmark_payload(payload: dict) -> dict:
     if not version:
         raise BenchmarkValidationError("Provide a benchmark version.")
     if not revision_description:
-        raise BenchmarkValidationError("Describe this exact revision.")
+        raise BenchmarkValidationError("Describe this revision.")
     if previous_id is None and not description:
         raise BenchmarkValidationError(
             "The first benchmark revision requires a description."
@@ -124,7 +124,7 @@ def create_benchmark_submission(
             pass
         else:
             raise BenchmarkStateError(
-                "That benchmark revision already has an exact successor."
+                "That benchmark revision already has a successor."
             )
         if BenchmarkRevision.objects.filter(
             history_id=previous.history_id,
@@ -185,7 +185,7 @@ def create_benchmark_submission(
             record=benchmark,
             actor=submitter,
             action=RecordEvent.Action.REVISION_CREATED,
-            note="Created this exact benchmark revision as a successor.",
+            note="Created this benchmark revision as a successor.",
             details={"policy_version": "0.1", "predecessor_id": str(previous.id)},
         )
     snapshot_payload = {**payload, "manifest_artifact": str(manifest.id)}
@@ -366,7 +366,7 @@ def create_benchmark_attempt(
             ) from error
         if result.id in seen_results:
             raise BenchmarkValidationError(
-                "The same exact result cannot fill more than one manifest position."
+                "The same result cannot fill more than one manifest position."
             )
         if result.decoder_version_id != decoder.id:
             raise BenchmarkValidationError(
@@ -670,7 +670,8 @@ def _validate_stored_manifest(benchmark: BenchmarkRevision) -> None:
         ) from error
     if stored != expected:
         raise BenchmarkValidationError(
-            "The stored benchmark manifest does not exactly match its ordered rows."
+            "The stored benchmark manifest does not match its ordered rows "
+            "byte-for-byte."
         )
 
 

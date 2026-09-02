@@ -1,0 +1,36 @@
+<div class="control-axis-picker" data-plot-axis-picker>
+  <button class="control-grid-trigger" type="button" data-plot-axis-open aria-expanded="false" aria-haspopup="dialog">
+    <span class="control-grid-cell-title">{{ cell.label }}</span>
+    <span class="control-grid-cell-value" data-plot-axis-summary>{{ cell.display_value }}</span>
+  </button>
+  <label class="control-grid-fallback">
+    <span>{{ cell.label }}</span>
+    <select name="{{ cell.name }}" data-plot-axis-input>
+      {% for option in cell.options %}<option value="{{ option.value }}"{% if option.value == cell.value %} selected{% endif %}>{{ option.label }}{% if option.unit %} ({{ option.unit }}){% endif %}</option>{% endfor %}
+    </select>
+  </label>
+  <dialog class="picker-dialog control-axis-dialog" id="{{ cell.picker_id }}" data-plot-axis-dialog aria-labelledby="{{ cell.picker_id }}-title">
+    <div class="dialog-heading">
+      <h2 id="{{ cell.picker_id }}-title">Choose {{ cell.label }}</h2>
+      <button class="button-plain" type="button" data-plot-axis-cancel>Close</button>
+    </div>
+    <div class="picker-body control-axis-picker-body">
+      <label class="picker-search-label" for="{{ cell.picker_id }}-search">Search numerical ResultRecord fields</label>
+      <input id="{{ cell.picker_id }}-search" type="search" autocomplete="off" data-plot-axis-search>
+      <div class="picker-results control-axis-options" data-plot-axis-options>
+        {% for option in cell.options %}
+          <button class="control-axis-option" type="button" data-plot-axis-option="{{ option.value }}" data-option-search="{{ option.label|lower }} {{ option.value|lower }} {{ option.unit|default:''|lower }}" aria-pressed="{% if option.value == cell.value %}true{% else %}false{% endif %}">
+            <span><strong>{{ option.label }}</strong>{% if option.unit %} <span>{{ option.unit }}</span>{% endif %}</span>
+            <small>{{ option.description }}</small>
+            {% if option.interval_count %}<span class="control-axis-interval-status">± {{ option.interval_label }}</span>{% endif %}
+          </button>
+        {% endfor %}
+      </div>
+      <p class="picker-empty" data-plot-axis-empty hidden>No matching numerical fields.</p>
+    </div>
+    <div class="picker-actions">
+      <button class="button-secondary button-compact" type="button" data-plot-axis-cancel>Cancel</button>
+      <button class="button-compact" type="button" data-plot-axis-apply>Use selected axis</button>
+    </div>
+  </dialog>
+</div>
