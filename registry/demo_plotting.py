@@ -7,7 +7,14 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
 
-from registry.demo import _artifact, _demo_history, demo_id, seed_demo_data
+from registry.demo import (
+    _artifact,
+    _demo_history,
+    _ensure_demo_history_events,
+    _ensure_demo_tag_aliases,
+    demo_id,
+    seed_demo_data,
+)
 from registry.models import (
     CircuitRevision,
     CircuitRevisionCodeTag,
@@ -18,6 +25,7 @@ from registry.models import (
     EvaluatorRelease,
     Machine,
     NoiseModel,
+    RecordHistory,
     Result,
     ResultScore,
     SchemaRelease,
@@ -244,6 +252,8 @@ def seed_plot_demo_data() -> dict[str, int]:
     published_at = evaluator.published_at
 
     tags = _seed_tags(releases["tag"], uploader, published_at)
+    _ensure_demo_history_events(tags.values())
+    _ensure_demo_tag_aliases(uploader)
     machines = _seed_machines(releases["machine"], uploader, published_at)
     decoders = _seed_decoders(releases["decoder"], uploader, published_at, tags)
     circuits = _seed_circuits(
@@ -280,6 +290,17 @@ def _account(key):
     return Account.objects.get(id=demo_id(key))
 
 
+def _history_for_seed_record(model, record_id, name: str, kind: str):
+    """Reuse an existing record's history without creating an eager orphan."""
+
+    history_id = (
+        model.objects.filter(id=record_id).values_list("history_id", flat=True).first()
+    )
+    if history_id is not None:
+        return RecordHistory.objects.get(id=history_id)
+    return _demo_history(name, kind)
+
+
 def _seed_tags(schema_release, uploader, published_at):
     specifications = (
         ("algorithm", "union-find", "Union find", "#567d46"),
@@ -288,22 +309,41 @@ def _seed_tags(schema_release, uploader, published_at):
         ("algorithm", "cellular-automaton", "Cellular automaton", "#387c7a"),
         ("algorithm", "tensor-network", "Tensor network", "#80612e"),
         ("algorithm", "clustering", "Clustering", "#4e6695"),
+        ("algorithm", "fallback", "Fallback", "#755844"),
+        ("algorithm", "predecoder", "Predecoder", "#497178"),
+        ("algorithm", "ensemble", "Ensemble", "#765278"),
         ("code", "colour-code", "Colour code", "#8d4771"),
         ("code", "bivariate-bicycle-144", "Bivariate bicycle 144", "#526e3d"),
         ("experiment", "stability", "Stability", "#93622f"),
         ("experiment", "logical-operation", "Logical operation", "#445f91"),
     )
+    descriptions = {
+        "fallback": (
+            "A secondary decoding method invoked when another decoding stage "
+            "declines or fails."
+        ),
+        "predecoder": "A preliminary decoding stage applied before the main decoder.",
+        "ensemble": ("Combines outputs from multiple decoders or decoding hypotheses."),
+    }
     tags = {tag.slug: tag for tag in Tag.objects.all()}
     for namespace, slug, label, colour in specifications:
+        tag_id = demo_id(f"tag/{namespace}/{slug}")
         tag, _ = Tag.objects.get_or_create(
-            id=demo_id(f"tag/{namespace}/{slug}"),
+            id=tag_id,
             defaults={
                 "schema_release": schema_release,
-                "history": _demo_history(f"tag/{namespace}/{slug}", "tag"),
+                "history": _history_for_seed_record(
+                    Tag,
+                    tag_id,
+                    f"tag/{namespace}/{slug}",
+                    "tag",
+                ),
                 "namespace": namespace,
                 "slug": slug,
                 "label": label,
-                "description": f"Synthetic {label.lower()} tag for development data.",
+                "description": descriptions.get(
+                    slug, f"Synthetic {label.lower()} tag for development data."
+                ),
                 "status": "official",
                 "display_color": colour,
                 "submitted_by": uploader,
@@ -332,11 +372,14 @@ def _seed_machines(schema_release, uploader, published_at):
     )
     machines = {machine.slug: machine for machine in Machine.objects.all()}
     for slug, machine_class, description, status in specifications:
+        machine_id = demo_id(f"machine/{slug}")
         machine, _ = Machine.objects.get_or_create(
-            id=demo_id(f"machine/{slug}"),
+            id=machine_id,
             defaults={
                 "schema_release": schema_release,
-                "history": _demo_history(f"machine/{slug}", "machine"),
+                "history": _history_for_seed_record(
+                    Machine, machine_id, f"machine/{slug}", "machine"
+                ),
                 "slug": slug,
                 "machine_class": machine_class,
                 "description": description,
@@ -361,11 +404,17 @@ def _seed_decoders(schema_release, uploader, published_at, tags):
         }
     }
     for spec in DECODER_SPECS:
+        decoder_id = demo_id(f"decoder/{spec['key']}/0.1")
         decoder, _ = DecoderVersion.objects.get_or_create(
-            id=demo_id(f"decoder/{spec['key']}/0.1"),
+            id=decoder_id,
             defaults={
                 "schema_release": schema_release,
-                "history": _demo_history(f"decoder/{spec['key']}", "decoder"),
+                "history": _history_for_seed_record(
+                    DecoderVersion,
+                    decoder_id,
+                    f"decoder/{spec['key']}",
+                    "decoder",
+                ),
                 "slug": spec["slug"],
                 "name": spec["name"],
                 "version": "0.1",
@@ -555,7 +604,9 @@ def _seed_results(
                 id=result_id,
                 defaults={
                     "schema_release": schema_release,
-                    "history": _demo_history(history_key, "result"),
+                    "history": _history_for_seed_record(
+                        Result, result_id, history_key, "result"
+                    ),
                     "decoder_version": decoder["record"],
                     "circuit_revision": circuit["record"],
                     "evaluator_version": evaluator,

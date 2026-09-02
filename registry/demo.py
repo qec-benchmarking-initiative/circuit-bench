@@ -653,8 +653,17 @@ def _refresh_demo_presentation() -> None:
 
 def _ensure_demo_tag_aliases(uploader: Account) -> None:
     aliases = {
-        "tag/algorithm/matching": ("MWPM", "Minimum-weight perfect matching"),
+        "tag/algorithm/matching": (
+            "MWPM",
+            "MWM",
+            "Minimum-weight perfect matching",
+        ),
+        "tag/algorithm/ordered-statistics": ("OSD",),
+        "tag/algorithm/tensor-network": ("TN",),
+        "tag/algorithm/neural-network": ("NN",),
+        "tag/algorithm/union-find": ("UF",),
         "tag/algorithm/belief-propagation": ("BP",),
+        "tag/algorithm/fallback": ("Post processing",),
         "tag/code/rotated-surface-code": ("Rotated planar code",),
         "tag/experiment/memory": ("Quantum memory",),
     }
