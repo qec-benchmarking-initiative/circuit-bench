@@ -31,7 +31,9 @@ from registry.models import (
     SchemaRelease,
     ScoreDefinition,
     Tag,
+    TagParent,
 )
+from registry.services.histories import append_history_event, submission_snapshot
 
 DECODER_SPECS = (
     {
@@ -253,6 +255,7 @@ def seed_plot_demo_data() -> dict[str, int]:
 
     tags = _seed_tags(releases["tag"], uploader, published_at)
     _ensure_demo_history_events(tags.values())
+    _seed_tag_parents(tags, uploader)
     _ensure_demo_tag_aliases(uploader)
     machines = _seed_machines(releases["machine"], uploader, published_at)
     decoders = _seed_decoders(releases["decoder"], uploader, published_at, tags)
@@ -353,6 +356,46 @@ def _seed_tags(schema_release, uploader, published_at):
         )
         tags[tag.slug] = tag
     return tags
+
+
+def _seed_tag_parents(tags, uploader):
+    for child_slug, parent_slug in (
+        ("ordered-statistics", "fallback"),
+        ("union-find", "clustering"),
+    ):
+        relationship, _created = TagParent.objects.get_or_create(
+            child=tags[child_slug],
+            parent=tags[parent_slug],
+        )
+        if not relationship.child.record_events.filter(
+            action="edited",
+            details__fixture_parent_id=str(relationship.parent_id),
+        ).exists():
+            append_history_event(
+                kind="tag",
+                record=relationship.child,
+                actor=uploader,
+                action="edited",
+                note="Added a deterministic development-data parent tag.",
+                details={
+                    "fixture": True,
+                    "changed_fields": ["parents"],
+                    "fixture_parent_id": str(relationship.parent_id),
+                },
+                payload_snapshot=submission_snapshot(
+                    "tag",
+                    {
+                        "fixture": True,
+                        "record_id": str(relationship.child_id),
+                        "parent_tag_ids": [
+                            str(parent_id)
+                            for parent_id in relationship.child.parents.values_list(
+                                "id", flat=True
+                            )
+                        ],
+                    },
+                ),
+            )
 
 
 def _seed_machines(schema_release, uploader, published_at):

@@ -8,6 +8,7 @@ from registry.record_pickers import (
     record_picker_context,
     serialize_picker_record,
 )
+from registry.services.tags import active_tag_queryset
 from registry.submission_policy import SubmissionKind
 
 REFERENCE_PICKERS = {
@@ -372,12 +373,16 @@ def _field_context(form, name, kind, section_index):
         tags = list(bound.field.queryset)
         for tag in tags:
             tag.picker_key = str(tag.id)
+        parent_tags = list(active_tag_queryset())
+        for tag in parent_tags:
+            tag.picker_key = str(tag.id)
         context.update(
             type="tags",
             tags=tags,
             selected_keys=tuple(_bound_values(bound.value())),
             picker_id=f"submission-{kind.value}-{section_index}-{name}",
             tag_namespace=TAG_NAMESPACE_BY_FIELD[name],
+            parent_tags=parent_tags,
         )
     elif getattr(bound.field.widget, "input_type", None) == "checkbox":
         context["type"] = "boolean"

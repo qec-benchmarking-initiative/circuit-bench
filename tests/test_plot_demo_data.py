@@ -2,7 +2,7 @@ import pytest
 
 from registry.demo import demo_id
 from registry.demo_plotting import plot_demo_counts, seed_plot_demo_data
-from registry.models import RecordHistory, Result, Tag
+from registry.models import RecordHistory, Result, Tag, TagParent
 from registry.result_plots import build_result_scatter_plot
 from registry.result_tables import with_result_metrics
 from registry.services.results import public_result_catalogue
@@ -27,6 +27,7 @@ def test_plot_demo_data_is_rich_idempotent_and_plot_ready():
         }
     )
     assert RecordHistory.objects.count() == first_history_count
+    assert TagParent.objects.count() == 2
     assert plot_demo_counts() == first_counts
     assert Result.objects.values("decoder_version").distinct().count() == 7
     assert Result.objects.values("circuit_revision").distinct().count() == 8

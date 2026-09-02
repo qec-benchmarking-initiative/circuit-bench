@@ -1,11 +1,13 @@
 import pytest
+from django.core.management import CommandError, call_command
 from django.urls import reverse
 
 from accounts.models import Account
 from registry.demo import DEMO_ACCOUNT_ID, demo_id, seed_demo_data
-from registry.models import RecordEvent, Tag, TagAlias
+from registry.models import RecordEvent, Tag, TagAlias, TagParent
 from registry.services.taxonomy import (
     TaxonomyPermissionError,
+    TaxonomyValidationError,
     create_custom_tag,
     promote_tag_official,
     update_tag,
@@ -103,6 +105,7 @@ def test_custom_owner_loses_edit_permission_after_official_promotion(accounts):
 
 def test_inline_creation_api_and_alias_aware_picker(accounts, client):
     client.force_login(accounts["contributor"])
+    parent = Tag.objects.get(slug="matching")
     response = client.post(
         reverse("taxonomy:tag-create-json"),
         {
@@ -110,12 +113,14 @@ def test_inline_creation_api_and_alias_aware_picker(accounts, client):
             "label": "Peeling decoder",
             "description": "Iteratively removes degree-one checks.",
             "aliases": "leaf removal\npeeling",
+            "parents": [str(parent.id)],
         },
     )
 
     assert response.status_code == 201
     payload = response.json()["tag"]
     assert payload["aliases"] == ["leaf removal", "peeling"]
+    assert payload["parents"][0]["id"] == str(parent.id)
     assert payload["url"] == "/tags/algorithm/peeling-decoder/"
 
     form_page = client.get(reverse("submissions:create", args=["decoder"]))
@@ -174,3 +179,139 @@ def test_tag_detail_links_usage_history_and_owner_edit(accounts, client):
         "memory repetition",
         "repeated storage",
     }
+
+
+def test_multiple_parents_are_durable_and_cycles_are_rejected(accounts):
+    contributor = accounts["contributor"]
+    broad_a = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.ALGORITHM,
+        label="Broad method A",
+        description="A broad method.",
+    ).tag
+    broad_b = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.CODE,
+        label="Broad method B",
+        description="Another broad method in another namespace.",
+    ).tag
+    child = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.EXPERIMENT,
+        label="Narrow method",
+        description="A narrower method.",
+        parents=(broad_a, broad_b.id),
+    ).tag
+
+    assert set(child.parents.values_list("id", flat=True)) == {
+        broad_a.id,
+        broad_b.id,
+    }
+
+    with pytest.raises(TaxonomyValidationError, match="cycle"):
+        update_tag(
+            broad_a.id,
+            actor=contributor,
+            label=broad_a.label,
+            description=broad_a.description,
+            aliases=(),
+            parents=(child,),
+        )
+    assert not broad_a.parents.exists()
+
+
+def test_parent_edit_family_tree_and_contextual_picker(accounts, client):
+    contributor = accounts["contributor"]
+    grandparent = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.ALGORITHM,
+        label="Decoder family",
+        description="A broad family.",
+    ).tag
+    parent = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.ALGORITHM,
+        label="Graph decoder",
+        description="A graph-based family.",
+        parents=(grandparent,),
+    ).tag
+    child = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.ALGORITHM,
+        label="Leaf decoder",
+        description="A leaf family.",
+        parents=(parent,),
+    ).tag
+    unrelated = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.ALGORITHM,
+        label="Unrelated decoder",
+        description="No family relationships.",
+    ).tag
+
+    child_page = client.get(child.get_absolute_url()).content.decode()
+    assert "Taxonomy family" in child_page
+    assert "Graph decoder" in child_page
+    assert "Decoder family" in child_page
+    assert "Children and descendants" not in child_page
+
+    root_page = client.get(grandparent.get_absolute_url()).content.decode()
+    assert "Children and descendants" in root_page
+    assert "Graph decoder" in root_page
+    assert "Leaf decoder" in root_page
+    assert (
+        "Taxonomy family"
+        not in client.get(unrelated.get_absolute_url()).content.decode()
+    )
+
+    client.force_login(contributor)
+    submission_page = client.get(reverse("submissions:create", args=["decoder"]))
+    content = submission_page.content.decode()
+    assert "Parent tags" in content
+    assert "Unselected parent tags" in content
+    assert "(recommended)" in content
+    assert f'data-parent-id="{grandparent.id}"' in content
+    assert "Available parent tags" in content
+
+    edit = client.post(
+        reverse(
+            "taxonomy:tag-edit",
+            kwargs={"namespace": child.namespace, "slug": child.slug},
+        ),
+        {
+            "label": child.label,
+            "description": child.description,
+            "aliases": "",
+            "parents": [str(grandparent.id), str(parent.id)],
+        },
+    )
+    assert edit.status_code == 302
+    assert set(child.parents.values_list("id", flat=True)) == {
+        grandparent.id,
+        parent.id,
+    }
+    assert child.record_events.filter(
+        action=RecordEvent.Action.EDITED,
+        details__changed_fields__contains=["parents"],
+    ).exists()
+
+
+def test_taxonomy_validator_detects_out_of_band_cycle(accounts):
+    contributor = accounts["contributor"]
+    first = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.ALGORITHM,
+        label="First cycle node",
+        description="First node.",
+    ).tag
+    second = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.ALGORITHM,
+        label="Second cycle node",
+        description="Second node.",
+    ).tag
+    TagParent.objects.create(child=first, parent=second)
+    TagParent.objects.create(child=second, parent=first)
+
+    with pytest.raises(CommandError, match="cycle"):
+        call_command("validate_tag_taxonomy")

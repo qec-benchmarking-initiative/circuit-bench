@@ -29,6 +29,7 @@ from .tags import (
     DecoderVersionAlgorithmTag,
     Tag,
     TagAlias,
+    TagParent,
 )
 
 __all__ = [
@@ -59,4 +60,5 @@ __all__ = [
     "ScoreDefinition",
     "Tag",
     "TagAlias",
+    "TagParent",
 ]

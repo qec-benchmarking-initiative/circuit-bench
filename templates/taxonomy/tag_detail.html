@@ -22,6 +22,25 @@
         <p class="null-value">No active aliases.</p>
       {% endif %}
     </section>
+    {% if tag_family.has_family %}
+      <section class="record-section tag-family-section">
+        <h2>Taxonomy family</h2>
+        <div class="tag-family-columns">
+          {% if tag_family.ancestors %}
+            <section>
+              <h3>Parents and ancestors</h3>
+              <ul class="tag-family-tree">{% for node in tag_family.ancestors %}{% include "taxonomy/tag_family_branch.html" with node=node only %}{% endfor %}</ul>
+            </section>
+          {% endif %}
+          {% if tag_family.descendants %}
+            <section>
+              <h3>Children and descendants</h3>
+              <ul class="tag-family-tree">{% for node in tag_family.descendants %}{% include "taxonomy/tag_family_branch.html" with node=node only %}{% endfor %}</ul>
+            </section>
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
     {% if tag.canonical_tag %}
       <section class="record-section">
         <h2>Canonical replacement</h2>
@@ -69,5 +88,5 @@
 {% block extra_scripts %}
   <script src="{% static 'js/filter-grid.js' %}?v=0.1.20260831k" defer></script>
   <script src="{% static 'js/filter-query.js' %}" defer></script>
-  <script src="{% static 'js/explorer.js' %}?v=0.1.20260902e" defer></script>
+  <script src="{% static 'js/explorer.js' %}?v=0.1.20260902i" defer></script>
 {% endblock %}

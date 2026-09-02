@@ -13,12 +13,19 @@ from dataclasses import dataclass
 
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 from django.utils.text import slugify
 
 from accounts.models import Account
-from registry.models import NoiseModel, RecordEvent, SchemaRelease, Tag, TagAlias
+from registry.models import (
+    NoiseModel,
+    RecordEvent,
+    SchemaRelease,
+    Tag,
+    TagAlias,
+    TagParent,
+)
 from registry.services.histories import (
     append_history_event,
     history_for_new_record,
@@ -34,6 +41,7 @@ SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 COLOUR_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 PUBLIC_NOISE_MODEL_STATES = ("published", "withdrawn")
 PENDING_NOISE_MODEL_STATES = ("pending_review", "pending_reapproval")
+TAG_GRAPH_ADVISORY_LOCK_ID = 0x434252544147
 
 
 class TaxonomyError(Exception):
@@ -78,6 +86,7 @@ def create_custom_tag(
     label: str,
     description: str,
     aliases: Iterable[str] = (),
+    parents: Iterable[Tag | str] = (),
 ) -> TagCreationOutcome:
     """Create an immediately usable custom tag with an explicit system route."""
 
@@ -86,6 +95,7 @@ def create_custom_tag(
     label = label.strip()
     description = description.strip()
     aliases = normalise_tag_aliases(aliases)
+    parent_ids = normalise_tag_parent_ids(parents)
     slug = slug.strip() if slug is not None else ""
     if not slug:
         slug = _available_tag_slug(namespace, label)
@@ -94,6 +104,8 @@ def create_custom_tag(
 
     try:
         with transaction.atomic():
+            graph_edges = _lock_tag_taxonomy_graph()
+            parent_tags = _locked_parent_tags(parent_ids)
             if Tag.objects.filter(namespace=namespace, slug=slug).exists():
                 raise TaxonomyConflictError(
                     "That tag identity is already present as a tag or canonical alias."
@@ -139,12 +151,21 @@ def create_custom_tag(
                         "label": label,
                         "description": description,
                         "aliases": list(aliases),
+                        "parent_tag_ids": [str(parent_id) for parent_id in parent_ids],
                         "status": Tag.Status.CUSTOM,
                     },
                 ),
             )
             for alias in aliases:
                 _add_tag_alias_locked(tag, actor=submitter, alias=alias)
+            proposed_edges = graph_edges | {
+                (tag.id, parent_id) for parent_id in parent_ids
+            }
+            _assert_tag_taxonomy_acyclic(proposed_edges)
+            TagParent.objects.bulk_create(
+                TagParent(child=tag, parent=parent_tags[parent_id])
+                for parent_id in parent_ids
+            )
             approval_event = append_history_event(
                 kind="tag",
                 record=tag,
@@ -193,6 +214,31 @@ def normalise_tag_aliases(values: Iterable[str] | str) -> tuple[str, ...]:
     return tuple(aliases)
 
 
+def normalise_tag_parent_ids(
+    values: Iterable[Tag | str] | Tag | str | None,
+) -> tuple:
+    """Return ordered, unique Tag primary keys from form or service values."""
+
+    if values is None:
+        return ()
+    if isinstance(values, (Tag, str)):
+        values = (values,)
+    parent_ids = []
+    seen = set()
+    for value in values:
+        raw_id = value.id if isinstance(value, Tag) else value
+        try:
+            parent_id = Tag._meta.pk.to_python(raw_id)
+        except (TypeError, ValueError, ValidationError) as error:
+            raise TaxonomyValidationError(
+                "A selected parent tag is invalid."
+            ) from error
+        if parent_id not in seen:
+            parent_ids.append(parent_id)
+            seen.add(parent_id)
+    return tuple(parent_ids)
+
+
 def can_edit_tag(tag: Tag, actor: Account | None) -> bool:
     if actor is None or not actor.is_active:
         return False
@@ -209,9 +255,12 @@ def update_tag(
     label: str,
     description: str,
     aliases: Iterable[str] | str,
+    parents: Iterable[Tag | str] | Tag | str | None = None,
 ) -> Tag:
     """Edit tag prose and reconcile its durable alias rows."""
 
+    parent_ids = normalise_tag_parent_ids(parents) if parents is not None else None
+    graph_edges = _lock_tag_taxonomy_graph() if parent_ids is not None else None
     tag = _locked_tag(tag_id)
     if not can_edit_tag(tag, actor):
         raise TaxonomyPermissionError("You cannot edit this tag.")
@@ -239,6 +288,33 @@ def update_tag(
         if key not in desired_by_key:
             _remove_tag_alias_locked(alias_record, actor=actor)
             aliases_changed = True
+
+    parents_changed = False
+    if parent_ids is not None:
+        parent_tags = _locked_parent_tags(parent_ids)
+        existing_parent_ids = {
+            parent_id
+            for parent_id in TagParent.objects.filter(child=tag).values_list(
+                "parent_id", flat=True
+            )
+        }
+        desired_parent_ids = set(parent_ids)
+        proposed_edges = {edge for edge in graph_edges if edge[0] != tag.id} | {
+            (tag.id, parent_id) for parent_id in desired_parent_ids
+        }
+        _assert_tag_taxonomy_acyclic(proposed_edges)
+        removed_parent_ids = existing_parent_ids - desired_parent_ids
+        added_parent_ids = desired_parent_ids - existing_parent_ids
+        if removed_parent_ids:
+            TagParent.objects.filter(
+                child=tag, parent_id__in=removed_parent_ids
+            ).delete()
+        if added_parent_ids:
+            TagParent.objects.bulk_create(
+                TagParent(child=tag, parent=parent_tags[parent_id])
+                for parent_id in added_parent_ids
+            )
+        parents_changed = bool(removed_parent_ids or added_parent_ids)
     for key, alias in desired_by_key.items():
         if key not in existing_by_key:
             _add_tag_alias_locked(tag, actor=actor, alias=alias)
@@ -251,14 +327,19 @@ def update_tag(
     if tag.description != description:
         tag.description = description
         changed_fields.append("description")
+    if parents_changed:
+        changed_fields.append("parents")
     if changed_fields:
-        tag.save(update_fields=[*changed_fields, "updated_at"])
+        concrete_changed_fields = [
+            field for field in changed_fields if field in {"label", "description"}
+        ]
+        tag.save(update_fields=[*concrete_changed_fields, "updated_at"])
         append_history_event(
             kind="tag",
             record=tag,
             actor=actor,
             action=RecordEvent.Action.EDITED,
-            note="Updated this tag's label or description.",
+            note="Updated this tag.",
             details={
                 "policy_version": POLICY_VERSION,
                 "changed_fields": changed_fields,
@@ -271,6 +352,14 @@ def update_tag(
                     "label": tag.label,
                     "description": tag.description,
                     "aliases": list(aliases),
+                    "parent_tag_ids": [
+                        str(parent_id)
+                        for parent_id in (
+                            parent_ids
+                            if parent_ids is not None
+                            else tag.parents.values_list("id", flat=True)
+                        )
+                    ],
                     "status": tag.status,
                 },
             ),
@@ -800,6 +889,69 @@ def _remove_tag_alias_locked(
         },
     )
     return alias_record
+
+
+def _lock_tag_taxonomy_graph() -> set[tuple]:
+    """Serialize hierarchy writers and return the locked directed edge set."""
+
+    if connection.vendor == "postgresql":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT pg_advisory_xact_lock(%s)",
+                [TAG_GRAPH_ADVISORY_LOCK_ID],
+            )
+    return set(
+        TagParent.objects.select_for_update().values_list("child_id", "parent_id")
+    )
+
+
+def _locked_parent_tags(parent_ids: tuple) -> dict:
+    if not parent_ids:
+        return {}
+    records = {
+        tag.id: tag
+        for tag in Tag.objects.select_for_update()
+        .filter(id__in=parent_ids)
+        .order_by("id")
+    }
+    if set(records) != set(parent_ids):
+        raise TaxonomyValidationError("A selected parent tag does not exist.")
+    return records
+
+
+def _assert_tag_taxonomy_acyclic(edges: set[tuple]) -> None:
+    """Reject any directed cycle, including a tag selected as its own parent."""
+
+    adjacency: dict[object, set] = {}
+    nodes = set()
+    for child_id, parent_id in edges:
+        adjacency.setdefault(child_id, set()).add(parent_id)
+        nodes.update((child_id, parent_id))
+
+    state = {}
+
+    def visit(node) -> None:
+        if state.get(node) == "active":
+            raise TaxonomyValidationError(
+                "That parent selection would create a cycle in the tag taxonomy."
+            )
+        if state.get(node) == "complete":
+            return
+        state[node] = "active"
+        for parent_id in adjacency.get(node, ()):
+            visit(parent_id)
+        state[node] = "complete"
+
+    for node in nodes:
+        visit(node)
+
+
+def validate_tag_taxonomy_acyclic() -> None:
+    """Validate the persisted hierarchy, including out-of-band database writes."""
+
+    _assert_tag_taxonomy_acyclic(
+        set(TagParent.objects.values_list("child_id", "parent_id"))
+    )
 
 
 def _validate_noise_model_values(

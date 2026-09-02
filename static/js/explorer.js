@@ -76,7 +76,7 @@
     const icon = document.createElement("span");
     icon.className = "tag-glyph";
     icon.setAttribute("aria-hidden", "true");
-    icon.textContent = checkbox.dataset.status === "official" ? "◆" : "◇";
+    icon.textContent = "✓";
     tag.append(icon, document.createTextNode(` ${checkbox.dataset.label} `));
 
     if (checkbox.dataset.url) {
@@ -120,6 +120,91 @@
       display: item.dataset.tagAliasDisplay,
     }));
 
+  const parentEntries = (choice) => [...choice.querySelectorAll("[data-tag-parent]")]
+    .map((item) => ({
+      id: item.dataset.parentId,
+      label: item.dataset.parentLabel,
+      status: item.dataset.parentStatus,
+      color: item.dataset.parentColor,
+      url: item.dataset.parentUrl,
+      namespace: item.dataset.parentNamespace,
+    }));
+
+  const choiceId = (choice) => {
+    const checkbox = choice.querySelector('input[type="checkbox"]');
+    return checkbox?.dataset.tagId || checkbox?.value || choice.dataset.tagId;
+  };
+
+  const makeContextParent = (record, root, choices) => {
+    const card = document.createElement("div");
+    card.className = `tag-choice tag-choice-${record.status} tag-context-parent`;
+    if (record.status === "official" && record.color) {
+      card.style.setProperty("--tag-color", record.color);
+    }
+    const targetChoice = choices.find((choice) => choiceId(choice) === record.id);
+    const targetCheckbox = targetChoice?.querySelector('input[type="checkbox"]');
+    const parentSelector = root.closest("[data-tag-parent-selector]");
+    const picker = root.closest("[data-tag-picker]");
+    const pickerNamespace = picker ? currentTagNamespace(picker) : "";
+    const selectable = Boolean(targetCheckbox) && (
+      Boolean(parentSelector)
+      || !picker
+      || !pickerNamespace
+      || targetChoice.dataset.tagNamespace === pickerNamespace
+    );
+    const content = document.createElement(selectable ? "button" : "span");
+    content.className = "tag-choice-main tag-choice-content";
+    if (selectable) {
+      content.type = "button";
+      content.classList.add("tag-context-parent-action");
+      content.setAttribute("aria-label", `Select ${record.label}`);
+      content.addEventListener("click", () => {
+        targetCheckbox.checked = true;
+        targetCheckbox.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    }
+    const glyph = document.createElement("span");
+    glyph.className = "tag-glyph";
+    glyph.setAttribute("aria-hidden", "true");
+    glyph.textContent = record.status === "official" ? "◆" : "◇";
+    content.append(glyph, document.createTextNode(` ${record.label}`));
+    card.append(content);
+    if (record.url) {
+      const info = document.createElement("a");
+      info.className = "tag-info-link";
+      info.href = record.url;
+      info.setAttribute("aria-label", `Information about ${record.label}`);
+      info.textContent = "i";
+      card.append(info);
+    }
+    return card;
+  };
+
+  const renderContextParents = (root, choices, selectedIds, hasSearchQuery) => {
+    const results = root?.querySelector("[data-tag-context-parent-results]");
+    if (!results) return;
+    const visibleIds = new Set(
+      choices.filter((choice) => !choice.hidden).map(choiceId)
+    );
+    const records = new Map();
+    choices.filter((choice) => {
+      const checkbox = choice.querySelector('input[type="checkbox"]');
+      return checkbox?.checked || (hasSearchQuery && !choice.hidden);
+    }).forEach((choice) => {
+      parentEntries(choice).forEach((record) => {
+        if (!selectedIds.has(record.id) && !visibleIds.has(record.id)) {
+          records.set(record.id, record);
+        }
+      });
+    });
+    results.replaceChildren(
+      ...[...records.values()]
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map((record) => makeContextParent(record, root, choices))
+    );
+    root.hidden = records.size === 0;
+  };
+
   const updateTagPicker = (picker) => {
     const search = picker.querySelector("[data-tag-search]");
     const proposedLabel = (search?.value || "").trim().replace(/\s+/g, " ");
@@ -129,6 +214,7 @@
     const selected = choices
       .map((choice) => choice.querySelector('input[type="checkbox"]'))
       .filter((checkbox) => checkbox?.checked);
+    const selectedIds = new Set(selected.map((checkbox) => checkbox.dataset.tagId));
 
     renderSelectedTags(
       picker.querySelector("[data-tag-summary]"),
@@ -161,17 +247,28 @@
       if (aliasLabel) {
         aliasLabel.textContent = aliasMatch ? `(${aliasMatch.display})` : "";
       }
-      choice.hidden = !inNamespace || Boolean(checkbox?.checked) || !matches;
+      choice.hidden = !inNamespace || (!checkbox?.checked && !matches);
+      choice.classList.toggle("is-selected", Boolean(checkbox?.checked));
+      const glyph = choice.querySelector(".tag-glyph");
+      if (glyph) {
+        glyph.textContent = checkbox?.checked
+          ? "✓"
+          : choice.dataset.tagStatus === "official" ? "◆" : "◇";
+      }
       if (!choice.hidden) visibleCount += 1;
     });
 
     const noResults = picker.querySelector("[data-tag-no-results]");
     if (noResults) {
       noResults.classList.toggle("hidden", visibleCount > 0);
-      noResults.textContent = !query && selected.length === choices.length
-        ? "All available tags are selected."
-        : "No matching tags.";
+      noResults.textContent = "No matching tags.";
     }
+    renderContextParents(
+      picker.querySelector("[data-tag-context-parents]"),
+      choices,
+      selectedIds,
+      Boolean(query)
+    );
     picker.querySelectorAll("[data-tag-apply]").forEach((button) => {
       button.disabled = (
         button.dataset.tagApply !== "selection" && selected.length === 0
@@ -199,6 +296,9 @@
       picker.querySelectorAll("[data-tag-create]").forEach((button) => {
         button.disabled = !eligible || !hasDescription;
       });
+      const parentSelector = createSection.querySelector("[data-tag-parent-selector]");
+      parentSelector?.querySelectorAll("[data-tag-parent-toggle], [data-tag-parent-choice]")
+        .forEach((control) => { control.disabled = !eligible; });
       if (!query) {
         status.textContent = "Type a proposed tag name above.";
       } else if (exactMatch) {
@@ -235,6 +335,7 @@
     checkbox.type = "checkbox";
     checkbox.name = picker.querySelector('[data-tag-choice] input')?.name || "tag";
     checkbox.value = record.id;
+    checkbox.dataset.tagId = record.id;
     checkbox.dataset.label = record.label;
     checkbox.dataset.status = record.status;
     checkbox.dataset.color = record.display_color || "";
@@ -267,7 +368,21 @@
       item.dataset.tagAliasDisplay = alias;
       aliasData.append(item);
     });
-    choice.append(main, info, aliasData);
+    const parentData = document.createElement("span");
+    parentData.hidden = true;
+    parentData.dataset.tagParents = "";
+    record.parents.forEach((parent) => {
+      const item = document.createElement("span");
+      item.dataset.tagParent = "";
+      item.dataset.parentId = parent.id;
+      item.dataset.parentLabel = parent.label;
+      item.dataset.parentStatus = parent.status;
+      item.dataset.parentColor = parent.display_color || "";
+      item.dataset.parentUrl = parent.url;
+      item.dataset.parentNamespace = parent.namespace;
+      parentData.append(item);
+    });
+    choice.append(main, info, aliasData, parentData);
     picker.querySelector("[data-tag-options]").append(choice);
     return checkbox;
   };
@@ -282,6 +397,9 @@
       description: picker.querySelector("[data-tag-create-description]").value.trim(),
       aliases: picker.querySelector("[data-tag-create-aliases]").value,
     });
+    picker.querySelectorAll(
+      "[data-tag-create-section] [data-tag-parent-choice]:checked"
+    ).forEach((checkbox) => payload.append("parents", checkbox.value));
     picker.querySelectorAll("[data-tag-create]").forEach((item) => {
       item.disabled = true;
     });
@@ -306,6 +424,13 @@
       picker.querySelector("[data-tag-search]").value = "";
       picker.querySelector("[data-tag-create-description]").value = "";
       picker.querySelector("[data-tag-create-aliases]").value = "";
+      picker.querySelectorAll(
+        "[data-tag-create-section] [data-tag-parent-choice]:checked"
+      ).forEach((checkbox) => { checkbox.checked = false; });
+      const parentSelector = picker.querySelector(
+        "[data-tag-create-section] [data-tag-parent-selector]"
+      );
+      if (parentSelector) updateParentSelector(parentSelector);
       updateTagPicker(picker);
       status.textContent = `Created and selected “${data.tag.label}”.`;
     } catch (error) {
@@ -328,6 +453,12 @@
       });
       if (matchInput) matchInput.value = matchSnapshot;
       search.value = "";
+      const parentSelector = picker.querySelector(
+        "[data-tag-create-section] [data-tag-parent-selector]"
+      );
+      parentSelector?.querySelectorAll("[data-tag-parent-choice]:checked")
+        .forEach((checkbox) => { checkbox.checked = false; });
+      if (parentSelector) updateParentSelector(parentSelector);
       updateTagPicker(picker);
     };
 
@@ -404,5 +535,91 @@
     });
 
     updateTagPicker(picker);
+  });
+
+  const makeSelectedParent = (checkbox) => {
+    const tag = makeSelectedTag(checkbox);
+    tag.dataset.selectedParent = checkbox.value;
+    tag.removeAttribute("data-selected-tag");
+    const remove = tag.querySelector("[data-tag-remove]");
+    remove.dataset.tagParentRemove = checkbox.value;
+    delete remove.dataset.tagRemove;
+    remove.setAttribute("aria-label", `Remove ${checkbox.dataset.label} as a parent`);
+    return tag;
+  };
+
+  const updateParentSelector = (selector) => {
+    const query = (selector.querySelector("[data-tag-parent-search]")?.value || "")
+      .trim().toLocaleLowerCase();
+    const choices = [...selector.querySelectorAll("[data-tag-parent-choice-card]")];
+    const selected = choices
+      .map((choice) => choice.querySelector("[data-tag-parent-choice]"))
+      .filter((checkbox) => checkbox.checked);
+    const selectedIds = new Set(selected.map((checkbox) => checkbox.value));
+    const summary = selector.querySelector("[data-tag-parent-summary]");
+    summary.replaceChildren(...selected.map(makeSelectedParent));
+    if (!selected.length) {
+      const empty = document.createElement("span");
+      empty.className = "tag-picker-empty-summary";
+      empty.textContent = "No parent tags selected";
+      summary.append(empty);
+    }
+
+    let visibleCount = 0;
+    choices.forEach((choice) => {
+      const checkbox = choice.querySelector("[data-tag-parent-choice]");
+      const aliases = aliasEntries(choice);
+      const aliasMatch = query
+        ? aliases.find((alias) => alias.normalized.includes(query))
+        : null;
+      const matches = !query
+        || choice.dataset.tagLabel.includes(query)
+        || Boolean(aliasMatch);
+      choice.hidden = !checkbox.checked && !matches;
+      choice.classList.toggle("is-selected", checkbox.checked);
+      const glyph = choice.querySelector(".tag-glyph");
+      glyph.textContent = checkbox.checked
+        ? "✓"
+        : choice.dataset.tagStatus === "official" ? "◆" : "◇";
+      const aliasLabel = choice.querySelector("[data-tag-alias-match]");
+      aliasLabel.textContent = aliasMatch ? `(${aliasMatch.display})` : "";
+      if (!choice.hidden) visibleCount += 1;
+    });
+    const noResults = selector.querySelector("[data-tag-parent-no-results]");
+    noResults.classList.toggle("hidden", visibleCount > 0);
+    renderContextParents(
+      selector.querySelector("[data-tag-context-parents]"),
+      choices,
+      selectedIds,
+      Boolean(query)
+    );
+  };
+
+  document.querySelectorAll("[data-tag-parent-selector]").forEach((selector) => {
+    const toggle = selector.querySelector("[data-tag-parent-toggle]");
+    const panel = selector.querySelector("[data-tag-parent-panel]");
+    const search = selector.querySelector("[data-tag-parent-search]");
+    toggle.addEventListener("click", () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      toggle.setAttribute("aria-expanded", String(opening));
+      toggle.textContent = opening ? "Hide parent choices" : "Choose parent tags…";
+      if (opening) search.focus();
+    });
+    selector.addEventListener("change", (event) => {
+      if (event.target.matches("[data-tag-parent-choice]")) {
+        updateParentSelector(selector);
+      }
+    });
+    selector.addEventListener("click", (event) => {
+      const remove = event.target.closest("[data-tag-parent-remove]");
+      if (!remove) return;
+      const checkbox = [...selector.querySelectorAll("[data-tag-parent-choice]")]
+        .find((candidate) => candidate.value === remove.dataset.tagParentRemove);
+      if (checkbox) checkbox.checked = false;
+      updateParentSelector(selector);
+    });
+    search.addEventListener("input", () => updateParentSelector(selector));
+    updateParentSelector(selector);
   });
 })();

@@ -152,6 +152,15 @@ def custom_tag_preview(request, preview_id):
                 ("Label", payload["label"]),
                 ("Description", payload["description"]),
                 ("Aliases", payload.get("aliases") or "None"),
+                (
+                    "Parent tags",
+                    ", ".join(
+                        Tag.objects.filter(id__in=payload.get("parents", ()))
+                        .order_by("label")
+                        .values_list("label", flat=True)
+                    )
+                    or "None",
+                ),
                 ("Initial status", "Custom"),
             ),
             "back_url": f"/taxonomy/tags/new/?preview={preview_id}",

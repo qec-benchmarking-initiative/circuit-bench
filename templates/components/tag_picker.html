@@ -19,7 +19,7 @@
         <h2 id="{{ picker_id }}-title">{{ label }}</h2>
         <button class="button-plain" type="button" data-tag-cancel aria-label="Close {{ label }} picker">Close</button>
       </div>
-      {% include "components/tag_picker_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=allow_create tag_namespace=tag_namespace only %}
+      {% include "components/tag_picker_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=allow_create tag_namespace=tag_namespace parent_tags=parent_tags only %}
       <div class="dialog-actions">
         <button class="button-secondary button-compact" type="button" data-tag-cancel>Cancel</button>
         {% if mode == "submission" %}
@@ -33,7 +33,7 @@
       </div>
     </dialog>
   {% else %}
-    {% include "components/tag_picker_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=True namespace_choices=namespace_choices only %}
+    {% include "components/tag_picker_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=True namespace_choices=namespace_choices parent_tags=parent_tags only %}
     <div class="dialog-actions tag-create-standalone-actions">
       <button class="button-compact" type="button" data-tag-create disabled>Add new tag</button>
     </div>

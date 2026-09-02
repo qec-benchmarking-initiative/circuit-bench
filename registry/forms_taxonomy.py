@@ -2,6 +2,7 @@
 
 from django import forms
 from django.core.validators import RegexValidator
+from django.db.models import Q
 
 from registry.models import NoiseModel, Tag
 
@@ -29,6 +30,17 @@ class CustomTagForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 3}),
         help_text="Optional alternative names, one per line or separated by commas.",
     )
+    parents = forms.ModelMultipleChoiceField(
+        queryset=Tag.objects.none(),
+        required=False,
+        label="Parent tags",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["parents"].queryset = Tag.objects.exclude(
+            status=Tag.Status.DEPRECATED
+        ).order_by("namespace", "label", "id")
 
     def payload(self) -> dict:
         if not self.is_valid():
@@ -39,6 +51,7 @@ class CustomTagForm(forms.Form):
             "label": self.cleaned_data["label"],
             "description": self.cleaned_data["description"],
             "aliases": self.cleaned_data["aliases"],
+            "parents": [str(tag.id) for tag in self.cleaned_data["parents"]],
         }
 
 
@@ -50,6 +63,23 @@ class TagEditForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 4}),
         help_text="One alias per line or separated by commas.",
     )
+    parents = forms.ModelMultipleChoiceField(
+        queryset=Tag.objects.none(),
+        required=False,
+        label="Parent tags",
+    )
+
+    def __init__(self, *args, tag: Tag, **kwargs):
+        super().__init__(*args, **kwargs)
+        current_parent_ids = tag.parents.values_list("id", flat=True)
+        self.fields["parents"].queryset = (
+            Tag.objects.exclude(id=tag.id)
+            .filter(
+                Q(status__in=(Tag.Status.CUSTOM, Tag.Status.OFFICIAL))
+                | Q(id__in=current_parent_ids)
+            )
+            .order_by("namespace", "label", "id")
+        )
 
 
 class NoiseModelSubmissionForm(forms.Form):

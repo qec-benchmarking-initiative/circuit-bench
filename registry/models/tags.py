@@ -52,6 +52,13 @@ class Tag(UUIDModel):
         on_delete=models.PROTECT,
         related_name="deprecated_aliases",
     )
+    parents = models.ManyToManyField(
+        "self",
+        through="TagParent",
+        through_fields=("child", "parent"),
+        symmetrical=False,
+        related_name="children",
+    )
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -176,6 +183,29 @@ class TagAlias(UUIDModel):
 
     def __str__(self) -> str:
         return self.alias
+
+
+class TagParent(models.Model):
+    pk = models.CompositePrimaryKey("child_id", "parent_id")
+    child = models.ForeignKey(
+        Tag,
+        on_delete=models.PROTECT,
+        related_name="parent_memberships",
+    )
+    parent = models.ForeignKey(
+        Tag,
+        on_delete=models.PROTECT,
+        related_name="child_memberships",
+    )
+
+    class Meta:
+        db_table = "tag_parent"
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(child=models.F("parent")),
+                name="tag_parent_not_self",
+            )
+        ]
 
 
 class DecoderVersionAlgorithmTag(models.Model):

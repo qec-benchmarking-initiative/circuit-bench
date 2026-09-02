@@ -4240,6 +4240,7 @@ code {
 .tag-namespace-label,
 .tag-selection h3,
 .tag-available h3,
+.tag-context-parents h3,
 .tag-create-section h3 {
   font: 700 0.8rem/1.2 var(--font-interface);
 }
@@ -4331,6 +4332,17 @@ span.tag-choice-main {
   background: color-mix(in srgb, var(--tag-color, var(--accent)) 14%, var(--surface));
 }
 
+.tag-choice.is-selected {
+  color: var(--muted);
+  background: var(--surface-muted);
+  filter: saturate(0.45);
+  opacity: 0.78;
+}
+
+.tag-choice.is-selected .tag-glyph {
+  color: var(--muted);
+}
+
 .tag-choice:hover {
   border-color: var(--accent-hover);
 }
@@ -4397,7 +4409,9 @@ span.tag-choice-main {
 }
 
 .tag-create-fields > label,
-.tag-create-fields > textarea {
+.tag-create-fields > textarea,
+.tag-create-fields > .tag-create-parent-label,
+.tag-create-fields > .tag-create-parent-control {
   min-width: 0;
   margin: 0;
   padding: 0.42rem 0.5rem;
@@ -4407,9 +4421,64 @@ span.tag-choice-main {
   border-radius: 0;
 }
 
-.tag-create-fields > label {
+.tag-create-fields > label,
+.tag-create-fields > .tag-create-parent-label {
   background: var(--surface-muted);
   font: 700 0.74rem/1.3 var(--font-interface);
+}
+
+.tag-create-parent-control {
+  background: var(--surface);
+}
+
+.tag-context-parents {
+  margin-top: 0.55rem;
+  padding: 0.48rem 0.52rem;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+
+.tag-context-parent-title {
+  margin: 0 0 0.4rem;
+  color: var(--muted);
+  font: 700 0.74rem/1.2 var(--font-interface);
+}
+
+.tag-context-parent-action {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+
+.tag-parent-selector {
+  min-width: 0;
+}
+
+.tag-parent-selector-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.tag-parent-selector-panel {
+  margin-top: 0.55rem;
+  padding: 0.55rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.tag-parent-selector-panel > label {
+  display: block;
+  margin-bottom: 0.28rem;
+  font: 700 0.74rem/1.2 var(--font-interface);
+}
+
+.tag-parent-selector-panel > .tag-available,
+.tag-parent-selector-panel > .tag-context-parents {
+  margin-top: 0.65rem;
 }
 
 .tag-create-action {
@@ -4466,6 +4535,34 @@ span.tag-choice-main {
 .tag-identity-bars dt,
 .tag-identity-bars dd {
   margin: 0;
+}
+
+.tag-family-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.tag-family-columns > section {
+  padding: 0.55rem 0.65rem;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.tag-family-columns h3 {
+  margin: 0 0 0.35rem;
+  font: 700 0.78rem/1.2 var(--font-interface);
+}
+
+.tag-family-tree,
+.tag-family-tree ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.tag-family-tree li {
+  margin: 0.16rem 0;
 }
 
 .tag-no-results {

@@ -15,7 +15,28 @@
       </dl>
       <form method="post">
         {% csrf_token %}
-        {% include "components/form_bar_list.html" with form=form only %}
+        {% if form.non_field_errors %}<div class="submission-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="form-bar-list">
+          <div class="form-bar-row">
+            <label class="form-bar-label" for="{{ form.label.id_for_label }}">{{ form.label.label }}</label>
+            <div class="form-bar-control">{{ form.label }}{% if form.label.errors %}<div class="field-errors" role="alert">{{ form.label.errors }}</div>{% endif %}</div>
+          </div>
+          <div class="form-bar-row">
+            <label class="form-bar-label" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+            <div class="form-bar-control">{{ form.description }}{% if form.description.errors %}<div class="field-errors" role="alert">{{ form.description.errors }}</div>{% endif %}</div>
+          </div>
+          <div class="form-bar-row">
+            <label class="form-bar-label" for="{{ form.aliases.id_for_label }}">{{ form.aliases.label }}</label>
+            <div class="form-bar-control">{{ form.aliases }}{% if form.aliases.help_text %}<p class="field-help">{{ form.aliases.help_text }}</p>{% endif %}{% if form.aliases.errors %}<div class="field-errors" role="alert">{{ form.aliases.errors }}</div>{% endif %}</div>
+          </div>
+          <div class="form-bar-row">
+            <span class="form-bar-label">Parent tags <span class="muted">(optional)</span></span>
+            <div class="form-bar-control">
+              {% include "components/tag_parent_selector.html" with picker_id="tag-edit-parents" tags=parent_tags selected_parent_ids=selected_parent_ids input_name="parents" only %}
+              {% if form.parents.errors %}<div class="field-errors" role="alert">{{ form.parents.errors }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
         <div class="submission-actions">
           <a class="button button-secondary" href="{{ tag.get_absolute_url }}">Cancel</a>
           <button type="submit">Save changes</button>
@@ -23,4 +44,8 @@
       </form>
     </section>
   </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  {% load static %}<script src="{% static 'js/explorer.js' %}?v=0.1.20260902i" defer></script>
 {% endblock %}

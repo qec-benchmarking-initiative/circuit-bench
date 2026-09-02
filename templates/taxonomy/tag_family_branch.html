@@ -1,0 +1,6 @@
+<li>
+  <a href="{{ node.tag.get_absolute_url }}">{{ node.tag.label }}</a>
+  {% if node.branches %}
+    <ul>{% for child in node.branches %}{% include "taxonomy/tag_family_branch.html" with node=child only %}{% endfor %}</ul>
+  {% endif %}
+</li>

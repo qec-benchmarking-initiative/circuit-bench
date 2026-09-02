@@ -21,7 +21,7 @@ from registry.forms_taxonomy import TagEditForm
 from registry.models import Tag
 from registry.services.circuits import circuit_catalogue
 from registry.services.decoders import public_decoder_catalogue
-from registry.services.tags import tag_detail_queryset
+from registry.services.tags import active_tag_queryset, tag_detail_queryset, tag_family
 from registry.services.taxonomy import (
     TaxonomyConflictError,
     TaxonomyError,
@@ -66,6 +66,7 @@ def create_tag_json(request):
             label=request.POST.get("label", ""),
             description=request.POST.get("description", ""),
             aliases=request.POST.get("aliases", ""),
+            parents=request.POST.getlist("parents"),
         )
     except TaxonomyPermissionError as error:
         return JsonResponse({"error": str(error)}, status=403)
@@ -84,6 +85,17 @@ def create_tag_json(request):
                 "status": tag.status,
                 "display_color": tag.display_color,
                 "aliases": list(normalise_tag_aliases(request.POST.get("aliases", ""))),
+                "parents": [
+                    {
+                        "id": str(parent.id),
+                        "label": parent.label,
+                        "status": parent.status,
+                        "display_color": parent.display_color,
+                        "namespace": parent.namespace,
+                        "url": parent.get_absolute_url(),
+                    }
+                    for parent in tag.parents.all()
+                ],
                 "url": tag.get_absolute_url(),
             }
         },
@@ -117,6 +129,7 @@ def tag_detail(request, namespace, slug):
                 "version": None,
                 "tags": (),
             },
+            "tag_family": tag_family(tag),
             **usage,
         },
     )
@@ -136,8 +149,9 @@ def tag_edit(request, namespace, slug):
         "label": tag.label,
         "description": tag.description,
         "aliases": "\n".join(alias.alias for alias in tag.display_aliases),
+        "parents": list(tag.parents.values_list("id", flat=True)),
     }
-    form = TagEditForm(request.POST or None, initial=initial)
+    form = TagEditForm(request.POST or None, tag=tag, initial=initial)
     if request.method == "POST" and form.is_valid():
         try:
             update_tag(tag.id, actor=request.user, **form.cleaned_data)
@@ -148,7 +162,23 @@ def tag_edit(request, namespace, slug):
         else:
             messages.success(request, "The tag was updated.")
             return redirect(tag.get_absolute_url())
-    return render(request, "taxonomy/tag_edit.html", {"tag": tag, "form": form})
+    current_parent_ids = list(tag.parents.values_list("id", flat=True))
+    parent_tags = list(active_tag_queryset(include_ids=current_parent_ids))
+    selected_parent_ids = {
+        str(parent_id)
+        for parent_id in form["parents"].value()
+        or tag.parents.values_list("id", flat=True)
+    }
+    return render(
+        request,
+        "taxonomy/tag_edit.html",
+        {
+            "tag": tag,
+            "form": form,
+            "parent_tags": [item for item in parent_tags if item.id != tag.id],
+            "selected_parent_ids": selected_parent_ids,
+        },
+    )
 
 
 def _algorithm_usage(request, tag):
