@@ -10,27 +10,39 @@
     </header>
     {% include "components/submission_policy_bar.html" with policy=policy only %}
 
-    <section class="submission-entry-panel">
-      <form method="post" novalidate>
+    {% if kind == "tag" %}
+      <section class="tag-create-workbench">
         {% csrf_token %}
-        {% if form.non_field_errors %}<div class="submission-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-        <div class="submission-form-sections">
-          <section class="submission-form-section">
-            <header><h3>{% if kind == "tag" %}Vocabulary term{% else %}Noise-model revision{% endif %}</h3></header>
-            <div class="submission-field-group submission-field-group-stack">
-              {% for field in form %}
-                <div class="submission-field">
-                  {{ field.label_tag }}
-                  {{ field }}
-                  {% if field.help_text %}<p class="helptext">{{ field.help_text }}</p>{% endif %}
-                  {% if field.errors %}<div class="submission-errors" role="alert">{{ field.errors }}</div>{% endif %}
-                </div>
-              {% endfor %}
-            </div>
-          </section>
-        </div>
-        <div class="submission-actions"><button type="submit">Preview</button></div>
-      </form>
-    </section>
+        {% url 'taxonomy:tag-create-json' as tag_create_url %}
+        {% include "components/tag_picker.html" with picker_id="standalone-tag-creator" label="Create custom tag" input_name="unused" tags=picker_tags selected_keys=selected_keys mode="create" namespace_choices=namespace_choices create_url=tag_create_url created_redirect=True only %}
+      </section>
+    {% else %}
+      <section class="submission-entry-panel">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}<div class="submission-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+          <div class="submission-form-sections">
+            <section class="submission-form-section">
+              <header><h3>Noise-model revision</h3></header>
+              <div class="submission-field-group submission-field-group-stack">
+                {% for field in form %}
+                  <div class="submission-field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}<p class="helptext">{{ field.help_text }}</p>{% endif %}
+                    {% if field.errors %}<div class="submission-errors" role="alert">{{ field.errors }}</div>{% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </section>
+          </div>
+          <div class="submission-actions"><button type="submit">Preview</button></div>
+        </form>
+      </section>
+    {% endif %}
   </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  {% if kind == "tag" %}{% load static %}<script src="{% static 'js/explorer.js' %}?v=0.1.20260902e" defer></script>{% endif %}
 {% endblock %}

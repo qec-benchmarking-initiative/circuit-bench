@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
+from django.db.models.functions import Lower
 
 from .artifacts import SchemaRelease
 from .common import UUIDModel
@@ -49,7 +50,7 @@ class Tag(UUIDModel):
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="aliases",
+        related_name="deprecated_aliases",
     )
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -110,6 +111,71 @@ class Tag(UUIDModel):
 
     def __str__(self) -> str:
         return self.label
+
+    def get_absolute_url(self) -> str:
+        return f"/tags/{self.namespace}/{self.slug}/"
+
+
+class TagAlias(UUIDModel):
+    tag = models.ForeignKey(
+        Tag,
+        on_delete=models.PROTECT,
+        related_name="aliases",
+    )
+    alias = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="tag_aliases_added",
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+    removed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="tag_aliases_removed",
+    )
+    removed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "tag_alias"
+        constraints = [
+            models.UniqueConstraint(
+                Lower("alias"),
+                condition=models.Q(is_active=True),
+                name="tag_alias_active_ci_uniq",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(alias__regex=r"^\s*$"),
+                name="tag_alias_not_blank",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        is_active=True,
+                        removed_by__isnull=True,
+                        removed_at__isnull=True,
+                    )
+                    | models.Q(
+                        is_active=False,
+                        removed_by__isnull=False,
+                        removed_at__isnull=False,
+                    )
+                ),
+                name="tag_alias_removal_state_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["tag", "is_active", "alias"],
+                name="idx_tag_alias_lookup",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return self.alias
 
 
 class DecoderVersionAlgorithmTag(models.Model):

@@ -1,0 +1,66 @@
+<div class="tag-dialog-body">
+  {% if namespace_choices %}
+    <label class="tag-namespace-label" for="{{ picker_id }}-namespace">Tag type</label>
+    <select id="{{ picker_id }}-namespace" data-tag-namespace-select>
+      {% for value, label in namespace_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+    </select>
+  {% endif %}
+
+  <label class="tag-search-label" for="{{ picker_id }}-search">{% if mode == "create" %}Tag name{% else %}Search tags{% endif %}</label>
+  <input id="{{ picker_id }}-search" type="search" placeholder="Type a tag name" autocomplete="off" data-tag-search{% if mode != 'create' %} autofocus{% endif %}>
+
+  {% if mode != "create" %}
+    <section class="tag-selection" aria-labelledby="{{ picker_id }}-selected-title">
+      <h3 id="{{ picker_id }}-selected-title">Selected</h3>
+      <div class="selected-tag-area" data-tag-selected-area>
+        {% for tag in tags %}{% if tag.picker_key|default:tag.slug in selected_keys %}{% include "components/selected_tag_chip.html" with tag=tag only %}{% endif %}{% endfor %}
+        {% if not selected_keys %}<span class="muted">No tags selected.</span>{% endif %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="tag-available" aria-labelledby="{{ picker_id }}-available-title">
+    <h3 id="{{ picker_id }}-available-title">{% if mode == "create" %}Existing tags{% else %}Available tags{% endif %}</h3>
+    <div class="tag-choice-grid" data-tag-options>
+      {% for tag in tags %}
+        <div
+          class="tag-choice tag-choice-{{ tag.status }}"
+          data-tag-choice
+          data-tag-label="{{ tag.label|lower }}"
+          data-tag-label-display="{{ tag.label }}"
+          data-tag-status="{{ tag.status }}"
+          data-tag-namespace="{{ tag.namespace }}"
+          {% if tag.status == "official" and tag.display_color %}style="--tag-color: {{ tag.display_color }}"{% endif %}
+        >
+          {% if mode != "create" %}
+            <label class="tag-choice-main">
+              <input type="checkbox" name="{{ input_name }}" value="{{ tag.picker_key|default:tag.slug }}" data-label="{{ tag.label }}" data-status="{{ tag.status }}" data-color="{{ tag.display_color|default:'' }}" data-url="{{ tag.get_absolute_url }}"{% if tag.picker_key|default:tag.slug in selected_keys %} checked{% endif %}>
+              <span class="tag-choice-content"><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }} <span class="tag-choice-alias" data-tag-alias-match></span></span>
+            </label>
+          {% else %}
+            <span class="tag-choice-main tag-choice-content"><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }} <span class="tag-choice-alias" data-tag-alias-match></span></span>
+          {% endif %}
+          <a class="tag-info-link" href="{{ tag.get_absolute_url }}" aria-label="Information about {{ tag.label }}" title="Information about {{ tag.label }}">i</a>
+          <span hidden data-tag-aliases>{% for alias in tag.display_aliases %}<span data-tag-alias="{{ alias.alias|lower }}" data-tag-alias-display="{{ alias.alias }}"></span>{% endfor %}</span>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="tag-no-results hidden" data-tag-no-results role="status">No matching tags.</p>
+  </section>
+
+  {% if allow_create %}
+    <section class="tag-create-section is-disabled" data-tag-create-section aria-disabled="true" aria-labelledby="{{ picker_id }}-create-title">
+      <h3 id="{{ picker_id }}-create-title">Add a new tag</h3>
+      <p>Please check carefully if there is an existing tag that describes this <span data-tag-concept>concept</span> well, to help with searching.</p>
+      <p class="tag-create-proposal">New tag: <strong data-tag-proposed-label>—</strong></p>
+      <div class="tag-create-fields">
+        <label for="{{ picker_id }}-description">Brief description - include references</label>
+        <textarea id="{{ picker_id }}-description" rows="3" data-tag-create-description disabled></textarea>
+        <label for="{{ picker_id }}-aliases">Aliases <span class="muted">(optional; one per line or separated by commas)</span></label>
+        <textarea id="{{ picker_id }}-aliases" rows="2" data-tag-create-aliases disabled></textarea>
+      </div>
+      <p class="tag-create-status" data-tag-create-status role="status">Type a proposed tag name above.</p>
+      {% if mode != "create" %}<p class="tag-create-action"><button class="button-compact" type="button" data-tag-create disabled>Add new tag</button></p>{% endif %}
+    </section>
+  {% endif %}
+</div>

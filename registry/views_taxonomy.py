@@ -19,6 +19,7 @@ from registry.forms_taxonomy import (
     TagPromotionForm,
 )
 from registry.models import NoiseModel, Tag
+from registry.services.tags import active_tag_queryset
 from registry.services.taxonomy import (
     TaxonomyError,
     TaxonomyPermissionError,
@@ -66,6 +67,8 @@ def custom_tag_create(request):
             "kind": "tag",
             "title": "Create custom tag",
             "policy": TAG_POLICY,
+            "picker_tags": list(active_tag_queryset()),
+            "namespace_choices": Tag.Namespace.choices,
         },
     )
 
@@ -148,6 +151,7 @@ def custom_tag_preview(request, preview_id):
                 ("Slug", payload["slug"]),
                 ("Label", payload["label"]),
                 ("Description", payload["description"]),
+                ("Aliases", payload.get("aliases") or "None"),
                 ("Initial status", "Custom"),
             ),
             "back_url": f"/taxonomy/tags/new/?preview={preview_id}",

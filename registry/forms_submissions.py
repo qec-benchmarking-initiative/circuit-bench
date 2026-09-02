@@ -19,6 +19,7 @@ from registry.models import (
     Tag,
 )
 from registry.services.artifact_access import readable_artifacts_for
+from registry.services.tags import active_tag_queryset
 from registry.submission_policy import SubmissionKind
 
 
@@ -133,10 +134,8 @@ class DecoderSubmissionForm(BaseSubmissionForm):
             for version in previous_versions
             if version.hyperparameter_schema_artifact_id
         }
-        self.fields["algorithm_tags"].queryset = (
-            Tag.objects.filter(namespace=Tag.Namespace.ALGORITHM)
-            .exclude(status=Tag.Status.DEPRECATED)
-            .order_by("status", "label", "id")
+        self.fields["algorithm_tags"].queryset = active_tag_queryset(
+            Tag.Namespace.ALGORITHM
         )
 
     def clean_slug(self):
@@ -229,15 +228,9 @@ class CircuitSubmissionForm(BaseSubmissionForm):
             "manifest_artifact",
         ):
             self.fields[name].queryset = artifacts
-        self.fields["code_tags"].queryset = (
-            Tag.objects.filter(namespace=Tag.Namespace.CODE)
-            .exclude(status=Tag.Status.DEPRECATED)
-            .order_by("status", "label", "id")
-        )
-        self.fields["experiment_tags"].queryset = (
-            Tag.objects.filter(namespace=Tag.Namespace.EXPERIMENT)
-            .exclude(status=Tag.Status.DEPRECATED)
-            .order_by("status", "label", "id")
+        self.fields["code_tags"].queryset = active_tag_queryset(Tag.Namespace.CODE)
+        self.fields["experiment_tags"].queryset = active_tag_queryset(
+            Tag.Namespace.EXPERIMENT
         )
 
     def clean_slug(self):

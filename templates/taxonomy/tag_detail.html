@@ -1,0 +1,73 @@
+{% extends "layouts/entity_detail.html" %}
+{% load static submission_history %}
+
+{% block title %}{{ tag.label }} · Circuit Bench{% endblock %}
+
+{% block entity_heading %}
+  {% include "components/entity_header.html" with entity=entity only %}
+  {% if can_edit %}<p class="page-action-bar"><a class="button button-secondary" href="{% url 'taxonomy:tag-edit' namespace=tag.namespace slug=tag.slug %}">Edit tag</a></p>{% endif %}
+{% endblock %}
+
+{% block entity_main %}
+  <div class="record-sections">
+    <section class="record-section">
+      <h2>Description</h2>
+      <p>{{ tag.description|linebreaksbr }}</p>
+    </section>
+    <section class="record-section">
+      <h2>Aliases</h2>
+      {% if tag.display_aliases %}
+        <ul class="tag-alias-list">{% for alias in tag.display_aliases %}<li>{{ alias.alias }}</li>{% endfor %}</ul>
+      {% else %}
+        <p class="null-value">No active aliases.</p>
+      {% endif %}
+    </section>
+    {% if tag.canonical_tag %}
+      <section class="record-section">
+        <h2>Canonical replacement</h2>
+        <p><a href="{{ tag.canonical_tag.get_absolute_url }}">{{ tag.canonical_tag.label }}</a></p>
+      </section>
+    {% endif %}
+  </div>
+  {% submission_history tag "tag" %}
+{% endblock %}
+
+{% block entity_aside %}
+  <h2>Tag identity</h2>
+  <dl class="stacked-metadata compact-technical-metadata">
+    <div><dt>Namespace</dt><dd>{{ tag.get_namespace_display }}</dd></div>
+    <div><dt>Permanent slug</dt><dd><code>{{ tag.slug }}</code></dd></div>
+    <div><dt>UUID</dt><dd><code>{{ tag.id }}</code></dd></div>
+    <div><dt>Submitted by</dt><dd>{{ tag.submitted_by.display_name }}</dd></div>
+    <div><dt>Created</dt><dd>{{ tag.created_at }}</dd></div>
+    {% if tag.curated_by %}<div><dt>Curated by</dt><dd>{{ tag.curated_by.display_name }}</dd></div>{% endif %}
+  </dl>
+  <p><a href="{{ tag.schema_release.permanent_url }}">Schema contract {{ tag.schema_release.version }}</a></p>
+{% endblock %}
+
+{% block entity_related %}
+  <h2>{{ usage_label }}</h2>
+  <form class="leaderboard-filter-form" method="get">
+    {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+    {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+    <div class="compact-search-form">
+      <label for="tag-usage-search">Search within these records</label>
+      <input id="tag-usage-search" type="search" name="q" value="{{ usage_query }}">
+      <button type="submit">Search</button>
+    </div>
+    {% include "components/filters/grid.html" with grid=usage_grid only %}
+    <div class="leaderboard-filter-actions">
+      {% include "components/filters/query_actions.html" with show_reset=usage_filters_active reset_url=usage_reset_url only %}
+    </div>
+  </form>
+  <div class="collection-results" aria-live="polite">
+    {% include "components/explorer_toolbar.html" with explorer_id="tag-usage" %}
+    {% include "components/data_table.html" with columns=table_columns rows=usage_rows empty_message=usage_empty only %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/filter-grid.js' %}?v=0.1.20260831k" defer></script>
+  <script src="{% static 'js/filter-query.js' %}" defer></script>
+  <script src="{% static 'js/explorer.js' %}?v=0.1.20260902e" defer></script>
+{% endblock %}

@@ -1,7 +1,5 @@
 """Presentation-neutral cell data for public result tables."""
 
-from urllib.parse import urlencode
-
 from django.urls import NoReverseMatch, reverse
 
 from registry.explorer import ColumnSpec
@@ -88,7 +86,7 @@ def result_cell_map(
                 {
                     "label": tag.label,
                     "display_color": tag.display_color,
-                    "url": f"{filter_url}?{urlencode({algorithm_tag_name: tag.slug})}",
+                    "url": tag.get_absolute_url(),
                 }
                 for tag in decoder.display_algorithm_tags
             ],
@@ -104,7 +102,7 @@ def result_cell_map(
                 {
                     "label": tag.label,
                     "display_color": tag.display_color,
-                    "url": f"{filter_url}?{urlencode({'code_tag': tag.slug})}",
+                    "url": tag.get_absolute_url(),
                 }
                 for tag in circuit.display_code_tags
             ],
@@ -115,7 +113,7 @@ def result_cell_map(
                 {
                     "label": tag.label,
                     "display_color": tag.display_color,
-                    "url": f"{filter_url}?{urlencode({'experiment_tag': tag.slug})}",
+                    "url": tag.get_absolute_url(),
                 }
                 for tag in circuit.display_experiment_tags
             ],

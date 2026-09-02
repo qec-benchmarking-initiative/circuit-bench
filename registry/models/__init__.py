@@ -28,6 +28,7 @@ from .tags import (
     CircuitRevisionExperimentTag,
     DecoderVersionAlgorithmTag,
     Tag,
+    TagAlias,
 )
 
 __all__ = [
@@ -57,4 +58,5 @@ __all__ = [
     "SchemaRelease",
     "ScoreDefinition",
     "Tag",
+    "TagAlias",
 ]

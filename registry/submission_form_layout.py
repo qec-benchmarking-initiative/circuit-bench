@@ -24,6 +24,12 @@ REFERENCE_PICKERS = {
 
 TAG_FIELDS = {"algorithm_tags", "code_tags", "experiment_tags"}
 
+TAG_NAMESPACE_BY_FIELD = {
+    "algorithm_tags": "algorithm",
+    "code_tags": "code",
+    "experiment_tags": "experiment",
+}
+
 ARTIFACT_FIELDS = {
     "hyperparameter_schema_artifact",
     "sampling_circuit_artifact",
@@ -371,6 +377,7 @@ def _field_context(form, name, kind, section_index):
             tags=tags,
             selected_keys=tuple(_bound_values(bound.value())),
             picker_id=f"submission-{kind.value}-{section_index}-{name}",
+            tag_namespace=TAG_NAMESPACE_BY_FIELD[name],
         )
     elif getattr(bound.field.widget, "input_type", None) == "checkbox":
         context["type"] = "boolean"

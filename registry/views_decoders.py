@@ -1,5 +1,3 @@
-from urllib.parse import urlencode
-
 from django.urls import NoReverseMatch, reverse
 from django.views.generic import DetailView, ListView
 
@@ -149,7 +147,7 @@ class DecoderCatalogueView(ListView):
             tag_cells = [
                 {
                     "label": tag.label,
-                    "url": f"{reverse('decoders:list')}?{urlencode({'tag': tag.slug})}",
+                    "url": tag.get_absolute_url(),
                     "display_color": tag.display_color,
                 }
                 for tag in decoder.display_algorithm_tags
@@ -253,7 +251,6 @@ class DecoderDetailView(DetailView):
         description_source = inherited_description_source(decoder)
         predecessor = public_predecessor(decoder)
         successor = public_successor(decoder)
-        list_url = reverse("decoders:list")
         result_context = self._result_context(decoder)
 
         context.update(
@@ -269,7 +266,7 @@ class DecoderDetailView(DetailView):
                             "label": tag.label,
                             "status": tag.status,
                             "display_color": tag.display_color,
-                            "url": f"{list_url}?{urlencode({'tag': tag.slug})}",
+                            "url": tag.get_absolute_url(),
                         }
                         for tag in decoder.display_algorithm_tags
                     ],

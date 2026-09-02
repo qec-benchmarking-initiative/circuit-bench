@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ tag.label }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell submission-shell">
+    <header class="page-heading submission-heading">
+      <p class="eyebrow"><a href="{{ tag.get_absolute_url }}">{{ tag.label }}</a></p>
+      <h1>Edit tag</h1>
+    </header>
+    <section class="form-bar-shell">
+      <dl class="form-bar-list tag-identity-bars">
+        <div class="form-bar-row"><dt class="form-bar-label">Namespace</dt><dd class="form-bar-control">{{ tag.get_namespace_display }}</dd></div>
+        <div class="form-bar-row"><dt class="form-bar-label">Permanent slug</dt><dd class="form-bar-control"><code>{{ tag.slug }}</code></dd></div>
+      </dl>
+      <form method="post">
+        {% csrf_token %}
+        {% include "components/form_bar_list.html" with form=form only %}
+        <div class="submission-actions">
+          <a class="button button-secondary" href="{{ tag.get_absolute_url }}">Cancel</a>
+          <button type="submit">Save changes</button>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

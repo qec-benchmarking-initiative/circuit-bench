@@ -36,7 +36,7 @@
           <tbody>
             {% for row in tag_rows %}
               <tr>
-                <td>{{ row.tag.label }}<br><small>{{ row.tag.slug }}</small></td>
+                <td><a href="{{ row.tag.get_absolute_url }}">{{ row.tag.label }}</a><br><small>{{ row.tag.slug }}</small></td>
                 <td>{{ row.tag.get_namespace_display }}</td>
                 <td>{{ row.tag.get_status_display }}</td>
                 <td>

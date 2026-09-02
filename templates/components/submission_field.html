@@ -6,7 +6,8 @@
     {% if item.type == "reference" %}
       {% include "components/filters/related_record_picker.html" with cell=item.picker_cell only %}
     {% elif item.type == "tags" %}
-      {% include "components/tag_picker.html" with picker_id=item.picker_id label=item.bound.label input_name=item.bound.html_name tags=item.tags selected_keys=item.selected_keys mode="submission" open_label="Choose tags…" only %}
+      {% url 'taxonomy:tag-create-json' as tag_create_url %}
+      {% include "components/tag_picker.html" with picker_id=item.picker_id label=item.bound.label input_name=item.bound.html_name tags=item.tags selected_keys=item.selected_keys mode="submission" open_label="Choose tags…" allow_create=True tag_namespace=item.tag_namespace create_url=tag_create_url only %}
     {% elif item.type == "previous_schema" %}
       <div class="submission-file-input submission-previous-schema" data-previous-schema-control data-previous-version-input="previous_version">
         {{ item.bound }}

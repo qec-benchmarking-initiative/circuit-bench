@@ -71,6 +71,8 @@ class RecordEvent(UUIDModel):
         PROMOTED_OFFICIAL = "promoted_official", "Promoted official"
         DEPRECATED = "deprecated", "Deprecated"
         MERGED = "merged", "Merged"
+        ADDED_ALIAS = "added_alias", "Added alias"
+        REMOVED_ALIAS = "removed_alias", "Removed alias"
         ADMIN_CREDIT_OVERRIDE = (
             "admin_credit_claim_override",
             "Admin credit claim override",
@@ -201,6 +203,8 @@ class RecordEvent(UUIDModel):
                         "promoted_official",
                         "deprecated",
                         "merged",
+                        "added_alias",
+                        "removed_alias",
                         "admin_credit_claim_override",
                     ]
                 ),

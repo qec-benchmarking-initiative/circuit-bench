@@ -24,6 +24,11 @@ class CustomTagForm(forms.Form):
     )
     label = forms.CharField(max_length=200)
     description = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}))
+    aliases = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Optional alternative names, one per line or separated by commas.",
+    )
 
     def payload(self) -> dict:
         if not self.is_valid():
@@ -33,7 +38,18 @@ class CustomTagForm(forms.Form):
             "slug": self.cleaned_data["slug"],
             "label": self.cleaned_data["label"],
             "description": self.cleaned_data["description"],
+            "aliases": self.cleaned_data["aliases"],
         }
+
+
+class TagEditForm(forms.Form):
+    label = forms.CharField(max_length=200)
+    description = forms.CharField(widget=forms.Textarea(attrs={"rows": 5}))
+    aliases = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 4}),
+        help_text="One alias per line or separated by commas.",
+    )
 
 
 class NoiseModelSubmissionForm(forms.Form):

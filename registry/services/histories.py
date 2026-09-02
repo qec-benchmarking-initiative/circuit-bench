@@ -329,6 +329,11 @@ def _record_url(kind: str, record) -> str | None:
             return reverse("results:detail", args=[record.id])
         if kind == "benchmark":
             return reverse("benchmarks:detail", args=[record.slug])
+        if kind == "tag":
+            return reverse(
+                "taxonomy:tag-detail",
+                kwargs={"namespace": record.namespace, "slug": record.slug},
+            )
     except NoReverseMatch:
         return None
     return None

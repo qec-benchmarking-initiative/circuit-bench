@@ -21,6 +21,7 @@ from registry.models import (
     Result,
     Tag,
 )
+from registry.services.tags import active_tag_queryset
 
 PUBLIC_DETAIL_STATES = ("published", "withdrawn")
 
@@ -66,6 +67,10 @@ def public_decoder_catalogue(
             | Q(slug__icontains=query)
             | Q(algorithm_tags__label__icontains=query)
             | Q(algorithm_tags__slug__icontains=query)
+            | Q(
+                algorithm_tags__aliases__alias__icontains=query,
+                algorithm_tags__aliases__is_active=True,
+            )
         )
 
     selected_tags = tuple(tag for tag in tag_slugs if tag)
@@ -103,7 +108,7 @@ def catalogue_algorithm_tags() -> QuerySet[Tag]:
     """Return tags used by at least one published decoder, official first."""
 
     return (
-        _ordered_algorithm_tags()
+        active_tag_queryset(Tag.Namespace.ALGORITHM)
         .filter(Q(status=Tag.Status.OFFICIAL) | Q(decoder_versions__state="published"))
         .distinct()
     )

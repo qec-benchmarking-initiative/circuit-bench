@@ -1,5 +1,3 @@
-from urllib.parse import urlencode
-
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
@@ -216,7 +214,6 @@ def circuit_list(request):
     ).as_context()
     if ordering_selection.mode != CatalogueOrderingMode.MANUAL:
         table["sort_summary"] = discovery_ordering["label"]
-    list_url = reverse("circuits:list")
     rows = []
     for circuit in circuits:
         cell_by_key = {
@@ -230,7 +227,7 @@ def circuit_list(request):
                 "tags": [
                     {
                         "label": tag.label,
-                        "url": f"{list_url}?{urlencode({'code_tag': tag.slug})}",
+                        "url": tag.get_absolute_url(),
                         "display_color": tag.display_color,
                     }
                     for tag in circuit.code_tags.all()
@@ -241,7 +238,7 @@ def circuit_list(request):
                 "tags": [
                     {
                         "label": tag.label,
-                        "url": f"{list_url}?{urlencode({'experiment_tag': tag.slug})}",
+                        "url": tag.get_absolute_url(),
                         "display_color": tag.display_color,
                     }
                     for tag in circuit.experiment_tags.all()
@@ -343,7 +340,6 @@ def circuit_list(request):
 
 def circuit_detail(request, slug):
     circuit = get_object_or_404(circuit_detail_queryset(), slug=slug)
-    list_url = reverse("circuits:list")
     detail_url = reverse("circuits:detail", args=[circuit.slug])
     selected_tags = tuple(
         dict.fromkeys(tag.strip() for tag in request.GET.getlist("tag") if tag.strip())
@@ -443,9 +439,7 @@ def circuit_detail(request, slug):
                             "label": tag.label,
                             "status": tag.status,
                             "display_color": tag.display_color,
-                            "url": (
-                                f"{list_url}?{urlencode({'tag': f'code:{tag.slug}'})}"
-                            ),
+                            "url": tag.get_absolute_url(),
                         }
                         for tag in circuit.code_tags.all()
                     ],
@@ -454,10 +448,7 @@ def circuit_detail(request, slug):
                             "label": tag.label,
                             "status": tag.status,
                             "display_color": tag.display_color,
-                            "url": (
-                                f"{list_url}?"
-                                f"{urlencode({'tag': f'experiment:{tag.slug}'})}"
-                            ),
+                            "url": tag.get_absolute_url(),
                         }
                         for tag in circuit.experiment_tags.all()
                     ],

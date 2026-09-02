@@ -54,8 +54,16 @@ def circuit_catalogue(
             | Q(slug__icontains=query)
             | Q(code_tags__label__icontains=query)
             | Q(code_tags__slug__icontains=query)
+            | Q(
+                code_tags__aliases__alias__icontains=query,
+                code_tags__aliases__is_active=True,
+            )
             | Q(experiment_tags__label__icontains=query)
             | Q(experiment_tags__slug__icontains=query)
+            | Q(
+                experiment_tags__aliases__alias__icontains=query,
+                experiment_tags__aliases__is_active=True,
+            )
         )
     if tag:
         namespace, separator, slug = tag.partition(":")

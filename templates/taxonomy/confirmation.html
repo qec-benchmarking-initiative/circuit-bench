@@ -12,6 +12,7 @@
     </dl>
     <p class="page-action-bar">
       {% if record_kind == "tag" %}
+        <a class="button" href="{{ record.get_absolute_url }}">View tag</a>
         <a class="button button-secondary" href="{% url 'taxonomy:tag-create' %}">Create another custom tag</a>
       {% else %}
         <a class="button button-secondary" href="{% url 'taxonomy:noise-model-create' %}">Submit another noise model</a>

@@ -8,15 +8,17 @@ the review queue without becoming publicly discoverable.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import IntegrityError, transaction
 from django.utils import timezone
+from django.utils.text import slugify
 
 from accounts.models import Account
-from registry.models import NoiseModel, RecordEvent, SchemaRelease, Tag
+from registry.models import NoiseModel, RecordEvent, SchemaRelease, Tag, TagAlias
 from registry.services.histories import (
     append_history_event,
     history_for_new_record,
@@ -72,18 +74,23 @@ def create_custom_tag(
     *,
     submitter: Account,
     namespace: str,
-    slug: str,
+    slug: str | None = None,
     label: str,
     description: str,
+    aliases: Iterable[str] = (),
 ) -> TagCreationOutcome:
     """Create an immediately usable custom tag with an explicit system route."""
 
     _require_active(submitter)
     namespace = namespace.strip()
-    slug = slug.strip()
     label = label.strip()
     description = description.strip()
+    aliases = normalise_tag_aliases(aliases)
+    slug = slug.strip() if slug is not None else ""
+    if not slug:
+        slug = _available_tag_slug(namespace, label)
     _validate_tag_values(namespace, slug, label, description)
+    _validate_alias_values(label, aliases)
 
     try:
         with transaction.atomic():
@@ -91,6 +98,11 @@ def create_custom_tag(
                 raise TaxonomyConflictError(
                     "That tag identity is already present as a tag or canonical alias."
                 )
+            _require_available_tag_terms(
+                namespace=namespace,
+                label=label,
+                aliases=aliases,
+            )
             release = _frozen_schema_release(SchemaRelease.RecordType.TAG)
             history = history_for_new_record("tag")
             tag = Tag.objects.create(
@@ -126,10 +138,13 @@ def create_custom_tag(
                         "slug": slug,
                         "label": label,
                         "description": description,
+                        "aliases": list(aliases),
                         "status": Tag.Status.CUSTOM,
                     },
                 ),
             )
+            for alias in aliases:
+                _add_tag_alias_locked(tag, actor=submitter, alias=alias)
             approval_event = append_history_event(
                 kind="tag",
                 record=tag,
@@ -158,6 +173,150 @@ def create_custom_tag(
         raise TaxonomyConflictError(
             "That tag identity was created by another request."
         ) from error
+
+
+def normalise_tag_aliases(values: Iterable[str] | str) -> tuple[str, ...]:
+    """Return ordered, case-insensitively unique alias text."""
+
+    if isinstance(values, str):
+        values = re.split(r"[\n,]", values)
+    aliases: list[str] = []
+    seen: set[str] = set()
+    for raw_value in values:
+        value = " ".join(str(raw_value).split())
+        if not value:
+            continue
+        key = value.casefold()
+        if key not in seen:
+            aliases.append(value)
+            seen.add(key)
+    return tuple(aliases)
+
+
+def can_edit_tag(tag: Tag, actor: Account | None) -> bool:
+    if actor is None or not actor.is_active:
+        return False
+    if actor.is_admin:
+        return True
+    return tag.status == Tag.Status.CUSTOM and tag.submitted_by_id == actor.id
+
+
+@transaction.atomic
+def update_tag(
+    tag_id,
+    *,
+    actor: Account,
+    label: str,
+    description: str,
+    aliases: Iterable[str] | str,
+) -> Tag:
+    """Edit tag prose and reconcile its durable alias rows."""
+
+    tag = _locked_tag(tag_id)
+    if not can_edit_tag(tag, actor):
+        raise TaxonomyPermissionError("You cannot edit this tag.")
+    label = " ".join(label.split())
+    description = description.strip()
+    aliases = normalise_tag_aliases(aliases)
+    _validate_tag_values(tag.namespace, tag.slug, label, description)
+    _validate_alias_values(label, aliases)
+    _require_available_tag_terms(
+        namespace=tag.namespace,
+        label=label,
+        aliases=aliases,
+        exclude_tag=tag,
+    )
+
+    active_aliases = list(
+        TagAlias.objects.select_for_update()
+        .filter(tag=tag, is_active=True)
+        .order_by("added_at", "id")
+    )
+    existing_by_key = {item.alias.casefold(): item for item in active_aliases}
+    desired_by_key = {item.casefold(): item for item in aliases}
+    aliases_changed = False
+    for key, alias_record in existing_by_key.items():
+        if key not in desired_by_key:
+            _remove_tag_alias_locked(alias_record, actor=actor)
+            aliases_changed = True
+    for key, alias in desired_by_key.items():
+        if key not in existing_by_key:
+            _add_tag_alias_locked(tag, actor=actor, alias=alias)
+            aliases_changed = True
+
+    changed_fields = []
+    if tag.label != label:
+        tag.label = label
+        changed_fields.append("label")
+    if tag.description != description:
+        tag.description = description
+        changed_fields.append("description")
+    if changed_fields:
+        tag.save(update_fields=[*changed_fields, "updated_at"])
+        append_history_event(
+            kind="tag",
+            record=tag,
+            actor=actor,
+            action=RecordEvent.Action.EDITED,
+            note="Updated this tag's label or description.",
+            details={
+                "policy_version": POLICY_VERSION,
+                "changed_fields": changed_fields,
+            },
+            payload_snapshot=submission_snapshot(
+                "tag",
+                {
+                    "namespace": tag.namespace,
+                    "slug": tag.slug,
+                    "label": tag.label,
+                    "description": tag.description,
+                    "aliases": list(aliases),
+                    "status": tag.status,
+                },
+            ),
+        )
+    elif aliases_changed:
+        tag.save(update_fields=["updated_at"])
+    return tag
+
+
+@transaction.atomic
+def add_tag_alias(tag_id, *, actor: Account, alias: str) -> TagAlias:
+    tag = _locked_tag(tag_id)
+    if not can_edit_tag(tag, actor):
+        raise TaxonomyPermissionError("You cannot edit this tag.")
+    alias_values = normalise_tag_aliases((alias,))
+    if not alias_values:
+        raise TaxonomyValidationError("Provide an alias.")
+    _validate_alias_values(tag.label, alias_values)
+    _require_available_tag_terms(
+        namespace=tag.namespace,
+        label=tag.label,
+        aliases=alias_values,
+        exclude_tag=tag,
+    )
+    alias_record = _add_tag_alias_locked(tag, actor=actor, alias=alias_values[0])
+    tag.save(update_fields=["updated_at"])
+    return alias_record
+
+
+@transaction.atomic
+def remove_tag_alias(alias_id, *, actor: Account) -> TagAlias:
+    try:
+        alias_record = (
+            TagAlias.objects.select_for_update()
+            .select_related("tag", "tag__history")
+            .get(id=alias_id)
+        )
+    except TagAlias.DoesNotExist as error:
+        raise TaxonomyStateError("Tag alias not found.") from error
+    if not can_edit_tag(alias_record.tag, actor):
+        raise TaxonomyPermissionError("You cannot edit this tag.")
+    if not alias_record.is_active:
+        raise TaxonomyStateError("That alias is already inactive.")
+    alias_record = _remove_tag_alias_locked(alias_record, actor=actor)
+    alias_record.tag.save(update_fields=["updated_at"])
+    return alias_record
 
 
 @transaction.atomic
@@ -533,6 +692,114 @@ def _validate_tag_values(
         raise TaxonomyValidationError("Provide a tag label of at most 200 characters.")
     if not description:
         raise TaxonomyValidationError("Provide a tag description.")
+
+
+def _validate_alias_values(label: str, aliases: tuple[str, ...]) -> None:
+    label_key = label.casefold()
+    for alias in aliases:
+        if len(alias) > 200:
+            raise TaxonomyValidationError(
+                "Each tag alias must be at most 200 characters."
+            )
+        if alias.casefold() == label_key:
+            raise TaxonomyValidationError(
+                "An alias must differ from the tag's displayed label."
+            )
+
+
+def _require_available_tag_terms(
+    *,
+    namespace: str,
+    label: str,
+    aliases: tuple[str, ...],
+    exclude_tag: Tag | None = None,
+) -> None:
+    """Reject terms that would make a namespace picker ambiguous."""
+
+    candidate_terms = (label, *aliases)
+    tags = Tag.objects.filter(namespace=namespace)
+    namespace_aliases = TagAlias.objects.filter(
+        tag__namespace=namespace,
+        is_active=True,
+    )
+    global_aliases = TagAlias.objects.filter(is_active=True)
+    if exclude_tag is not None:
+        tags = tags.exclude(id=exclude_tag.id)
+        namespace_aliases = namespace_aliases.exclude(tag=exclude_tag)
+        global_aliases = global_aliases.exclude(tag=exclude_tag)
+    for term in candidate_terms:
+        if tags.filter(label__iexact=term).exists():
+            raise TaxonomyConflictError(
+                f"An existing {namespace} tag already uses “{term}”."
+            )
+        if namespace_aliases.filter(alias__iexact=term).exists():
+            raise TaxonomyConflictError(
+                f"An existing {namespace} tag already uses “{term}” as an alias."
+            )
+    for alias in aliases:
+        if global_aliases.filter(alias__iexact=alias).exists():
+            raise TaxonomyConflictError(
+                f"Another tag already uses “{alias}” as an active alias."
+            )
+
+
+def _available_tag_slug(namespace: str, label: str) -> str:
+    base = slugify(label)[:200].strip("-") or "tag"
+    candidate = base
+    suffix = 2
+    while Tag.objects.filter(namespace=namespace, slug=candidate).exists():
+        ending = f"-{suffix}"
+        candidate = f"{base[: 200 - len(ending)].rstrip('-')}{ending}"
+        suffix += 1
+    return candidate
+
+
+def _add_tag_alias_locked(tag: Tag, *, actor: Account, alias: str) -> TagAlias:
+    alias_record = TagAlias.objects.create(
+        tag=tag,
+        alias=alias,
+        is_active=True,
+        added_by=actor,
+        removed_by=None,
+        removed_at=None,
+    )
+    append_history_event(
+        kind="tag",
+        record=tag,
+        actor=actor,
+        action=RecordEvent.Action.ADDED_ALIAS,
+        note=f"Added the alias “{alias}”.",
+        details={
+            "policy_version": POLICY_VERSION,
+            "alias_id": str(alias_record.id),
+            "alias": alias,
+        },
+    )
+    return alias_record
+
+
+def _remove_tag_alias_locked(
+    alias_record: TagAlias,
+    *,
+    actor: Account,
+) -> TagAlias:
+    alias_record.is_active = False
+    alias_record.removed_by = actor
+    alias_record.removed_at = timezone.now()
+    alias_record.save(update_fields=["is_active", "removed_by", "removed_at"])
+    append_history_event(
+        kind="tag",
+        record=alias_record.tag,
+        actor=actor,
+        action=RecordEvent.Action.REMOVED_ALIAS,
+        note=f"Removed the alias “{alias_record.alias}”.",
+        details={
+            "policy_version": POLICY_VERSION,
+            "alias_id": str(alias_record.id),
+            "alias": alias_record.alias,
+        },
+    )
+    return alias_record
 
 
 def _validate_noise_model_values(

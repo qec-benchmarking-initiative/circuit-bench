@@ -30,6 +30,7 @@ from registry.models import (
     SchemaRelease,
     ScoreDefinition,
     Tag,
+    TagAlias,
 )
 from registry.services.artifacts import store_artifact_chunks
 from registry.services.histories import append_history_event, submission_snapshot
@@ -540,6 +541,7 @@ def seed_demo_data() -> dict[str, int]:
             attempt,
         )
     )
+    _ensure_demo_tag_aliases(uploader)
 
     return demo_counts()
 
@@ -644,6 +646,45 @@ def _refresh_demo_presentation() -> None:
     EvaluatorRelease.objects.filter(id=demo_id("evaluator/0.1")).update(
         source_url="https://example.org/circuit-bench/evaluator"
     )
+    uploader = Account.objects.filter(id=DEMO_ACCOUNT_ID).first()
+    if uploader is not None:
+        _ensure_demo_tag_aliases(uploader)
+
+
+def _ensure_demo_tag_aliases(uploader: Account) -> None:
+    aliases = {
+        "tag/algorithm/matching": ("MWPM", "Minimum-weight perfect matching"),
+        "tag/algorithm/belief-propagation": ("BP",),
+        "tag/code/rotated-surface-code": ("Rotated planar code",),
+        "tag/experiment/memory": ("Quantum memory",),
+    }
+    for tag_key, values in aliases.items():
+        tag = Tag.objects.filter(id=demo_id(tag_key)).select_related("history").first()
+        if tag is None:
+            continue
+        for alias in values:
+            alias_record, created = TagAlias.objects.get_or_create(
+                id=demo_id(f"{tag_key}/alias/{alias.casefold()}"),
+                defaults={
+                    "tag": tag,
+                    "alias": alias,
+                    "is_active": True,
+                    "added_by": uploader,
+                },
+            )
+            if created:
+                append_history_event(
+                    kind="tag",
+                    record=tag,
+                    actor=uploader,
+                    action="added_alias",
+                    note=f"Added the alias “{alias}”.",
+                    details={
+                        "fixture": True,
+                        "alias_id": str(alias_record.id),
+                        "alias": alias,
+                    },
+                )
 
 
 def demo_counts() -> dict[str, int]:
