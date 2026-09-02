@@ -3,8 +3,8 @@
 {% block title %}{{ title }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading"><h1>{{ title }}</h1></header>
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><h1>{{ title }}</h1></header>
     <dl class="metadata-list">
       <div><dt>Name</dt><dd>{% if record_kind == "tag" %}{{ record.label }}{% else %}{{ record.name }}{% endif %}</dd></div>
       <div><dt>Identity</dt><dd>{% if record_kind == "tag" %}{{ record.namespace }}:{{ record.slug }}{% else %}{{ record.slug }}{% endif %}</dd></div>

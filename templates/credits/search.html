@@ -3,8 +3,8 @@
 {% block title %}Claim a credit · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <h1>Claim a credit</h1>
       <p><a class="button button-secondary" href="{% url 'credits:claims' %}">Your credit claims</a></p>
     </header>
@@ -15,7 +15,7 @@
       <button type="submit">Search</button>
     </form>
 
-    <section class="submission-table-section" aria-labelledby="credit-results-heading">
+    <section class="table-section" aria-labelledby="credit-results-heading">
       <h2 id="credit-results-heading">Name credits</h2>
       <div class="table-scroll" tabindex="0" aria-label="Matching name credits">
         <table class="data-table">

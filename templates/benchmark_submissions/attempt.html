@@ -3,16 +3,16 @@
 {% block title %}Submit benchmark attempt · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading"><p class="eyebrow">Submission</p><h1>Submit benchmark attempt</h1></header>
-    <aside class="submission-policy-bar"><strong>Approval Process v0.1:</strong> A benchmark attempt groups already-published exact results and is published after administrator review. It does not assign an aggregate score.</aside>
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><p class="eyebrow">Submission</p><h1>Submit benchmark attempt</h1></header>
+    <aside class="policy-bar"><strong>Approval Process v0.1:</strong> A benchmark attempt groups already-published exact results and is published after administrator review. It does not assign an aggregate score.</aside>
     {% if not results_form %}
-      <form method="get" class="form-bar-shell">{% include "components/form_bar_list.html" with form=selection_form only %}<div class="submission-actions"><button type="submit">Choose results</button></div></form>
+      <form method="get" class="form-bar-shell">{% include "components/form_bar_list.html" with form=selection_form only %}<div class="form-actions"><button type="submit">Choose results</button></div></form>
     {% else %}
       <form method="post" class="form-bar-shell">
         {% csrf_token %}<input type="hidden" name="benchmark_revision" value="{{ selection_form.cleaned_data.benchmark_revision.id }}"><input type="hidden" name="decoder_version" value="{{ selection_form.cleaned_data.decoder_version.id }}">
         {% include "components/form_bar_list.html" with form=results_form only %}
-        <div class="submission-actions"><a class="button button-secondary" href="{% url 'benchmark-submissions:attempt-create' %}">Back</a><button type="submit">Submit for review</button></div>
+        <div class="form-actions"><a class="button button-secondary" href="{% url 'benchmark-submissions:attempt-create' %}">Back</a><button type="submit">Submit for review</button></div>
       </form>
     {% endif %}
   </div>

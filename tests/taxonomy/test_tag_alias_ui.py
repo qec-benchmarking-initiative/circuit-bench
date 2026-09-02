@@ -154,7 +154,7 @@ def test_tag_detail_links_usage_history_and_owner_edit(accounts, client):
     assert detail.status_code == 200
     content = detail.content.decode()
     assert "memory repetition" in content
-    assert "Submission history" in content
+    assert "Record history" in content
     assert "Circuit revisions using this tag" in content
     assert "Edit tag" not in content
 

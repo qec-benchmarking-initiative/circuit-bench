@@ -3,8 +3,8 @@
 {% block title %}Claim {{ credit.display_name }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading"><h1>Claim {{ credit.display_name }}</h1></header>
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><h1>Claim {{ credit.display_name }}</h1></header>
     <dl class="metadata-list">
       <div><dt>Record type</dt><dd>{{ subject.kind }}</dd></div>
       <div><dt>Scientific record</dt><dd>{{ subject.label }}</dd></div>
@@ -13,7 +13,7 @@
     <form method="post" class="form-bar-shell">
       {% csrf_token %}
       {% include "components/form_bar_list.html" with form=form only %}
-      <div class="submission-actions">
+      <div class="form-actions">
         <button type="submit">Submit claim</button>
         <a class="button button-secondary" href="{% url 'credits:search' %}">Cancel</a>
       </div>

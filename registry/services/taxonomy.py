@@ -108,7 +108,7 @@ def create_custom_tag(
             parent_tags = _locked_parent_tags(parent_ids)
             if Tag.objects.filter(namespace=namespace, slug=slug).exists():
                 raise TaxonomyConflictError(
-                    "That tag identity is already present as a tag or canonical alias."
+                    "That tag identity is already present as a tag name or alias."
                 )
             _require_available_tag_terms(
                 namespace=namespace,

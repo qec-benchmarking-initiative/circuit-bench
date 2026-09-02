@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% load static scientific submission_history %}
+{% load static scientific record_history %}
 
 {% block title %}{{ benchmark.name }} {{ benchmark.version }} · Circuit Bench{% endblock %}
 
 {% block content %}
   <article class="page-shell record-layout benchmark-record-layout">
     <header class="record-heading">
-      {% include "components/entity_header.html" with entity=entity only %}
+      {% include "components/record_header.html" with record=record only %}
     </header>
 
     <div class="record-columns">
@@ -43,7 +43,7 @@
       </aside>
     </div>
 
-    {% submission_history benchmark "benchmark" %}
+    {% record_history benchmark "benchmark" %}
 
     <section class="record-related" aria-labelledby="benchmark-manifest-heading">
       <h2 id="benchmark-manifest-heading">Ordered circuit manifest</h2>
@@ -128,9 +128,9 @@
         </div>
         <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
       </form>
-      <div class="collection-results" aria-live="polite">
+      <div class="table-region" aria-live="polite">
         {% include "components/result_comparison.html" with result_plot=result_plot only %}
-        {% include "components/explorer_toolbar.html" with explorer_id="benchmark-results" %}
+        {% include "components/table_toolbar.html" with table_id="benchmark-results" %}
         {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No constituent results match these filters and query." only %}
       </div>
     </section>
@@ -138,10 +138,11 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'js/filter-grid.js' %}?v=0.1.20260831k" defer></script>
+  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902a" defer></script>
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
   <script src="{% static 'js/filter-query.js' %}" defer></script>
-  <script src="{% static 'js/explorer.js' %}?v=0.1.20260902i" defer></script>
+  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902a" defer></script>
+  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902a" defer></script>
   <script src="{% static 'js/plot-settings.js' %}?v=0.1.20260831k" defer></script>
 <script src="{% static 'js/result-plot.js' %}?v=0.1.20260901p" defer></script>
 {% endblock %}

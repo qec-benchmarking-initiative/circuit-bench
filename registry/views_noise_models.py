@@ -9,7 +9,12 @@ from registry.curation import (
     ordering_metadata,
     select_catalogue_ordering,
 )
-from registry.explorer import (
+from registry.filter_grids import noise_model_grid as build_noise_model_grid
+from registry.services.circuits import (
+    noise_model_catalogue,
+    noise_model_detail_queryset,
+)
+from registry.table_controls import (
     ColumnSpec,
     apply_sort,
     cells_for_visible_columns,
@@ -17,11 +22,6 @@ from registry.explorer import (
     parse_sort,
     table_context,
     url_without,
-)
-from registry.filter_grids import noise_model_grid as build_noise_model_grid
-from registry.services.circuits import (
-    noise_model_catalogue,
-    noise_model_detail_queryset,
 )
 
 
@@ -170,7 +170,7 @@ def noise_model_detail(request, slug):
         {
             "noise_model": noise_model,
             "circuits": noise_model.published_circuits,
-            "entity": {
+            "record": {
                 "kind": "Noise model",
                 "name": noise_model.name,
                 "version": None,

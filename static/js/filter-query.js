@@ -52,7 +52,7 @@
   };
 
   forms.forEach((form) => {
-    form.addEventListener("filterquery:change", () => submitAutomatically(form));
+    form.addEventListener("control:commit", () => submitAutomatically(form));
     form.querySelector("[data-autoquery-toggle]")?.addEventListener("change", (event) => {
       autoqueryEnabled = event.target.checked;
       writeStorage(localStorage, autoqueryKey, String(autoqueryEnabled));

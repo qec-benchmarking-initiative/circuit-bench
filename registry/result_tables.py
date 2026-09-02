@@ -2,10 +2,10 @@
 
 from django.urls import NoReverseMatch, reverse
 
-from registry.explorer import ColumnSpec
 from registry.formatting import format_scientific_value
 from registry.models import Result
 from registry.result_query import FIELD_BY_NAME, annotate_result_metrics
+from registry.table_controls import ColumnSpec
 
 RESULT_METRIC_COLUMNS = (
     ColumnSpec(

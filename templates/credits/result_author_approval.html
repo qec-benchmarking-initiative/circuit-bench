@@ -3,8 +3,8 @@
 {% block title %}Decoder-author approval · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading"><h1>Decoder-author approval</h1></header>
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><h1>Decoder-author approval</h1></header>
     <dl class="metadata-list">
       <div><dt>Decoder version</dt><dd>{{ result.decoder_version }}</dd></div>
       <div><dt>Circuit revision</dt><dd>{{ result.circuit_revision }}</dd></div>
@@ -13,7 +13,7 @@
     <form method="post" class="form-bar-shell">
       {% csrf_token %}
       {% include "components/form_bar_list.html" with form=form only %}
-      <div class="submission-actions"><button type="submit">Record decision</button></div>
+      <div class="form-actions"><button type="submit">Record decision</button></div>
     </form>
   </div>
 {% endblock %}

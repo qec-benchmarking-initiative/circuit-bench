@@ -245,7 +245,7 @@ def test_pending_record_has_private_exact_view_for_owner_and_admin(
     assert b"Algorithm tags" in owner_response.content
     history_tag = (
         owner_response.content.decode()
-        .split('<details class="submission-history"', 1)[1]
+        .split('<details class="record-history"', 1)[1]
         .split(">", 1)[0]
     )
     assert " open" not in history_tag

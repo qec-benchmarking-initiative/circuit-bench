@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% load submission_history %}
+{% load record_history %}
 
 {% block title %}{{ record_label }} · Submission · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <p class="eyebrow">Exact {{ spec.label }} submission</p>
       <h1>{{ record_label }}</h1>
       <p><strong>State:</strong> <span class="status-badge status-{{ record.state }}">{{ record.get_state_display }}</span></p>
@@ -19,7 +19,7 @@
       </dl>
     </section>
 
-    <div class="submission-actions">
+    <div class="page-action-bar">
       {% if user.is_admin %}<a class="button button-secondary" href="{% url 'submissions:review' %}">Back to admin queue</a>{% else %}<a class="button button-secondary" href="{% url 'submissions:profile' %}">Back to profile</a>{% endif %}
       {% if public_url %}<a class="button" href="{{ public_url }}">Open public data page</a>{% endif %}
       {% if can_edit %}<a class="button" href="{% url 'submissions:edit' kind=kind record_id=record.id %}">Edit</a>{% endif %}
@@ -30,6 +30,6 @@
       {% if user.is_admin and can_approve %}<a class="button button-secondary" href="{% url 'review-decisions:request-changes' kind=kind record_id=record.id %}">Request changes</a><a class="button button-danger" href="{% url 'review-decisions:reject' kind=kind record_id=record.id %}">Reject</a>{% endif %}
     </div>
 
-    {% submission_history record kind %}
+    {% record_history record kind %}
   </div>
 {% endblock %}

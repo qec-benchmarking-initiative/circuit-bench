@@ -3,18 +3,18 @@
 {% block title %}{{ title }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <h1>{{ title }}</h1>
       {% if user.is_admin %}<p><a class="button button-secondary" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a></p>{% endif %}
     </header>
-    {% include "components/submission_policy_bar.html" with policy=policy only %}
+    {% include "components/approval_policy_bar.html" with policy=policy only %}
 
     {% if kind == "tag" %}
       <section class="tag-create-workbench">
         {% csrf_token %}
         {% url 'taxonomy:tag-create-json' as tag_create_url %}
-        {% include "components/tag_picker.html" with picker_id="standalone-tag-creator" label="Create custom tag" input_name="unused" tags=picker_tags selected_keys=selected_keys mode="create" namespace_choices=namespace_choices parent_tags=picker_tags create_url=tag_create_url created_redirect=True only %}
+        {% include "components/pickers/tag.html" with picker_id="standalone-tag-creator" label="Create custom tag" input_name="unused" tags=picker_tags selected_keys=selected_keys mode="create" namespace_choices=namespace_choices parent_tags=picker_tags create_url=tag_create_url created_redirect=True only %}
       </section>
     {% else %}
       <section class="submission-entry-panel">
@@ -36,7 +36,7 @@
               </div>
             </section>
           </div>
-          <div class="submission-actions"><button type="submit">Preview</button></div>
+          <div class="form-actions"><button type="submit">Preview</button></div>
         </form>
       </section>
     {% endif %}
@@ -44,5 +44,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  {% if kind == "tag" %}{% load static %}<script src="{% static 'js/explorer.js' %}?v=0.1.20260902i" defer></script>{% endif %}
+  {% if kind == "tag" %}{% load static %}<script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902a" defer></script>{% endif %}
 {% endblock %}

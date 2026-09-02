@@ -3,8 +3,8 @@
 {% block title %}Delete {{ tag.label }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <p class="eyebrow"><a href="{{ tag.get_absolute_url }}">{{ tag.label }}</a></p>
       <h1>Delete tag</h1>
     </header>
@@ -16,7 +16,7 @@
       </dl>
       <form method="post">
         {% csrf_token %}
-        <div class="submission-actions">
+        <div class="form-actions">
           <a class="button button-secondary" href="{{ tag.get_absolute_url }}">Cancel</a>
           <button class="button-danger" type="submit">Delete tag</button>
         </div>

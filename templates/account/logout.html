@@ -3,8 +3,8 @@
 {% block title %}Sign out · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading"><p class="eyebrow">Account</p><h1>Sign out</h1><p>Your GitHub and ORCID identities will remain linked.</p></header>
-    <form class="submission-actions" method="post" action="/accounts/logout/">{% csrf_token %}{% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}<button type="submit">Sign out</button><a class="button button-secondary" href="/">Cancel</a></form>
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><p class="eyebrow">Account</p><h1>Sign out</h1><p>Your GitHub and ORCID identities will remain linked.</p></header>
+    <form class="form-actions" method="post" action="/accounts/logout/">{% csrf_token %}{% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}<button type="submit">Sign out</button><a class="button button-secondary" href="/">Cancel</a></form>
   </div>
 {% endblock %}

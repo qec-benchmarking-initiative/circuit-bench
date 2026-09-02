@@ -3,8 +3,8 @@
 {% block title %}Edit {{ tag.label }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <p class="eyebrow"><a href="{{ tag.get_absolute_url }}">{{ tag.label }}</a></p>
       <h1>Edit tag</h1>
     </header>
@@ -37,7 +37,7 @@
             </div>
           </div>
         </div>
-        <div class="submission-actions">
+        <div class="form-actions">
           <a class="button button-secondary" href="{{ tag.get_absolute_url }}">Cancel</a>
           <button type="submit">Save changes</button>
         </div>
@@ -47,5 +47,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  {% load static %}<script src="{% static 'js/explorer.js' %}?v=0.1.20260902i" defer></script>
+  {% load static %}<script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902a" defer></script>
 {% endblock %}

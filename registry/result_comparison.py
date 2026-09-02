@@ -9,7 +9,6 @@ from urllib.parse import urlencode
 from django.http import QueryDict
 from django.urls import NoReverseMatch, reverse
 
-from registry.explorer import ColumnSpec, SortKey, parse_sort, table_context
 from registry.plot_controls import (
     MARKER_COLOURS,
     MARKER_STYLES,
@@ -28,6 +27,7 @@ from registry.result_query import (
     page_result_query,
     parse_result_query,
 )
+from registry.table_controls import ColumnSpec, SortKey, parse_sort, table_context
 
 ODATA_OPTIONS = (
     "$filter",

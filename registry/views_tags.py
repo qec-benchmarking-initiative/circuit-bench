@@ -8,14 +8,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from registry.explorer import (
-    ColumnSpec,
-    apply_sort,
-    cells_for_visible_columns,
-    parse_nonnegative_int,
-    parse_sort,
-    table_context,
-)
 from registry.filter_grids import choice_cell, filter_grid, range_cell
 from registry.forms_taxonomy import TagEditForm
 from registry.models import Tag
@@ -32,6 +24,14 @@ from registry.services.taxonomy import (
     normalise_tag_aliases,
     retire_tag,
     update_tag,
+)
+from registry.table_controls import (
+    ColumnSpec,
+    apply_sort,
+    cells_for_visible_columns,
+    parse_nonnegative_int,
+    parse_sort,
+    table_context,
 )
 from registry.tag_taxonomy_graph import build_local_tag_graph
 
@@ -125,7 +125,7 @@ def tag_detail(request, namespace, slug):
             "tag": tag,
             "can_edit": can_edit_tag(tag, request.user),
             "can_retire": can_retire_tag(tag, request.user),
-            "entity": {
+            "record": {
                 "kind": f"{tag.get_namespace_display()} tag",
                 "name": tag.label,
                 "status": tag.status,

@@ -208,7 +208,7 @@ def component_gallery(request):
     if not settings.DEBUG:
         raise Http404
     context = {
-        "entity": {
+        "record": {
             "kind": "Decoder",
             "name": "A deliberately long decoder name that tests wrapping cleanly",
             "version": "0.2-preprint-reproduction-build",
@@ -226,18 +226,6 @@ def component_gallery(request):
             {"label": "Failure probability", "value": "Provided per shot"},
             {"label": "Optional timing", "value": None},
         ],
-        "filter_tags": [
-            {"slug": "matching", "label": "Matching"},
-            {"slug": "belief-propagation", "label": "Belief propagation"},
-        ],
-        "query_text": (
-            "$filter=logical_error_rate lt 0.01&$orderby="
-            "logical_error_rate asc,decode_time_seconds asc"
-        ),
-        "query_status": {
-            "kind": "success",
-            "message": "Valid query — 3 matching results, completed in 18 ms",
-        },
         "columns": [
             {"label": "Decoder", "sortable": True},
             {

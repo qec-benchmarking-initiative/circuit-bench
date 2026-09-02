@@ -1,10 +1,6 @@
 from django.shortcuts import render
 from django.urls import reverse
 
-from registry.explorer import (
-    ColumnSpec,
-    cells_for_visible_columns,
-)
 from registry.filter_grids import (
     algorithm_grid as build_algorithm_grid,
 )
@@ -28,6 +24,10 @@ from registry.result_tables import (
 from registry.services.decoders import catalogue_algorithm_tags
 from registry.services.filter_options import public_circuit_filter_options
 from registry.services.results import public_result_catalogue
+from registry.table_controls import (
+    ColumnSpec,
+    cells_for_visible_columns,
+)
 
 RESULT_COLUMNS = (
     ColumnSpec("result", "Result", help_text="Exact result UUID"),

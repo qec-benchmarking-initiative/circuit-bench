@@ -364,9 +364,9 @@ The history contains:
 The exact A row ends in `withdrawn`. The exact B row ends in `published`. Both
 refer to the same `record_history`. No event or scientific record is deleted.
 
-## 8. Reusable submission-history interface
+## 8. Reusable record-history interface
 
-Every scientific data page should include the same reusable submission-history
+Every scientific data page should include the same reusable record-history
 component. It should work for decoders, circuits, results, machines, noise
 models, benchmarks, and future record kinds without duplicating templates or
 JavaScript.
@@ -544,7 +544,7 @@ transaction. Direct state mutation outside those services is removed.
 
 ### Phase 6: integrate the interface
 
-Add the shared submission-history component to every exact public data page and
+Add the shared record-history component to every exact public data page and
 to the corresponding private submission view. Apply explicit public, uploader,
 and administrator visibility rules.
 
@@ -580,7 +580,7 @@ The current proposal makes these decisions:
 5. Human and system actors are represented explicitly.
 6. Only one direction of revision linkage is authoritative.
 7. Submission and resubmission snapshots preserve what was actually reviewed.
-8. Every exact data page receives the same reusable submission-history UI.
+8. Every exact data page receives the same reusable record-history UI.
 
 Questions to settle during implementation include:
 

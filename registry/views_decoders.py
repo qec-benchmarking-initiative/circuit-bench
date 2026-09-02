@@ -9,15 +9,6 @@ from registry.curation import (
     ordering_metadata,
     select_catalogue_ordering,
 )
-from registry.explorer import (
-    ColumnSpec,
-    apply_sort,
-    cells_for_visible_columns,
-    parse_nonnegative_int,
-    parse_sort,
-    table_context,
-    url_without,
-)
 from registry.filter_grids import algorithm_grid as build_algorithm_grid
 from registry.filter_grids import (
     circuit_grid as build_circuit_grid,
@@ -45,6 +36,15 @@ from registry.services.decoders import (
 )
 from registry.services.filter_options import public_circuit_filter_options
 from registry.services.results import public_result_catalogue
+from registry.table_controls import (
+    ColumnSpec,
+    apply_sort,
+    cells_for_visible_columns,
+    parse_nonnegative_int,
+    parse_sort,
+    table_context,
+    url_without,
+)
 
 DECODER_RESULT_COLUMNS = (
     ColumnSpec("result", "Result UUID", default_visible=False),
@@ -255,7 +255,7 @@ class DecoderDetailView(DetailView):
 
         context.update(
             {
-                "entity": {
+                "record": {
                     "kind": "Decoder version",
                     "name": decoder.name,
                     "version": decoder.version,

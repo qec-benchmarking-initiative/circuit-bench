@@ -1,22 +1,22 @@
 {% load scientific %}
-<div class="explorer-toolbar">
-  <div class="explorer-toolbar-summary">
+<div class="table-toolbar">
+  <div class="table-toolbar-summary">
     <strong>{% scientific_number result_count "count" %}</strong> record{{ result_count|pluralize }}
     <span aria-label="Active sorting">Sort: {{ sort_summary }}</span>
     {% if discovery_ordering %}<span class="discovery-ordering" title="{{ discovery_ordering.explanation }}"><strong>{{ discovery_ordering.label }}</strong>{% if discovery_ordering.provisional %} · disclosed provisional policy{% endif %}</span>{% endif %}
   </div>
-  <div class="explorer-toolbar-actions">
+  <div class="table-toolbar-actions">
     {% if not sort_is_default %}<a href="{{ reset_sort_url }}">Reset sort</a>{% endif %}
-    <button class="button-secondary button-compact" type="button" data-column-dialog-open="{{ explorer_id }}-columns">Table view options ({{ visible_column_count }}/{{ available_column_count }})</button>
+    <button class="button-secondary button-compact" type="button" data-column-dialog-open="{{ table_id }}-columns">Table view options ({{ visible_column_count }}/{{ available_column_count }})</button>
   </div>
 </div>
-<dialog class="column-dialog" id="{{ explorer_id }}-columns">
+<dialog class="column-dialog" id="{{ table_id }}-columns">
   <form method="dialog" data-column-form>
     <div class="dialog-heading">
       <h2>Table view options</h2>
       <button class="button-plain" value="cancel" aria-label="Close table view options">Close</button>
     </div>
-    <p>Choose the columns shown in this explorer. The selection is recorded in the URL.</p>
+    <p>Choose the columns shown in this table. The selection is recorded in the URL.</p>
     <fieldset>
       <legend>Visible columns</legend>
       <div class="column-choice-grid">

@@ -3,8 +3,8 @@
 {% block title %}Benchmark attempt {{ attempt.id }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <p class="eyebrow">Benchmark attempt</p>
       <h1>{{ attempt.decoder_version }} on {{ attempt.benchmark_revision }}</h1>
     </header>
@@ -14,7 +14,7 @@
       <div><dt>Submitted by</dt><dd>{{ attempt.submitted_by.display_name }}</dd></div>
       <div><dt>Description</dt><dd>{{ attempt.description|default:"—" }}</dd></div>
     </dl>
-    <section class="submission-table-section">
+    <section class="table-section">
       <h2>Exact results</h2>
       <div class="table-scroll">
         <table class="data-table">
@@ -30,7 +30,7 @@
       </div>
     </section>
     {% if can_approve %}
-      <form class="submission-actions" method="post" action="{% url 'benchmark-submissions:attempt-approve' attempt.id %}">
+      <form class="form-actions" method="post" action="{% url 'benchmark-submissions:attempt-approve' attempt.id %}">
         {% csrf_token %}
         <button type="submit">Approve and publish</button>
       </form>

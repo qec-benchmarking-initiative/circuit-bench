@@ -3,13 +3,13 @@
 {% block title %}Taxonomy curation · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <h1>Taxonomy curation</h1>
       <p class="page-action-bar"><a class="button button-secondary" href="{% url 'taxonomy:tag-create' %}">Create custom tag</a><a class="button button-secondary" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a></p>
     </header>
 
-    <section class="submission-table-section">
+    <section class="table-section">
       <h2>Waiting for noise-model review</h2>
       <div class="table-scroll" tabindex="0" aria-label="Noise models waiting for review">
         <table class="data-table">
@@ -28,7 +28,7 @@
       </div>
     </section>
 
-    <section class="submission-table-section">
+    <section class="table-section">
       <h2>Tag vocabulary</h2>
       <div class="table-scroll" tabindex="0" aria-label="Tag curation">
         <table class="data-table">
@@ -56,7 +56,7 @@
       </div>
     </section>
 
-    <section class="submission-table-section">
+    <section class="table-section">
       <h2>Published noise models</h2>
       <div class="table-scroll" tabindex="0" aria-label="Published noise-model curation">
         <table class="data-table">

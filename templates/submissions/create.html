@@ -4,13 +4,13 @@
 {% block title %}{% if operation == "edit" %}Edit{% elif operation == "successor" %}Revise{% else %}Submit{% endif %} {{ spec.label }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <p class="eyebrow"><a href="{% if operation == 'create' %}{% url 'submissions:hub' %}{% else %}{% url 'submissions:profile' %}{% endif %}">{% if operation == "create" %}Submit data{% else %}Your records{% endif %}</a></p>
       <h1>{% if operation == "edit" %}Edit pending {{ spec.label }}{% elif operation == "successor" %}{% if record.state == "withdrawn" %}Revise and resubmit{% else %}Create successor revision{% endif %}{% else %}Submit {{ spec.label }}{% endif %}</h1>
       {% if record_label %}<p>Based on {{ record_label }}.</p>{% endif %}
     </header>
-    {% include "components/submission_policy_bar.html" with policy=policy_statement only %}
+    {% include "components/approval_policy_bar.html" with policy=policy_statement only %}
 
     <div class="submission-entry-grid">
       <section class="submission-entry-panel">
@@ -19,7 +19,7 @@
           <input type="hidden" name="mode" value="structured">
           {% include "components/revision_disposition.html" with revision_control=revision_control only %}
           {% include "components/submission_form_vertical.html" with form=structured_form sections=form_sections csrf_token=csrf_token only %}
-          <div class="submission-actions"><button class="button" type="submit">Preview {% if operation == "edit" %}edit{% elif operation == "successor" %}successor{% else %}structured submission{% endif %}</button></div>
+          <div class="form-actions"><button class="button" type="submit">Preview {% if operation == "edit" %}edit{% elif operation == "successor" %}successor{% else %}structured submission{% endif %}</button></div>
         </form>
       </section>
 
@@ -35,7 +35,7 @@
           <label for="submission-json">Submission JSON</label>
           <textarea id="submission-json" class="submission-json" name="payload" rows="34" spellcheck="false">{{ raw_value }}</textarea>
           {% if json_error %}<p class="submission-json-status query-status-error" role="alert">{{ json_error }}</p>{% else %}<p class="submission-json-status" role="status">Ready for validation.</p>{% endif %}
-          <div class="submission-actions"><button class="button" type="submit">Validate and preview JSON</button></div>
+          <div class="form-actions"><button class="button" type="submit">Validate and preview JSON</button></div>
         </form>
       </section>
     </div>
@@ -44,6 +44,6 @@
 
 {% block extra_scripts %}
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
-  <script src="{% static 'js/explorer.js' %}?v=0.1.20260902i" defer></script>
+  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902a" defer></script>
   <script src="{% static 'js/submission-schema-reuse.js' %}" defer></script>
 {% endblock %}

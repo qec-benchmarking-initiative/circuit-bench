@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  // The responsive SVG emits `plot:geometry-change` after its bounds change.
+
   const XML_NAMESPACE = "http://www.w3.org/2000/svg";
   const AUTOUPDATE_KEY = "circuitBench.plot.autoupdate";
   const AUTOUPDATE_DELAY_MS = 120;
@@ -89,8 +91,7 @@
     form.addEventListener("input", (event) => {
       if (event.target.matches("[data-plot-live-update]")) submitAutomatically();
     });
-    form.addEventListener("filterquery:change", submitAutomatically);
-    form.addEventListener("plotcontrols:change", submitAutomatically);
+    form.addEventListener("control:commit", submitAutomatically);
     syncControls();
   }
 
@@ -190,7 +191,7 @@
       svg.querySelectorAll("[data-plot-centre-x]").forEach((element) => {
         element.setAttribute("x", String((plotLeft + plotRight) / 2));
       });
-      svg.dispatchEvent(new CustomEvent("plotgeometry:change"));
+      svg.dispatchEvent(new CustomEvent("plot:geometry-change"));
     };
 
     resize();
@@ -215,13 +216,13 @@
   };
 
   const syncPlotRangeCell = (input) => {
-    const cell = input?.closest("[data-filter-range-cell]");
+    const cell = input?.closest("[data-control-range-cell]");
     if (!cell) return;
-    const minimum = cell.querySelector("[data-filter-range-min]")?.value.trim() || "";
-    const maximum = cell.querySelector("[data-filter-range-max]")?.value.trim() || "";
+    const minimum = cell.querySelector("[data-control-range-min]")?.value.trim() || "";
+    const maximum = cell.querySelector("[data-control-range-max]")?.value.trim() || "";
     const isAuto = !minimum && !maximum;
-    cell.classList.toggle("is-filtered", !isAuto);
-    const output = cell.querySelector("[data-filter-cell-value]");
+    cell.classList.toggle("is-explicit", !isAuto);
+    const output = cell.querySelector("[data-control-cell-value]");
     if (output) {
       output.textContent = globalThis.CircuitBenchNumber?.formatRange(
         minimum,
@@ -255,7 +256,7 @@
       syncPlotRangeCell(input);
     });
     syncResetAxesButton(form);
-    form.dispatchEvent(new CustomEvent("plotcontrols:change"));
+    form.dispatchEvent(new CustomEvent("control:commit"));
   };
 
   const setSvgHidden = (element, hidden) => {
@@ -534,8 +535,7 @@
         plot_y_max: "",
       });
     });
-    form.addEventListener("filterquery:change", () => syncResetAxesButton(form));
-    form.addEventListener("plotcontrols:change", () => syncResetAxesButton(form));
+    form.addEventListener("control:commit", () => syncResetAxesButton(form));
     syncResetAxesButton(form);
   }
 
@@ -591,7 +591,7 @@
       setSelectionGuidesVisible(true);
     };
     selectionGuides?.closest("svg")?.addEventListener(
-      "plotgeometry:change",
+      "plot:geometry-change",
       updateSelectionGuides,
     );
 

@@ -3,8 +3,8 @@
 {% block title %}Resubmit · {{ record_label }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <p class="eyebrow">Submission review</p>
       <h1>Resubmit {{ record_label }}</h1>
     </header>
@@ -12,7 +12,7 @@
     <form method="post" class="form-bar-shell">
       {% csrf_token %}
       {% include "components/form_bar_list.html" with form=form only %}
-      <div class="submission-actions">
+      <div class="form-actions">
         <button type="submit">Resubmit for review</button>
         <a class="button button-secondary" href="{% url 'submissions:record' kind=kind record_id=record.id %}">Cancel</a>
       </div>

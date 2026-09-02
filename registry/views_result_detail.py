@@ -25,7 +25,7 @@ def result_detail(request, result_id):
         "results/detail.html",
         {
             "result": result,
-            "entity": _entity(result),
+            "record": _record(result),
             "provenance": _provenance(result),
             "outcomes": _outcomes(result),
             "eligibility": _eligibility(result),
@@ -56,7 +56,7 @@ def result_detail(request, result_id):
     )
 
 
-def _entity(result: Result) -> dict[str, object]:
+def _record(result: Result) -> dict[str, object]:
     return {
         "kind": "Exact result",
         "name": f"{result.decoder_version.name} on {result.circuit_revision.name}",

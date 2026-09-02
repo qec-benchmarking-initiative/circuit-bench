@@ -1,4 +1,4 @@
-{% extends "layouts/collection.html" %}
+{% extends "layouts/explorer.html" %}
 {% load scientific %}
 
 {% block title %}Decoders · Circuit Bench{% endblock %}
@@ -22,7 +22,7 @@
   <div class="filter-actions">{% include "components/filters/query_actions.html" with show_reset=filters_active reset_url=decoder_reset_url only %}</div>
 {% endblock %}
 
-{% block collection_results %}
-  {% include "components/explorer_toolbar.html" with explorer_id="decoders" %}
+{% block explorer_results %}
+  {% include "components/table_toolbar.html" with table_id="decoders" %}
   {% include "components/data_table.html" with columns=table_columns rows=table_rows empty_message="No matching decoder versions. Try removing a filter or shortening the search phrase." only %}
 {% endblock %}

@@ -1,8 +1,8 @@
-<details class="filter-grid" id="{{ grid.id }}" data-filter-grid>
+<details class="control-panel control-grid filter-grid" id="{{ grid.id }}" data-control-grid data-filter-grid>
   <summary>
-    <span class="filter-grid-title">{{ grid.title }}<span class="filter-grid-applied" data-filter-applied-count>, {{ grid.applied_count }} applied</span></span>
+    <span class="control-grid-title">{{ grid.title }}<span class="filter-grid-applied" data-filter-applied-count>, {{ grid.applied_count }} applied</span></span>
   </summary>
-  <div class="filter-grid-cells" data-filter-grid-cells>
+  <div class="control-grid-cells" data-control-grid-cells>
     {% for cell in grid.cells %}
       {% include "components/filters/grid_cell.html" with cell=cell only %}
     {% endfor %}

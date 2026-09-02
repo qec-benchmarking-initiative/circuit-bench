@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-  <div class="page-shell explorer-layout" data-explorer>
+  <div class="page-shell explorer-layout">
     <h1 class="visually-hidden">{% block explorer_name %}{% endblock %}</h1>
     <form class="explorer-form" method="get">
       <section class="explorer-query" aria-label="Search">
@@ -13,15 +13,16 @@
       </section>
       <p class="explorer-query-status" role="status">{% block explorer_status %}{% endblock %}</p>
     </form>
-    <section class="collection-results" aria-live="polite" aria-label="Matching records">
-      {% block collection_results %}{% endblock %}
+    <section class="table-region" aria-live="polite" aria-label="Matching records">
+      {% block explorer_results %}{% endblock %}
     </section>
   </div>
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'js/filter-grid.js' %}?v=0.1.20260831k" defer></script>
+  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902a" defer></script>
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
   <script src="{% static 'js/filter-query.js' %}" defer></script>
-  <script src="{% static 'js/explorer.js' %}?v=0.1.20260902i" defer></script>
+  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902a" defer></script>
+  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902a" defer></script>
 {% endblock %}

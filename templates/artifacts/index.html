@@ -4,13 +4,13 @@
 {% block title %}Files — Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <h1>Files and schema releases</h1>
       <p><a class="button" href="{% url 'artifacts:upload' %}">Upload a small file</a></p>
     </header>
 
-    <section class="submission-table-section">
+    <section class="table-section">
       <h2>Schema releases</h2>
       <div class="table-scroll" tabindex="0" aria-label="Schema releases">
         <table class="data-table">
@@ -31,7 +31,7 @@
       </div>
     </section>
 
-    <section class="submission-table-section">
+    <section class="table-section">
       <h2>Latest local files</h2>
       <div class="table-scroll" tabindex="0" aria-label="Latest local files">
         <table class="data-table">

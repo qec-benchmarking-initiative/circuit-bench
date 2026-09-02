@@ -1,4 +1,4 @@
-{% extends "layouts/collection.html" %}
+{% extends "layouts/explorer.html" %}
 {% load scientific %}
 
 {% block title %}Noise models · Circuit Bench{% endblock %}
@@ -22,7 +22,7 @@
   <div class="filter-actions">{% include "components/filters/query_actions.html" with show_reset=filters_active reset_url=noise_model_reset_url only %}</div>
 {% endblock %}
 
-{% block collection_results %}
-  {% include "components/explorer_toolbar.html" with explorer_id="noise-models" %}
+{% block explorer_results %}
+  {% include "components/table_toolbar.html" with table_id="noise-models" %}
   {% include "components/data_table.html" with columns=table_columns rows=table_rows empty_message="No matching noise models. Try removing a filter or shortening the search phrase." only %}
 {% endblock %}

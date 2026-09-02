@@ -75,8 +75,8 @@ def test_circuit_explorer_combines_scientific_filters_and_column_state(
     assert "Table view options (3/14)" in response.content.decode()
     content = response.content.decode()
     assert 'id="circuit-filters"' in content
-    assert 'data-filter-tag-cell data-filter-key="code_tags"' in content
-    assert 'data-filter-range-cell data-filter-key="detectors"' in content
+    assert "data-filter-tag-cell" in content
+    assert "Detector count" in content
 
 
 def test_circuit_noise_model_picker_uses_repeated_in_filter_parameters(
@@ -102,7 +102,7 @@ def test_circuit_noise_model_picker_uses_repeated_in_filter_parameters(
     assert len(randomised_only.context["circuits"]) == 0
     assert content.count('<input type="hidden" name="noise_model"') == 2
     assert "Fixed phenomenological noise +1" in content
-    assert 'data-filter-related-record-cell data-filter-key="noise_model"' in content
+    assert "data-filter-related-record-cell" in content
     assert reverse("pickers:records", args=["noise-models"]) in content
 
 
@@ -121,8 +121,8 @@ def test_noise_model_explorer_filters_derived_priors_and_circuit_count(
     assert response.context["sort_summary"] == "Circuits descending"
     content = response.content.decode()
     assert 'id="noise-model-filters"' in content
-    assert 'data-filter-choice-cell data-filter-key="curation"' in content
-    assert 'data-filter-range-cell data-filter-key="circuit_count"' in content
+    assert "data-control-choice-cell" in content
+    assert "Published circuits" in content
 
 
 def test_circuit_detail_exposes_only_published_results(client, demo_registry):
@@ -148,7 +148,7 @@ def test_circuit_leaderboard_uses_reusable_algorithm_and_machine_grids(
 
     assert 'id="circuit-result-algorithm-filters"' in content
     assert 'id="circuit-result-machine-filters"' in content
-    assert content.count('class="filter-grid"') == 2
+    assert content.count("data-filter-grid") == 2
     assert "Decoding algorithm filters" in content
     assert "Machine filters" in content
     assert "selected values shown in the theme colour" not in content

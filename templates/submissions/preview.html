@@ -3,14 +3,14 @@
 {% block title %}Preview {{ spec.label }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading">
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
       <p class="eyebrow">{% if operation == "edit" %}Edit preview{% elif operation == "successor" %}Successor preview{% else %}Submission preview{% endif %}</p>
       <h1>Check this {{ spec.label }}</h1>
       <p>{% if operation == "edit" %}The stored candidate has not changed yet.{% else %}No successor record has been created yet.{% endif %}</p>
       {% if revision_control %}<p class="submission-policy"><strong>Existing revision:</strong> {% if revision_mode == "replace" %}{{ revision_control.source_label }} will be withdrawn and this successor will enter pending reapproval.{% else %}Existing published revisions remain published alongside this successor.{% endif %}</p>{% endif %}
     </header>
-    {% include "components/submission_policy_bar.html" with policy=policy_statement only %}
+    {% include "components/approval_policy_bar.html" with policy=policy_statement only %}
 
     <section class="submission-preview">
       <div class="submission-form-sections submission-preview-sections">
@@ -35,7 +35,7 @@
         <pre><code>{{ payload_json }}</code></pre>
       </details>
     </section>
-    <div class="submission-actions submission-preview-actions">
+    <div class="page-action-bar submission-preview-actions">
       <a class="button button-secondary" href="{{ back_url }}">Back and edit</a>
       <form method="post" action="{% url 'submissions:commit' preview_id=preview_id %}">{% csrf_token %}<button class="button" type="submit">{% if operation == "edit" %}Save pending candidate{% elif operation == "successor" %}Submit successor{% else %}Submit {{ spec.label }}{% endif %}</button></form>
     </div>

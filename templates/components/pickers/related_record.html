@@ -5,22 +5,22 @@
   <div data-related-record-initial hidden>
     {% for record in cell.selected_records %}<span data-record-identifier="{{ record.identifier }}" data-record-label="{{ record.label }}" data-record-secondary-label="{{ record.secondary_label }}" data-record-description="{{ record.description }}" data-record-curation-status="{{ record.curation_status }}" data-record-curation-label="{{ record.curation_label }}" data-record-detail-url="{{ record.detail_url }}"></span>{% endfor %}
   </div>
-  <button class="filter-grid-trigger" type="button" data-related-record-open aria-expanded="false" aria-haspopup="dialog" title="{{ cell.selection_label }}"{% if cell.disabled %} disabled{% endif %}>
-    <span class="filter-grid-cell-title">{{ cell.label }}</span>
-    <span class="filter-grid-cell-value" data-related-record-summary>{{ cell.display_value }}</span>
+  <button class="control-grid-trigger" type="button" data-related-record-open aria-expanded="false" aria-haspopup="dialog" title="{{ cell.selection_label }}"{% if cell.disabled %} disabled{% endif %}>
+    <span class="control-grid-cell-title">{{ cell.label }}</span>
+    <span class="control-grid-cell-value" data-related-record-summary>{{ cell.display_value }}</span>
   </button>
-  <div class="filter-grid-fallback">
+  <div class="control-grid-fallback">
     <strong>{{ cell.label }}</strong>
     <span>{{ cell.display_value }}</span>
   </div>
 
-  <dialog class="tag-dialog related-record-dialog" id="{{ cell.picker_id }}" data-related-record-dialog aria-labelledby="{{ cell.picker_id }}-title">
+  <dialog class="picker-dialog related-record-dialog" id="{{ cell.picker_id }}" data-related-record-dialog aria-labelledby="{{ cell.picker_id }}-title">
     <div class="dialog-heading">
       <h2 id="{{ cell.picker_id }}-title">Choose {{ cell.plural_label }}</h2>
       <button class="button-plain" type="button" data-related-record-cancel aria-label="Close {{ cell.plural_label }} picker">Close</button>
     </div>
-    <div class="related-record-dialog-body">
-      <label class="tag-search-label" for="{{ cell.picker_id }}-search">Search {{ cell.plural_label }}</label>
+    <div class="picker-body related-record-picker-body">
+      <label class="picker-search-label" for="{{ cell.picker_id }}-search">Search {{ cell.plural_label }}</label>
       <input id="{{ cell.picker_id }}-search" type="search" placeholder="Search name, stable slug, or description" autocomplete="off" data-related-record-search>
 
       <section class="related-record-selection" aria-labelledby="{{ cell.picker_id }}-selected-title">
@@ -31,7 +31,7 @@
       <section class="related-record-available" aria-labelledby="{{ cell.picker_id }}-available-title">
         <h3 id="{{ cell.picker_id }}-available-title">Available {{ cell.plural_label }}</h3>
         <p class="related-record-status" data-related-record-status role="status">Search results load when the picker opens.</p>
-        <div class="related-record-results" data-related-record-results></div>
+        <div class="picker-results related-record-results" data-related-record-results></div>
         <nav class="related-record-pagination" data-related-record-pagination aria-label="Picker result pages" hidden>
           <button class="button-secondary button-compact" type="button" data-related-record-page="previous">Previous</button>
           <span data-related-record-page-status></span>
@@ -39,7 +39,7 @@
         </nav>
       </section>
     </div>
-    <div class="dialog-actions">
+    <div class="picker-actions">
       <button class="button-secondary button-compact" type="button" data-related-record-cancel>Cancel</button>
       <button class="button-compact" type="button" data-related-record-apply>Use selected {{ cell.plural_label }}</button>
     </div>

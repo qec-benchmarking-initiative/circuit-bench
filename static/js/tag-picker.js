@@ -1,15 +1,6 @@
 (() => {
   "use strict";
 
-  const parseSort = (value) => value.split(",").map((part) => part.trim()).filter(Boolean);
-  const sortKey = (value) => value.startsWith("-") ? value.slice(1) : value;
-  const toggled = (value) => value.startsWith("-") ? value.slice(1) : `-${value}`;
-  const renderedSort = () => [...document.querySelectorAll("a[data-sort-index]")]
-    .sort((a, b) => Number(a.dataset.sortIndex) - Number(b.dataset.sortIndex))
-    .map((link) => link.dataset.sortDirection === "desc"
-      ? `-${link.dataset.sortKey}`
-      : link.dataset.sortKey);
-
   const appendTagText = (container, label, status) => {
     const text = document.createElement("span");
     text.textContent = label;
@@ -22,61 +13,6 @@
       container.append(document.createTextNode(" "), note);
     }
   };
-
-  document.addEventListener("click", (event) => {
-    const sortLink = event.target.closest("a[data-sort-key]");
-    if (sortLink) {
-      event.preventDefault();
-      const url = new URL(window.location.href);
-      const key = sortLink.dataset.sortKey;
-      const encodedSort = parseSort(url.searchParams.get("sort") || "");
-      const current = encodedSort.length ? encodedSort : renderedSort();
-      let next;
-      if (event.shiftKey) {
-        const existingIndex = current.findIndex((value) => sortKey(value) === key);
-        next = [...current];
-        if (existingIndex >= 0) {
-          next[existingIndex] = toggled(next[existingIndex]);
-        } else {
-          next.push(key);
-        }
-      } else if (current.length && sortKey(current[0]) === key) {
-        next = [toggled(current[0])];
-      } else {
-        next = [key];
-      }
-      url.searchParams.set("sort", next.join(","));
-      url.searchParams.delete("page");
-      ["odata", "last_odata", "$filter", "$orderby", "$select", "$top", "$skip", "$count"]
-        .forEach((name) => url.searchParams.delete(name));
-      window.location.assign(url);
-      return;
-    }
-
-    const opener = event.target.closest("[data-column-dialog-open]");
-    if (opener) {
-      document.getElementById(opener.dataset.columnDialogOpen)?.showModal();
-    }
-  });
-
-  document.querySelectorAll("[data-column-form]").forEach((form) => {
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const checked = [...form.querySelectorAll('input[name="column"]:checked')]
-        .map((input) => input.value);
-      if (!checked.length) return;
-      const url = new URL(window.location.href);
-      url.searchParams.set("columns", checked.join(","));
-      url.searchParams.delete("page");
-      window.location.assign(url);
-    });
-    form.querySelector("[data-column-reset]")?.addEventListener("click", () => {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("columns");
-      url.searchParams.delete("page");
-      window.location.assign(url);
-    });
-  });
 
   const makeSelectedTag = (checkbox) => {
     const tag = document.createElement("span");
@@ -325,7 +261,7 @@
         status.textContent = "This will create an immediately usable custom tag.";
       }
     }
-    picker.dispatchEvent(new CustomEvent("filtergrid:tags-changed", {
+    picker.dispatchEvent(new CustomEvent("tagpicker:layoutchange", {
       bubbles: true,
     }));
   };
@@ -504,7 +440,7 @@
         if (checkbox) checkbox.checked = false;
         updateTagPicker(picker);
         if (!dialog?.open) {
-          picker.dispatchEvent(new CustomEvent("filterquery:change", {
+          picker.dispatchEvent(new CustomEvent("control:commit", {
             bubbles: true,
           }));
         }
@@ -539,7 +475,7 @@
         search.value = "";
         updateTagPicker(picker);
         dialog?.close();
-        picker.dispatchEvent(new CustomEvent("filterquery:change", {
+        picker.dispatchEvent(new CustomEvent("control:commit", {
           bubbles: true,
         }));
       });

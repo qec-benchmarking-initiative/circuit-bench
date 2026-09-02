@@ -8,10 +8,10 @@ register = template.Library()
 
 
 @register.inclusion_tag(
-    "components/submission_history.html",
+    "components/record_history.html",
     takes_context=True,
 )
-def submission_history(context, record, kind):
+def record_history(context, record, kind):
     return {
         "history": history_view(kind, record, context.get("request")),
     }

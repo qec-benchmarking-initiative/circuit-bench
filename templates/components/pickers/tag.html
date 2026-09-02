@@ -14,13 +14,13 @@
     </div>
     <button class="button-secondary button-compact" type="button" data-tag-dialog-open="{{ picker_id }}">{{ open_label|default:"Choose tags…" }}</button>
 
-    <dialog class="tag-dialog" id="{{ picker_id }}" data-tag-dialog aria-labelledby="{{ picker_id }}-title">
+    <dialog class="picker-dialog tag-picker-dialog" id="{{ picker_id }}" data-tag-dialog aria-labelledby="{{ picker_id }}-title">
       <div class="dialog-heading">
         <h2 id="{{ picker_id }}-title">{{ label }}</h2>
         <button class="button-plain" type="button" data-tag-cancel aria-label="Close {{ label }} picker">Close</button>
       </div>
-      {% include "components/tag_picker_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=allow_create tag_namespace=tag_namespace parent_tags=parent_tags only %}
-      <div class="dialog-actions">
+      {% include "components/pickers/tag_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=allow_create tag_namespace=tag_namespace parent_tags=parent_tags only %}
+      <div class="picker-actions">
         <button class="button-secondary button-compact" type="button" data-tag-cancel>Cancel</button>
         {% if mode == "submission" %}
           <button class="button-compact" type="button" data-tag-apply="selection">Use selected tags</button>
@@ -33,8 +33,8 @@
       </div>
     </dialog>
   {% else %}
-    {% include "components/tag_picker_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=True namespace_choices=namespace_choices parent_tags=parent_tags only %}
-    <div class="dialog-actions tag-create-standalone-actions">
+    {% include "components/pickers/tag_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=True namespace_choices=namespace_choices parent_tags=parent_tags only %}
+    <div class="picker-actions tag-create-standalone-actions">
       <button class="button-compact" type="button" data-tag-create disabled>Add new tag</button>
     </div>
   {% endif %}

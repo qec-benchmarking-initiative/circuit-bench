@@ -1,10 +1,6 @@
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
-from registry.explorer import (
-    ColumnSpec,
-    cells_for_visible_columns,
-)
 from registry.filter_grids import algorithm_grid as build_algorithm_grid
 from registry.filter_grids import circuit_grid as build_circuit_grid
 from registry.models import Machine
@@ -21,6 +17,10 @@ from registry.result_tables import (
 from registry.services.decoders import catalogue_algorithm_tags
 from registry.services.filter_options import public_circuit_filter_options
 from registry.services.results import public_result_catalogue
+from registry.table_controls import (
+    ColumnSpec,
+    cells_for_visible_columns,
+)
 
 MACHINE_RESULT_COLUMNS = (
     ColumnSpec("result", "Result UUID", default_visible=False),
@@ -96,7 +96,7 @@ def machine_detail(request, slug):
         "machines/detail.html",
         {
             "machine": machine,
-            "entity": {
+            "record": {
                 "kind": "Machine",
                 "name": machine.slug,
                 "version": None,

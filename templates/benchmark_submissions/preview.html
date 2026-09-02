@@ -3,9 +3,9 @@
 {% block title %}Preview benchmark revision · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading"><p class="eyebrow">Submission preview</p><h1>{{ payload.name }} {{ payload.version }}</h1></header>
-    <aside class="submission-policy-bar"><strong>Approval Process v0.1:</strong> Submitting creates an unpublished exact benchmark revision for administrator review.</aside>
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><p class="eyebrow">Submission preview</p><h1>{{ payload.name }} {{ payload.version }}</h1></header>
+    <aside class="policy-bar"><strong>Approval Process v0.1:</strong> Submitting creates an unpublished exact benchmark revision for administrator review.</aside>
     <section class="submission-preview-section">
       <dl class="stacked-metadata">
         <div><dt>Slug</dt><dd><code>{{ payload.slug }}</code></dd></div>
@@ -18,7 +18,7 @@
       <h2>Ordered circuit manifest</h2>
       <div class="table-scroll"><table class="data-table"><thead><tr><th>Position</th><th>Circuit revision</th><th>Requirement</th></tr></thead><tbody>{% for item in items %}<tr><td>{{ item.position }}</td><td>{{ item.circuit.name }} <code>{{ item.circuit.id }}</code></td><td>{{ item.required|yesno:"Required,Optional" }}</td></tr>{% endfor %}</tbody></table></div>
     </section>
-    <div class="submission-actions">
+    <div class="page-action-bar">
       <a class="button button-secondary" href="{{ back_url }}">Back</a>
       <form method="post" action="{% url 'benchmark-submissions:commit' preview_id %}">{% csrf_token %}<button type="submit">Submit for review</button></form>
     </div>

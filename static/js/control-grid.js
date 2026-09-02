@@ -1,28 +1,36 @@
 (() => {
   "use strict";
 
-  const grids = [...document.querySelectorAll("[data-filter-grid]")];
+  // Composite controls emit `control:commit`; related pickers accept
+  // `control:clear`; tag pickers emit `tagpicker:layoutchange` after reflow.
+
+  const grids = [...document.querySelectorAll("[data-control-grid]")];
   if (!grids.length) return;
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let activeOverlay = null;
   let resizeFrame = null;
 
-  const notifyFilterChange = (element) => {
-    element.closest("form")?.dispatchEvent(new CustomEvent("filterquery:change"));
+  const notifyControlCommit = (element) => {
+    element.closest("form")?.dispatchEvent(new CustomEvent("control:commit"));
+  };
+
+  const setControlState = (cell, active) => {
+    const stateClass = cell?.dataset.controlStateClass;
+    if (stateClass) cell.classList.toggle(stateClass, active);
   };
 
   const updateAppliedCount = (grid) => {
     const output = grid?.querySelector("[data-filter-applied-count]");
     if (!output) return;
     const count = grid.querySelectorAll(
-      "[data-filter-grid-cell].is-filtered"
+      "[data-control-grid-cell].is-applied"
     ).length;
     output.textContent = `, ${count} applied`;
   };
 
   const directCells = (gridCells) => [...gridCells.children]
-    .filter((element) => element.matches("[data-filter-grid-cell]"));
+    .filter((element) => element.matches("[data-control-grid-cell]"));
 
   const columnCount = (gridCells) => {
     const columns = getComputedStyle(gridCells).gridTemplateColumns
@@ -135,20 +143,20 @@
   };
 
   const updateChoiceCell = (source) => {
-    const select = source.querySelector("[data-filter-choice-input]");
+    const select = source.querySelector("[data-control-choice-input]");
     const selected = select.options[select.selectedIndex];
-    source.querySelector("[data-filter-cell-value]").textContent = selected.textContent;
-    source.classList.toggle("is-filtered", Boolean(select.value));
+    source.querySelector("[data-control-cell-value]").textContent = selected.textContent;
+    setControlState(source, Boolean(select.value));
     updateAppliedCount(source.closest("[data-filter-grid]"));
   };
 
   const clearRangeCell = (source) => {
-    source.querySelector("[data-filter-range-min]").value = "";
-    source.querySelector("[data-filter-range-max]").value = "";
-    source.querySelector("[data-filter-cell-value]").textContent = (
+    source.querySelector("[data-control-range-min]").value = "";
+    source.querySelector("[data-control-range-max]").value = "";
+    source.querySelector("[data-control-cell-value]").textContent = (
       source.dataset.rangeDefaultDisplay || "0–∞"
     );
-    source.classList.remove("is-filtered");
+    setControlState(source, false);
     updateAppliedCount(source.closest("[data-filter-grid]"));
   };
 
@@ -183,8 +191,8 @@
       return;
     }
     const ordered = [...overlay.elements].sort((left, right) => (
-      Number(right.dataset.filterDistance || 0)
-      - Number(left.dataset.filterDistance || 0)
+      Number(right.dataset.controlDistance || 0)
+      - Number(left.dataset.controlDistance || 0)
     ));
     ordered.forEach((element, index) => {
       element.style.transitionDelay = `${index * 28}ms`;
@@ -198,10 +206,10 @@
 
   const openChoice = (grid, source) => {
     closeOverlay({ immediate: true });
-    const gridCells = grid.querySelector("[data-filter-grid-cells]");
+    const gridCells = grid.querySelector("[data-control-grid-cells]");
     const layout = layoutFor(gridCells);
     const sourceLayout = layout.entries.get(source);
-    const select = source.querySelector("[data-filter-choice-input]");
+    const select = source.querySelector("[data-control-choice-input]");
     const options = [...select.options];
     if (!sourceLayout || !options.length) {
       select.focus();
@@ -213,18 +221,18 @@
       return;
     }
 
-    const trigger = source.querySelector("[data-filter-choice-trigger]");
+    const trigger = source.querySelector("[data-control-choice-trigger]");
     trigger.setAttribute("aria-expanded", "true");
-    const label = source.querySelector(".filter-grid-cell-title").textContent;
+    const label = source.querySelector(".control-grid-cell-title").textContent;
     const anchor = document.createElement("button");
     anchor.type = "button";
-    anchor.className = "filter-choice-overlay-cell filter-choice-overlay-anchor";
-    anchor.dataset.filterOverlayCancel = "true";
-    anchor.dataset.filterDistance = "0";
+    anchor.className = "control-choice-overlay-cell control-choice-overlay-anchor";
+    anchor.dataset.controlChoiceCancel = "true";
+    anchor.dataset.controlDistance = "0";
     const anchorLabel = document.createElement("span");
     anchorLabel.textContent = label;
     const anchorInstruction = document.createElement("span");
-    anchorInstruction.textContent = "Choose filter";
+    anchorInstruction.textContent = "Choose value";
     anchor.append(anchorLabel, anchorInstruction);
     positionOverlayCell(anchor, placement.anchorSlot, layout.columns);
 
@@ -233,13 +241,13 @@
       const slot = placement.optionSlots[index];
       const distance = Math.abs(slot - placement.anchorSlot);
       button.type = "button";
-      button.className = "filter-choice-overlay-cell filter-choice-overlay-option";
-      button.dataset.filterOverlayOption = option.value;
-      button.dataset.filterDistance = String(distance);
+      button.className = "control-choice-overlay-cell control-choice-overlay-option";
+      button.dataset.controlChoiceOption = option.value;
+      button.dataset.controlDistance = String(distance);
       button.setAttribute("aria-pressed", option.selected ? "true" : "false");
       button.textContent = `${option.selected ? "✓ " : ""}${option.textContent}`;
       button.style.setProperty(
-        "--filter-telescope-origin",
+        "--control-choice-origin",
         slot < placement.anchorSlot ? "right" : "left"
       );
       button.style.transitionDelay = `${Math.max(0, distance - 1) * 42}ms`;
@@ -278,7 +286,7 @@
     allowNegative = false,
   ) => {
     const label = document.createElement("label");
-    label.className = "filter-range-field";
+    label.className = "control-range-field";
     const title = document.createElement("span");
     title.textContent = labelText;
     const input = document.createElement("input");
@@ -295,10 +303,10 @@
   const makeRangeHandle = (kind) => {
     const handle = document.createElement("button");
     handle.type = "button";
-    handle.className = `filter-range-handle filter-range-handle-${kind}`;
-    handle.dataset.filterRangeHandle = kind;
+    handle.className = `control-range-handle control-range-handle-${kind}`;
+    handle.dataset.controlRangeHandle = kind;
     const label = document.createElement("span");
-    label.className = "filter-range-handle-label";
+    label.className = "control-range-handle-label";
     handle.appendChild(label);
     return handle;
   };
@@ -337,7 +345,7 @@
     handle.style.left = `${percent}%`;
     handle.classList.toggle("is-left-edge", edge === "left");
     handle.classList.toggle("is-right-edge", edge === "right");
-    handle.querySelector(".filter-range-handle-label").textContent = label;
+    handle.querySelector(".control-range-handle-label").textContent = label;
     handle.setAttribute("aria-label", `${label}; drag or use arrow keys to change`);
   };
 
@@ -399,7 +407,7 @@
       : (minimum > 0 ? String(minimum) : "");
     overlay.maximumInput.value = maximumBlank ? "" : String(maximum);
     const isDefault = !overlay.minimumInput.value && !overlay.maximumInput.value;
-    overlay.source.querySelector("[data-filter-cell-value]").textContent = isDefault
+    overlay.source.querySelector("[data-control-cell-value]").textContent = isDefault
       ? (overlay.source.dataset.rangeDefaultDisplay || "0–∞")
       : `${minimumBlank
         ? (overlay.source.dataset.rangeEmptyMinimumLabel || "auto")
@@ -410,40 +418,40 @@
             : "∞")
           : displayRangeNumber(maximum, overlay.source)
       }`;
-    overlay.source.classList.toggle("is-filtered", !isDefault);
+    setControlState(overlay.source, !isDefault);
     updateAppliedCount(overlay.grid);
     const source = overlay.source;
     closeOverlay({ immediate, restoreFocus: true });
-    notifyFilterChange(source);
+    notifyControlCommit(source);
   };
 
   const openRange = (grid, source) => {
     closeOverlay({ immediate: true });
-    const gridCells = grid.querySelector("[data-filter-grid-cells]");
+    const gridCells = grid.querySelector("[data-control-grid-cells]");
     const layout = layoutFor(gridCells);
     const sourceLayout = layout.entries.get(source);
     if (!sourceLayout) return;
 
-    const minimumInput = source.querySelector("[data-filter-range-min]");
-    const maximumInput = source.querySelector("[data-filter-range-max]");
-    const trigger = source.querySelector("[data-filter-range-trigger]");
+    const minimumInput = source.querySelector("[data-control-range-min]");
+    const maximumInput = source.querySelector("[data-control-range-max]");
+    const trigger = source.querySelector("[data-control-range-trigger]");
     const autoEmpty = source.dataset.rangeAutoEmpty === "true";
     const allowNegative = source.dataset.rangeAllowNegative === "true";
     const rangeStep = source.dataset.rangeStep || "1";
     trigger.setAttribute("aria-expanded", "true");
 
     const editor = document.createElement("section");
-    editor.className = "filter-range-overlay";
-    editor.dataset.filterDistance = "0";
+    editor.className = "control-range-overlay";
+    editor.dataset.controlDistance = "0";
     editor.style.gridColumn = "1 / -1";
     editor.style.gridRow = String(sourceLayout.row + 1);
-    editor.style.setProperty("--filter-editor-columns", String(layout.columns));
+    editor.style.setProperty("--control-editor-columns", String(layout.columns));
 
     const minimumEditor = makeRangeField(
       "Minimum",
       autoEmpty ? minimumInput.value : (minimumInput.value || "0"),
       autoEmpty ? (source.dataset.rangeEmptyMinimumLabel || "auto") : "0",
-      "filterRangeMinimumEditor",
+      "controlRangeMinimumEditor",
       rangeStep,
       allowNegative,
     );
@@ -451,45 +459,45 @@
       "Maximum",
       maximumInput.value,
       autoEmpty ? (source.dataset.rangeEmptyMaximumLabel || "auto") : "∞",
-      "filterRangeMaximumEditor",
+      "controlRangeMaximumEditor",
       rangeStep,
       allowNegative,
     );
     const histogram = document.createElement("section");
-    histogram.className = "filter-range-histogram-cell";
+    histogram.className = "control-range-histogram-cell";
     const histogramHead = document.createElement("header");
     const histogramLabel = document.createElement("strong");
     histogramLabel.textContent = source.dataset.histogramLabel;
     const reset = document.createElement("button");
     reset.type = "button";
-    reset.className = "filter-range-reset";
-    reset.dataset.filterRangeReset = "true";
+    reset.className = "control-range-reset";
+    reset.dataset.controlRangeReset = "true";
     reset.textContent = source.dataset.rangeResetLabel || "Reset limits";
     const cancel = document.createElement("button");
     cancel.type = "button";
-    cancel.className = "filter-range-cancel";
-    cancel.dataset.filterRangeCancel = "true";
+    cancel.className = "control-range-cancel";
+    cancel.dataset.controlRangeCancel = "true";
     cancel.textContent = "Cancel";
     const confirm = document.createElement("button");
     confirm.type = "button";
-    confirm.className = "filter-range-confirm";
-    confirm.dataset.filterRangeConfirm = "true";
+    confirm.className = "control-range-confirm";
+    confirm.dataset.controlRangeConfirm = "true";
     confirm.textContent = "OK (Enter)";
     confirm.hidden = true;
     const actions = document.createElement("span");
-    actions.className = "filter-range-actions";
+    actions.className = "control-range-actions";
     actions.append(reset, cancel, confirm);
     histogramHead.append(histogramLabel, actions);
 
     const plot = document.createElement("div");
-    plot.className = "filter-range-plot";
+    plot.className = "control-range-plot";
     plot.setAttribute("role", "img");
     plot.setAttribute(
       "aria-label",
       `${source.dataset.histogramLabel}; draggable minimum and maximum limits`
     );
     const bars = document.createElement("div");
-    bars.className = "filter-range-bars";
+    bars.className = "control-range-bars";
     const counts = source.dataset.histogramCounts.split(",").map(Number);
     const largestCount = Math.max(...counts, 1);
     counts.forEach((count) => {
@@ -498,7 +506,7 @@
       bars.appendChild(bar);
     });
     const axisLabels = document.createElement("div");
-    axisLabels.className = "filter-range-axis-labels";
+    axisLabels.className = "control-range-axis-labels";
     const domainMinimum = Number(source.dataset.domainMin);
     const domainMaximum = Number(source.dataset.domainMax);
     [0, 0.25, 0.5, 0.75, 1].forEach((fraction) => {
@@ -512,9 +520,9 @@
       axisLabels.appendChild(label);
     });
     const leftShade = document.createElement("span");
-    leftShade.className = "filter-range-shade filter-range-shade-left";
+    leftShade.className = "control-range-shade control-range-shade-left";
     const rightShade = document.createElement("span");
-    rightShade.className = "filter-range-shade filter-range-shade-right";
+    rightShade.className = "control-range-shade control-range-shade-right";
     const minimumHandle = makeRangeHandle("min");
     const maximumHandle = makeRangeHandle("max");
     plot.append(
@@ -593,7 +601,7 @@
     if (!picker) return;
     const selected = picker.querySelectorAll('[data-tag-choice] input:checked').length;
     const match = picker.querySelector("[data-tag-match-input]")?.value || "all";
-    panel.classList.toggle("is-filtered", selected > 0);
+    setControlState(panel, selected > 0);
     panel.querySelector("[data-tag-rule-label]").textContent = (
       match === "any" ? "any of" : "all of"
     );
@@ -601,7 +609,7 @@
   };
 
   const resizeTagPanel = (panel) => {
-    const gridCells = panel.closest("[data-filter-grid-cells]");
+    const gridCells = panel.closest("[data-control-grid-cells]");
     const columns = columnCount(gridCells);
     const trackWidth = gridCells.getBoundingClientRect().width / columns;
     const summaryItems = [
@@ -643,21 +651,21 @@
     grid.dataset.enhanced = "true";
     updateAppliedCount(grid);
     grid.addEventListener("click", (event) => {
-      const clear = event.target.closest("[data-filter-clear]");
+      const clear = event.target.closest("[data-control-clear]");
       if (clear) {
         event.preventDefault();
         event.stopPropagation();
-        const source = clear.closest("[data-filter-grid-cell]");
+        const source = clear.closest("[data-control-grid-cell]");
         if (activeOverlay?.source === source) closeOverlay({ immediate: true });
-        if (source.matches("[data-filter-choice-cell]")) {
-          const select = source.querySelector("[data-filter-choice-input]");
+        if (source.matches("[data-control-choice-cell]")) {
+          const select = source.querySelector("[data-control-choice-input]");
           select.value = "";
           select.dispatchEvent(new Event("change", { bubbles: true }));
           updateChoiceCell(source);
-          notifyFilterChange(source);
-        } else if (source.matches("[data-filter-range-cell]")) {
+          notifyControlCommit(source);
+        } else if (source.matches("[data-control-range-cell]")) {
           clearRangeCell(source);
-          notifyFilterChange(source);
+          notifyControlCommit(source);
         } else if (source.matches("[data-filter-tag-cell]")) {
           const selected = [...source.querySelectorAll(
             '[data-tag-choice] input[type="checkbox"]:checked'
@@ -665,30 +673,30 @@
           selected.forEach((checkbox) => { checkbox.checked = false; });
           selected[0]?.dispatchEvent(new Event("change", { bubbles: true }));
           syncTagPanel(source);
-          notifyFilterChange(source);
+          notifyControlCommit(source);
         } else if (source.matches("[data-filter-related-record-cell]")) {
           source.querySelector("[data-related-record-picker]").dispatchEvent(
-            new CustomEvent("filtergrid:clear")
+            new CustomEvent("control:clear")
           );
         }
         return;
       }
-      const option = event.target.closest("[data-filter-overlay-option]");
+      const option = event.target.closest("[data-control-choice-option]");
       if (option && activeOverlay?.type === "choice") {
-        const changed = activeOverlay.select.value !== option.dataset.filterOverlayOption;
-        activeOverlay.select.value = option.dataset.filterOverlayOption;
+        const changed = activeOverlay.select.value !== option.dataset.controlChoiceOption;
+        activeOverlay.select.value = option.dataset.controlChoiceOption;
         activeOverlay.select.dispatchEvent(new Event("change", { bubbles: true }));
         updateChoiceCell(activeOverlay.source);
         const source = activeOverlay.source;
         closeOverlay({ restoreFocus: true });
-        if (changed) notifyFilterChange(source);
+        if (changed) notifyControlCommit(source);
         return;
       }
-      if (event.target.closest("[data-filter-overlay-cancel]")) {
+      if (event.target.closest("[data-control-choice-cancel]")) {
         closeOverlay({ restoreFocus: true });
         return;
       }
-      const reset = event.target.closest("[data-filter-range-reset]");
+      const reset = event.target.closest("[data-control-range-reset]");
       if (reset && activeOverlay?.type === "range") {
         activeOverlay.minimumEditor.value = activeOverlay.autoEmpty ? "" : "0";
         activeOverlay.maximumEditor.value = "";
@@ -700,24 +708,24 @@
         }
         return;
       }
-      const cancel = event.target.closest("[data-filter-range-cancel]");
+      const cancel = event.target.closest("[data-control-range-cancel]");
       if (cancel && activeOverlay?.type === "range") {
         closeOverlay({ restoreFocus: true });
         return;
       }
-      const confirm = event.target.closest("[data-filter-range-confirm]");
+      const confirm = event.target.closest("[data-control-range-confirm]");
       if (confirm && activeOverlay?.type === "range") {
         commitRangeOverlay(activeOverlay);
         return;
       }
-      const choiceTrigger = event.target.closest("[data-filter-choice-trigger]");
+      const choiceTrigger = event.target.closest("[data-control-choice-trigger]");
       if (choiceTrigger) {
-        openChoice(grid, choiceTrigger.closest("[data-filter-choice-cell]"));
+        openChoice(grid, choiceTrigger.closest("[data-control-choice-cell]"));
         return;
       }
-      const rangeTrigger = event.target.closest("[data-filter-range-trigger]");
+      const rangeTrigger = event.target.closest("[data-control-range-trigger]");
       if (rangeTrigger) {
-        openRange(grid, rangeTrigger.closest("[data-filter-range-cell]"));
+        openRange(grid, rangeTrigger.closest("[data-control-range-cell]"));
       }
     });
 
@@ -725,7 +733,7 @@
       if (
         activeOverlay?.type === "range"
         && event.target.matches(
-          "[data-filter-range-minimum-editor], [data-filter-range-maximum-editor]"
+          "[data-control-range-minimum-editor], [data-control-range-maximum-editor]"
         )
       ) {
         updateRangeOverlay(activeOverlay);
@@ -733,14 +741,14 @@
     });
 
     grid.addEventListener("pointerdown", (event) => {
-      const handle = event.target.closest("[data-filter-range-handle]");
+      const handle = event.target.closest("[data-control-range-handle]");
       if (!handle || activeOverlay?.type !== "range") return;
       event.preventDefault();
-      activeOverlay.dragging = handle.dataset.filterRangeHandle;
+      activeOverlay.dragging = handle.dataset.controlRangeHandle;
     });
 
-    grid.addEventListener("filtergrid:tags-changed", scheduleTagResize);
-    grid.addEventListener("filterquery:change", () => updateAppliedCount(grid));
+    grid.addEventListener("tagpicker:layoutchange", scheduleTagResize);
+    grid.addEventListener("control:commit", () => updateAppliedCount(grid));
   });
 
   document.addEventListener("pointerdown", (event) => {
@@ -768,14 +776,14 @@
       return;
     }
     if (activeOverlay.type === "range" && event.key === "Enter") {
-      if (event.target.closest("[data-filter-range-reset], [data-filter-range-cancel]")) {
+      if (event.target.closest("[data-control-range-reset], [data-control-range-cancel]")) {
         return;
       }
       event.preventDefault();
       commitRangeOverlay(activeOverlay);
       return;
     }
-    const handle = event.target.closest("[data-filter-range-handle]");
+    const handle = event.target.closest("[data-control-range-handle]");
     if (
       activeOverlay.type !== "range"
       || !handle
@@ -792,7 +800,7 @@
       : Number(configuredStep);
     const step = baseStep * (event.shiftKey ? 10 : 1);
     const values = rangeValues(activeOverlay);
-    if (handle.dataset.filterRangeHandle === "min") {
+    if (handle.dataset.controlRangeHandle === "min") {
       const ceiling = values.maximum ?? activeOverlay.domainMaximum;
       activeOverlay.minimumEditor.value = String(Math.max(
         activeOverlay.allowNegative ? activeOverlay.domainMinimum : 0,
@@ -805,10 +813,10 @@
         Math.min(activeOverlay.domainMaximum, current + direction * step)
       ));
     }
-    const kind = handle.dataset.filterRangeHandle;
+    const kind = handle.dataset.controlRangeHandle;
     updateRangeOverlay(activeOverlay);
     requestAnimationFrame(() => activeOverlay?.editor
-      .querySelector(`[data-filter-range-handle="${kind}"]`)
+      .querySelector(`[data-control-range-handle="${kind}"]`)
       ?.focus({ preventScroll: true }));
   });
 

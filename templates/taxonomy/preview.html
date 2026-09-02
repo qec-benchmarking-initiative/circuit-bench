@@ -3,11 +3,11 @@
 {% block title %}{{ title }} · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading"><h1>{{ title }}</h1></header>
-    {% include "components/submission_policy_bar.html" with policy=policy only %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><h1>{{ title }}</h1></header>
+    {% include "components/approval_policy_bar.html" with policy=policy only %}
     {% if error %}<p class="query-status-error" role="alert">{{ error }}</p>{% endif %}
-    <section class="submission-table-section">
+    <section class="table-section">
       <div class="table-scroll" tabindex="0" aria-label="Submission preview">
         <table class="data-table">
           <thead><tr><th scope="col">Field</th><th scope="col">Value</th></tr></thead>
@@ -17,7 +17,7 @@
         </table>
       </div>
     </section>
-    <div class="submission-actions">
+    <div class="page-action-bar">
       <a class="button button-secondary" href="{{ back_url }}">Back and edit</a>
       <form method="post">{% csrf_token %}<button type="submit">Confirm submission</button></form>
     </div>

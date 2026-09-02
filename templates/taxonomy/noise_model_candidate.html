@@ -3,8 +3,8 @@
 {% block title %}{{ noise_model.name }} submission · Circuit Bench{% endblock %}
 
 {% block content %}
-  <div class="page-shell submission-shell">
-    <header class="page-heading submission-heading"><h1>{{ noise_model.name }}</h1></header>
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><h1>{{ noise_model.name }}</h1></header>
     <dl class="stacked-metadata compact-technical-metadata">
       <div><dt>State</dt><dd>{{ noise_model.get_state_display }}</dd></div>
       <div><dt>Submitted by</dt><dd>{{ noise_model.submitted_by.display_name }}</dd></div>
@@ -13,7 +13,7 @@
       <div><dt>Randomises priors</dt><dd>{{ noise_model.randomises_priors|yesno:"Yes,No" }}</dd></div>
     </dl>
     {% if can_approve %}
-      <form class="submission-actions" method="post" action="{% url 'taxonomy:noise-model-approve' noise_model.id %}">{% csrf_token %}<button type="submit">Approve and publish</button></form>
+      <form class="form-actions" method="post" action="{% url 'taxonomy:noise-model-approve' noise_model.id %}">{% csrf_token %}<button type="submit">Approve and publish</button></form>
     {% endif %}
   </div>
 {% endblock %}

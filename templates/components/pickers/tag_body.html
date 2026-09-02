@@ -1,4 +1,4 @@
-<div class="tag-dialog-body">
+<div class="picker-body">
   {% if namespace_choices %}
     <label class="tag-namespace-label" for="{{ picker_id }}-namespace">Tag type</label>
     <select id="{{ picker_id }}-namespace" data-tag-namespace-select>
@@ -6,7 +6,7 @@
     </select>
   {% endif %}
 
-  <label class="tag-search-label" for="{{ picker_id }}-search">{% if mode == "create" %}Tag name{% else %}Search tags{% endif %}</label>
+  <label class="picker-search-label" for="{{ picker_id }}-search">{% if mode == "create" %}Tag name{% else %}Search tags{% endif %}</label>
   <input id="{{ picker_id }}-search" type="search" placeholder="Type a tag name" autocomplete="off" data-tag-search{% if mode != 'create' %} autofocus{% endif %}>
 
   {% if mode != "create" %}
@@ -46,7 +46,7 @@
         </div>
       {% endfor %}
     </div>
-    <p class="tag-no-results hidden" data-tag-no-results role="status">No matching tags.</p>
+    <p class="picker-empty hidden" data-tag-no-results role="status">No matching tags.</p>
   </section>
 
   {% if mode == "create" %}

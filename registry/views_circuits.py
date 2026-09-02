@@ -9,15 +9,6 @@ from registry.curation import (
     ordering_metadata,
     select_catalogue_ordering,
 )
-from registry.explorer import (
-    ColumnSpec,
-    apply_sort,
-    cells_for_visible_columns,
-    parse_nonnegative_int,
-    parse_sort,
-    table_context,
-    url_without,
-)
 from registry.filter_grids import (
     algorithm_grid as build_algorithm_grid,
 )
@@ -45,6 +36,15 @@ from registry.services.circuits import (
 )
 from registry.services.decoders import catalogue_algorithm_tags
 from registry.services.filter_options import public_circuit_filter_options
+from registry.table_controls import (
+    ColumnSpec,
+    apply_sort,
+    cells_for_visible_columns,
+    parse_nonnegative_int,
+    parse_sort,
+    table_context,
+    url_without,
+)
 
 CIRCUIT_RESULT_COLUMNS = (
     ColumnSpec("decoder", "Decoder"),
@@ -427,7 +427,7 @@ def circuit_detail(request, slug):
             "circuit": circuit,
             "description": inherited_circuit_description(circuit),
             "artifacts": artifacts,
-            "entity": {
+            "record": {
                 "kind": "Circuit revision",
                 "name": circuit.name,
                 "version": None,

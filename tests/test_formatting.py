@@ -159,5 +159,5 @@ def test_tag_filter_has_per_tag_removal_without_a_panel_clear_button():
         },
     )
 
-    assert "data-filter-clear" not in rendered
+    assert "data-control-clear" not in rendered
     assert rendered.count('data-tag-remove="matching"') == 2

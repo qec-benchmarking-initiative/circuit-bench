@@ -49,6 +49,11 @@ def test_auto_and_explicit_axis_ranges_have_distinct_control_states(client):
     automatic_content = automatic.content.decode()
     assert automatic_content.count(">Auto</span>") >= 2
     assert "data-reset-plot-axes disabled" in automatic_content
+    assert automatic_content.count(
+        'class="control-panel control-grid plot-control-grid"'
+    ) == 2
+    assert "data-filter-key" not in automatic_content
+    assert "is-filtered" not in automatic_content
 
     explicit = client.get(
         reverse("results:list"),
@@ -56,7 +61,8 @@ def test_auto_and_explicit_axis_ranges_have_distinct_control_states(client):
     )
     assert explicit.context["result_plot"]["axes_are_explicit"] is True
     explicit_content = explicit.content.decode()
-    assert 'data-filter-key="x-range"' in explicit_content
+    assert 'data-control-state-class="is-explicit"' in explicit_content
+    assert "is-explicit" in explicit_content
     assert "data-reset-plot-axes disabled" not in explicit_content
     assert "Reset x range to auto" in explicit_content
 

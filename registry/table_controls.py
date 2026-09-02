@@ -1,8 +1,8 @@
-"""Small, query-contract-neutral helpers for scientific explorer tables.
+"""Small, query-contract-neutral helpers for scientific table controls.
 
-The current HTML explorers expose ordinary text/filter parameters.  This module
-keeps sorting and column visibility reproducible in the URL without attempting
-to define the later public scripted-query language.
+The calling pages expose ordinary text and filter parameters. This module keeps
+sorting and column visibility reproducible in the URL without attempting to
+define the public scripted-query language.
 """
 
 from collections.abc import Mapping, Sequence

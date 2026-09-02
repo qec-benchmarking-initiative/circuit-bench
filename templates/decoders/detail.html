@@ -1,18 +1,18 @@
-{% extends "layouts/entity_detail.html" %}
-{% load static submission_history %}
+{% extends "layouts/record_detail.html" %}
+{% load static record_history %}
 
 {% block title %}{{ decoder.name }} {{ decoder.version }} · Circuit Bench{% endblock %}
 
-{% block entity_heading %}
-  {% include "components/entity_header.html" with entity=entity only %}
-  <nav class="record-history" aria-label="Decoder version history">
+{% block record_heading %}
+  {% include "components/record_header.html" with record=record only %}
+  <nav class="revision-navigation" aria-label="Decoder version history">
     {% if predecessor %}<a href="{{ predecessor_url }}">← Previous: {{ predecessor.version }}</a>{% endif %}
     {% if predecessor and successor %} · {% endif %}
     {% if successor %}<a href="{{ successor_url }}">Next: {{ successor.version }} →</a>{% endif %}
   </nav>
 {% endblock %}
 
-{% block entity_main %}
+{% block record_main %}
   <div class="record-sections">
     <section class="record-section">
       <h2>General description</h2>
@@ -72,10 +72,10 @@
       </section>
     {% endif %}
   </div>
-  {% submission_history decoder "decoder" %}
+  {% record_history decoder "decoder" %}
 {% endblock %}
 
-{% block entity_aside %}
+{% block record_aside %}
   <h2>Exact revision</h2>
   {% include "components/metadata_list.html" with items=metadata only %}
   <p><a href="{{ decoder.schema_release.permanent_url }}">Schema contract {{ decoder.schema_release.version }}</a></p>
@@ -103,7 +103,7 @@
   </ol>
 {% endblock %}
 
-{% block entity_related %}
+{% block record_related %}
   <h2>Results for this exact decoder version</h2>
   <form class="leaderboard-filter-form" method="get">
     {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
@@ -117,18 +117,19 @@
     </div>
     <p class="result-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
   </form>
-  <div class="collection-results" aria-live="polite">
+  <div class="table-region" aria-live="polite">
     {% include "components/result_comparison.html" with result_plot=result_plot only %}
-    {% include "components/explorer_toolbar.html" with explorer_id="decoder-results" %}
+    {% include "components/table_toolbar.html" with table_id="decoder-results" %}
     {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No published results yet. This exact decoder version has no results matching the selected circuit and machine filters." only %}
   </div>
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'js/filter-grid.js' %}?v=0.1.20260831k" defer></script>
+  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902a" defer></script>
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
   <script src="{% static 'js/filter-query.js' %}" defer></script>
-  <script src="{% static 'js/explorer.js' %}?v=0.1.20260902i" defer></script>
+  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902a" defer></script>
+  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902a" defer></script>
   <script src="{% static 'js/plot-settings.js' %}?v=0.1.20260831k" defer></script>
 <script src="{% static 'js/result-plot.js' %}?v=0.1.20260901p" defer></script>
 {% endblock %}

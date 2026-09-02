@@ -1,25 +1,25 @@
-<details class="submission-history" id="submission-history-{{ history.history_id }}" data-ui-state-key="submission-history-{{ history.history_id }}">
+<details class="record-history" id="record-history-{{ history.history_id }}" data-ui-state-key="record-history-{{ history.history_id }}">
   <summary>
-    <span>Submission history</span>
+    <span>Record history</span>
     <span>{{ history.events|length }} event{{ history.events|length|pluralize }} · exact revisions and publication decisions</span>
   </summary>
   {% if history.revised_from_label or history.revised_to_label %}
-    <nav class="submission-history-lineage" aria-label="Revision lineage">
+    <nav class="record-history-lineage" aria-label="Revision lineage">
       {% if history.revised_from_label %}{% if history.revised_from_url %}<a href="{{ history.revised_from_url }}">{% endif %}← Revised from {{ history.revised_from_label }}{% if history.revised_from_url %}</a>{% endif %}{% endif %}
       {% if history.revised_from_label and history.revised_to_label %}<span aria-hidden="true">·</span>{% endif %}
       {% if history.revised_to_label %}{% if history.revised_to_url %}<a href="{{ history.revised_to_url }}">{% endif %}Revised to {{ history.revised_to_label }} →{% if history.revised_to_url %}</a>{% endif %}{% endif %}
     </nav>
   {% endif %}
-  <ol class="submission-history-timeline">
+  <ol class="record-history-timeline">
     {% for event in history.events %}
-      <li class="submission-history-event submission-history-event-{{ event.action }}">
+      <li class="record-history-event record-history-event-{{ event.action }}">
         <time datetime="{{ event.occurred_at|date:'c' }}">{{ event.occurred_at|date:"Y-m-d H:i" }} UTC</time>
         <strong>{{ event.action_label }}</strong>
-        <span class="submission-history-actor">{{ event.actor_label }}{% if event.actor_detail != "Account" %} <small>({{ event.actor_detail }})</small>{% endif %}</span>
+        <span class="record-history-actor">{{ event.actor_label }}{% if event.actor_detail != "Account" %} <small>({{ event.actor_detail }})</small>{% endif %}</span>
         <span>{{ event.note }}</span>
-        <span class="submission-history-subject">{{ event.record_label }}</span>
+        <span class="record-history-subject">{{ event.record_label }}</span>
         {% if event.details or event.snapshot or event.predecessor_label or event.caused_by_sequence %}
-          <details class="submission-history-event-details">
+          <details class="record-history-event-details">
             <summary>Event details</summary>
             <dl class="compact-technical-metadata">
               <div><dt>Sequence</dt><dd>{{ event.sequence }}</dd></div>

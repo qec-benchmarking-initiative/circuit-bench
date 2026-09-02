@@ -1,4 +1,4 @@
-{% extends "layouts/collection.html" %}
+{% extends "layouts/explorer.html" %}
 {% load static %}
 
 {% block title %}Results · Circuit Bench{% endblock %}
@@ -29,12 +29,12 @@
   </div>
 {% endblock %}
 
-{% block collection_results %}
+{% block explorer_results %}
   <nav class="result-format-links" aria-label="Machine-readable formats">
     Same population: <a href="{{ json_url }}">JSON</a> · <a href="{{ csv_url }}">CSV</a> · <a href="{% url 'results:api-schema' %}" title="Machine-readable field names, types, units and definition links; this is metadata, not result data.">Field definitions (JSON)</a>
   </nav>
   {% include "components/result_comparison.html" with result_plot=result_plot only %}
-  {% include "components/explorer_toolbar.html" with explorer_id="results" %}
+  {% include "components/table_toolbar.html" with table_id="results" %}
   {% include "components/data_table.html" with columns=table_columns rows=table_rows empty_message="No matching results. Try removing one or more filters." only %}
 {% endblock %}
 
