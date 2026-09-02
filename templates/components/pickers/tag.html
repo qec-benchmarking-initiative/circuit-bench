@@ -1,8 +1,12 @@
 <div
   class="tag-picker{% if mode == 'create' %} tag-picker-standalone{% endif %}"
   data-tag-picker
+  data-tag-search-url="{% url 'pickers:taxonomy-terms' %}"
   data-mode="{{ mode|default:'filter' }}"
+  data-native-input-name="{{ input_name }}"
+  {% if ecz_input_name %}data-ecz-input-name="{{ ecz_input_name }}"{% endif %}
   {% if tag_namespace %}data-tag-namespace="{{ tag_namespace }}"{% endif %}
+  {% if excluded_key %}data-tag-excluded-key="{{ excluded_key }}"{% endif %}
   {% if create_url %}data-tag-create-url="{{ create_url }}"{% endif %}
   {% if created_redirect %}data-tag-created-redirect="true"{% endif %}
 >
@@ -12,6 +16,14 @@
       {% for tag in tags %}{% if tag.picker_key|default:tag.slug in selected_keys %}{% include "components/selected_tag_chip.html" with tag=tag only %}{% endif %}{% endfor %}
       {% if not selected_keys %}<span class="tag-picker-empty-summary">No tags selected</span>{% endif %}
     </div>
+    <div data-tag-selection-inputs hidden>
+      {% if mode == "filter" %}
+        {% for key in selected_keys %}<input type="hidden" name="{{ input_name }}" value="{{ key }}" data-tag-selection data-tag-key="{{ key }}" data-tag-source="circuit_bench" data-tag-label="{{ key }}" data-tag-status="custom">{% endfor %}
+      {% else %}
+        {% for tag in tags %}{% if tag.picker_key|default:tag.slug in selected_keys %}<input type="hidden" name="{{ input_name }}" value="{{ tag.picker_key|default:tag.slug }}" data-tag-selection data-tag-key="cb:{{ tag.id }}" data-tag-source="circuit_bench" data-tag-database-id="{{ tag.id }}" data-tag-slug="{{ tag.slug }}" data-tag-label="{{ tag.label }}" data-tag-status="{{ tag.status }}" data-tag-colour="{{ tag.display_color|default:'' }}" data-tag-url="{{ tag.get_absolute_url }}">{% endif %}{% endfor %}
+        {% for term in selected_ecz_terms %}<input type="hidden" name="{{ ecz_input_name|default:input_name }}" value="{{ term.id }}" data-tag-selection data-tag-key="ecz:{{ term.ecz_code_id }}" data-tag-source="ecz" data-tag-database-id="{{ term.id }}" data-tag-label="{{ term.display_name }}" data-tag-status="{{ term.status }}" data-tag-url="{{ term.get_absolute_url }}">{% endfor %}
+      {% endif %}
+    </div>
     <button class="button-secondary button-compact" type="button" data-tag-dialog-open="{{ picker_id }}">{{ open_label|default:"Choose tags…" }}</button>
 
     <dialog class="picker-dialog tag-picker-dialog" id="{{ picker_id }}" data-tag-dialog aria-labelledby="{{ picker_id }}-title">
@@ -19,7 +31,7 @@
         <h2 id="{{ picker_id }}-title">{{ label }}</h2>
         <button class="button-plain" type="button" data-tag-cancel aria-label="Close {{ label }} picker">Close</button>
       </div>
-      {% include "components/pickers/tag_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=allow_create tag_namespace=tag_namespace parent_tags=parent_tags only %}
+      {% include "components/pickers/tag_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=allow_create tag_namespace=tag_namespace only %}
       <div class="picker-actions">
         <button class="button-secondary button-compact" type="button" data-tag-cancel>Cancel</button>
         {% if mode == "submission" %}
@@ -28,12 +40,13 @@
           <div class="tag-filter-actions">
             <button class="button-compact" type="button" data-tag-apply="all"{% if not selected_keys %} disabled{% endif %}>Filter for records with all selected tags</button>
             <button class="button-secondary button-compact" type="button" data-tag-apply="any"{% if not selected_keys %} disabled{% endif %}>Filter for records with any selected tag</button>
+            <button class="button-secondary button-compact" type="button" data-tag-apply="children"{% if not selected_keys %} disabled{% endif %}>Filter for records with any child of selected tags</button>
           </div>
         {% endif %}
       </div>
     </dialog>
   {% else %}
-    {% include "components/pickers/tag_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=True namespace_choices=namespace_choices parent_tags=parent_tags only %}
+    {% include "components/pickers/tag_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=True namespace_choices=namespace_choices only %}
     <div class="picker-actions tag-create-standalone-actions">
       <button class="button-compact" type="button" data-tag-create disabled>Add new tag</button>
     </div>

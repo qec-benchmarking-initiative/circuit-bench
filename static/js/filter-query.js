@@ -3,7 +3,7 @@
 
   const forms = [...document.querySelectorAll("form")].filter(
     (form) => !form.matches("[data-plot-controls]")
-      && form.querySelector("[data-filter-grid]")
+      && (form.matches("[data-filter-form]") || form.querySelector("[data-filter-grid]"))
   );
   if (!forms.length) return;
 
@@ -53,6 +53,18 @@
 
   forms.forEach((form) => {
     form.addEventListener("control:commit", () => submitAutomatically(form));
+    form.querySelectorAll("[data-checkbox-fallback-for]").forEach((fallback) => {
+      const checkbox = document.getElementById(fallback.dataset.checkboxFallbackFor);
+      if (!checkbox) return;
+      const syncFallback = () => {
+        fallback.disabled = checkbox.checked;
+      };
+      checkbox.addEventListener("change", syncFallback);
+      syncFallback();
+    });
+    form.querySelectorAll("[data-filter-commit]").forEach((control) => {
+      control.addEventListener("change", () => submitAutomatically(form));
+    });
     form.querySelector("[data-autoquery-toggle]")?.addEventListener("change", (event) => {
       autoqueryEnabled = event.target.checked;
       writeStorage(localStorage, autoqueryKey, String(autoqueryEnabled));

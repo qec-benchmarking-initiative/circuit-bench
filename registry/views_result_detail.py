@@ -58,7 +58,7 @@ def result_detail(request, result_id):
 
 def _record(result: Result) -> dict[str, object]:
     return {
-        "kind": "Exact result",
+        "kind": "Result",
         "name": f"{result.decoder_version.name} on {result.circuit_revision.name}",
         "version": None,
         "status": result.state,

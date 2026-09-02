@@ -84,4 +84,4 @@ def _selected(parameters: QueryDict, name: str) -> tuple[str, ...]:
 
 def _match(parameters: QueryDict, name: str) -> str:
     value = parameters.get(name, "all").strip()
-    return value if value in {"all", "any"} else "all"
+    return value if value in {"all", "any", "children"} else "all"

@@ -49,6 +49,10 @@
   document.querySelectorAll("[data-column-form]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
+      if (event.submitter?.value === "cancel") {
+        form.closest("dialog")?.close();
+        return;
+      }
       const checked = [...form.querySelectorAll('input[name="column"]:checked')]
         .map((input) => input.value);
       if (!checked.length) return;

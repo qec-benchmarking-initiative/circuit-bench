@@ -27,7 +27,7 @@
     </section>
 
     <section class="record-section">
-      <h2>What changed in this exact version</h2>
+      <h2>What changed in this version</h2>
       <p>{{ decoder.revision_description|linebreaksbr }}</p>
     </section>
 
@@ -76,7 +76,7 @@
 {% endblock %}
 
 {% block record_aside %}
-  <h2>Exact revision</h2>
+  <h2>Revision</h2>
   {% include "components/metadata_list.html" with items=metadata only %}
   <p><a href="{{ decoder.schema_release.permanent_url }}">Schema contract {{ decoder.schema_release.version }}</a></p>
 
@@ -104,7 +104,7 @@
 {% endblock %}
 
 {% block record_related %}
-  <h2>Results for this exact decoder version</h2>
+  <h2>Results for this decoder version</h2>
   <form class="leaderboard-filter-form" method="get">
     {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
     {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
@@ -120,16 +120,16 @@
   <div class="table-region" aria-live="polite">
     {% include "components/result_comparison.html" with result_plot=result_plot only %}
     {% include "components/table_toolbar.html" with table_id="decoder-results" %}
-    {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No published results yet. This exact decoder version has no results matching the selected circuit and machine filters." only %}
+    {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No published results yet. This decoder version has no results matching the selected circuit and machine filters." only %}
   </div>
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902a" defer></script>
+  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902e" defer></script>
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
-  <script src="{% static 'js/filter-query.js' %}" defer></script>
-  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902a" defer></script>
-  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902a" defer></script>
+  <script src="{% static 'js/filter-query.js' %}?v=0.1.20260902c" defer></script>
+  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902b" defer></script>
+  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902c" defer></script>
   <script src="{% static 'js/plot-settings.js' %}?v=0.1.20260831k" defer></script>
 <script src="{% static 'js/result-plot.js' %}?v=0.1.20260901p" defer></script>
 {% endblock %}

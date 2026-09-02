@@ -7,10 +7,33 @@ from django.db.models import (
     QuerySet,
 )
 
-from registry.models import CircuitRevision, NoiseModel, Result
+from registry.models import (
+    CircuitRevision,
+    EczTerm,
+    NoiseModel,
+    Result,
+    Tag,
+    TagEczMapping,
+)
 from registry.services.results import public_result_catalogue
+from registry.services.tag_hierarchy import (
+    descendant_slug_groups,
+    inclusive_code_descendant_identities,
+)
 
 PUBLIC_DETAIL_STATES = ("published", "withdrawn")
+
+
+def _code_tag_queryset():
+    return Tag.objects.prefetch_related(
+        Prefetch(
+            "ecz_mappings",
+            queryset=TagEczMapping.objects.filter(
+                status=TagEczMapping.Status.ACTIVE
+            ).select_related("ecz_term"),
+            to_attr="active_ecz_mappings",
+        )
+    ).order_by("label", "id")
 
 
 def circuit_catalogue(
@@ -46,7 +69,19 @@ def circuit_catalogue(
             )
         )
         .select_related("noise_model")
-        .prefetch_related("code_tags", "experiment_tags")
+        .prefetch_related(
+            Prefetch(
+                "code_tags",
+                queryset=_code_tag_queryset(),
+                to_attr="display_code_tags",
+            ),
+            Prefetch(
+                "ecz_terms",
+                queryset=EczTerm.objects.order_by("display_name", "ecz_code_id"),
+                to_attr="display_ecz_terms",
+            ),
+            "experiment_tags",
+        )
     )
     if query:
         circuits = circuits.filter(
@@ -54,6 +89,8 @@ def circuit_catalogue(
             | Q(slug__icontains=query)
             | Q(code_tags__label__icontains=query)
             | Q(code_tags__slug__icontains=query)
+            | Q(ecz_terms__display_name__icontains=query)
+            | Q(ecz_terms__ecz_code_id__icontains=query)
             | Q(
                 code_tags__aliases__alias__icontains=query,
                 code_tags__aliases__is_active=True,
@@ -76,22 +113,27 @@ def circuit_catalogue(
                 f"{relation}__slug": slug,
             }
         )
-    if code_tag_match == "any" and code_tag_slugs:
-        circuits = circuits.filter(
-            code_tags__namespace="code", code_tags__slug__in=code_tag_slugs
+    circuits = _filter_code_taxonomy(circuits, code_tag_slugs, code_tag_match)
+    selected_experiment_tags = tuple(
+        dict.fromkeys(slug for slug in experiment_tag_slugs if slug)
+    )
+    if experiment_tag_match == "children" and selected_experiment_tags:
+        experiment_groups = descendant_slug_groups(
+            Tag.Namespace.EXPERIMENT, selected_experiment_tags
         )
-    else:
-        for slug in code_tag_slugs:
-            circuits = circuits.filter(
-                code_tags__namespace="code", code_tags__slug=slug
-            )
-    if experiment_tag_match == "any" and experiment_tag_slugs:
         circuits = circuits.filter(
             experiment_tags__namespace="experiment",
-            experiment_tags__slug__in=experiment_tag_slugs,
+            experiment_tags__slug__in={
+                slug for group in experiment_groups for slug in group
+            },
+        )
+    elif experiment_tag_match == "any" and selected_experiment_tags:
+        circuits = circuits.filter(
+            experiment_tags__namespace="experiment",
+            experiment_tags__slug__in=selected_experiment_tags,
         )
     else:
-        for slug in experiment_tag_slugs:
+        for slug in selected_experiment_tags:
             circuits = circuits.filter(
                 experiment_tags__namespace="experiment",
                 experiment_tags__slug=slug,
@@ -117,6 +159,35 @@ def circuit_catalogue(
     return circuits.distinct()
 
 
+def _filter_code_taxonomy(queryset, identities, match):
+    if match == "children":
+        identities = inclusive_code_descendant_identities(identities)
+        match = "any"
+    predicates = []
+    for identity in identities:
+        source, separator, value = identity.partition(":")
+        if separator and source == "ecz" and value:
+            predicates.append(
+                Q(ecz_terms__ecz_code_id=value)
+                | Q(
+                    code_tags__ecz_mappings__status=TagEczMapping.Status.ACTIVE,
+                    code_tags__ecz_mappings__ecz_term__ecz_code_id=value,
+                )
+            )
+        elif separator and source == "cb" and value:
+            predicates.append(Q(code_tags__namespace="code", code_tags__id=value))
+        elif not separator and identity:
+            predicates.append(Q(code_tags__namespace="code", code_tags__slug=identity))
+    if match == "any" and predicates:
+        combined = Q()
+        for predicate in predicates:
+            combined |= predicate
+        return queryset.filter(combined)
+    for predicate in predicates:
+        queryset = queryset.filter(predicate)
+    return queryset
+
+
 def circuit_detail_queryset() -> QuerySet:
     return (
         CircuitRevision.objects.filter(
@@ -133,7 +204,16 @@ def circuit_detail_queryset() -> QuerySet:
             "submitted_by",
         )
         .prefetch_related(
-            "code_tags",
+            Prefetch(
+                "code_tags",
+                queryset=_code_tag_queryset(),
+                to_attr="display_code_tags",
+            ),
+            Prefetch(
+                "ecz_terms",
+                queryset=EczTerm.objects.order_by("display_name", "ecz_code_id"),
+                to_attr="display_ecz_terms",
+            ),
             "experiment_tags",
         )
     )

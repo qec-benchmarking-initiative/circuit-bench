@@ -23,11 +23,11 @@ def test_plot_demo_data_is_rich_idempotent_and_plot_ready():
             "machines": 3,
             "results": 56,
             "scores": 112,
-            "tags": 35,
+            "tags": 27,
         }
     )
     assert RecordHistory.objects.count() == first_history_count
-    assert TagParent.objects.count() == 29
+    assert TagParent.objects.count() == 15
     assert plot_demo_counts() == first_counts
     assert Result.objects.values("decoder_version").distinct().count() == 7
     assert Result.objects.values("circuit_revision").distinct().count() == 8
@@ -48,14 +48,33 @@ def test_plot_demo_data_is_rich_idempotent_and_plot_ready():
         for tag in Tag.objects.filter(namespace="algorithm")
     }
     assert algorithm_tags["Matching"] >= {"MWM", "MWPM", "Blossom"}
-    assert algorithm_tags["Ordered statistics"] == {"OSD"}
-    assert algorithm_tags["Tensor network"] == {"TN"}
-    assert algorithm_tags["Neural network"] == {"NN"}
-    assert algorithm_tags["Union find"] == {"UF"}
-    assert algorithm_tags["Belief propagation"] == {"BP"}
-    assert algorithm_tags["Fallback"] == {"Post processing"}
-    assert algorithm_tags["Predecoder"] == set()
-    assert algorithm_tags["Ensemble"] == set()
+    assert algorithm_tags["Ordered statistics"] >= {"OSD"}
+    assert algorithm_tags["Tensor network"] >= {"TN"}
+    assert algorithm_tags["Neural network"] >= {"NN"}
+    assert algorithm_tags["Union find"] >= {"UF"}
+    assert algorithm_tags["Belief propagation"] >= {"BP"}
+    assert algorithm_tags["Fallback"] >= {"Post processing"}
+    assert algorithm_tags["Predecoder"] >= {"Pre-decoder"}
+    assert algorithm_tags["Ensemble"] >= {"Decoder ensemble"}
+
+    parents = {
+        tag.slug: set(tag.parents.values_list("slug", flat=True))
+        for tag in Tag.objects.filter(namespace="algorithm")
+    }
+    assert parents["belief-propagation"] == {"message-passing"}
+    assert parents["ordered-statistics"] == {"post-decoding-method"}
+    assert parents["neural-network"] == {"machine-learning"}
+    assert parents["convolutional-neural-network"] == {"neural-network"}
+    assert parents["recurrent-neural-network"] == {"neural-network"}
+    assert parents["graph-neural-network"] == {"neural-network"}
+    assert parents["reinforcement-learning"] == {"machine-learning"}
+    assert parents["union-find"] == {"clustering"}
+    assert parents["cellular-automaton"] == {"local-decoder"}
+    assert parents["tensor-network"] == {"approximate-maximum-likelihood"}
+    assert parents["belief-propagation-guided-decimation"] == {"belief-propagation"}
+    assert not Tag.objects.filter(
+        namespace="algorithm", description__icontains="synthetic"
+    ).exists()
 
 
 @pytest.mark.django_db

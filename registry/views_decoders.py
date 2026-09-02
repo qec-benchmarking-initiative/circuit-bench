@@ -101,7 +101,7 @@ class DecoderCatalogueView(ListView):
             )
         )
         self.tag_match = self.request.GET.get("tag_match", "all").strip()
-        if self.tag_match not in {"all", "any"}:
+        if self.tag_match not in {"all", "any", "children"}:
             self.tag_match = "all"
         self.skeleton_preparation = self.request.GET.get("skeleton", "").strip()
         self.priors_preparation = self.request.GET.get("priors", "").strip()
@@ -148,6 +148,7 @@ class DecoderCatalogueView(ListView):
                 {
                     "label": tag.label,
                     "url": tag.get_absolute_url(),
+                    "status": tag.status,
                     "display_color": tag.display_color,
                 }
                 for tag in decoder.display_algorithm_tags
@@ -482,4 +483,4 @@ class DecoderDetailView(DetailView):
 
     def _match(self, name: str) -> str:
         value = self.request.GET.get(name, "all").strip()
-        return value if value in {"all", "any"} else "all"
+        return value if value in {"all", "any", "children"} else "all"

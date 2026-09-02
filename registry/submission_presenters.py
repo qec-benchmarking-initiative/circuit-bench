@@ -171,6 +171,10 @@ def stored_record_rows(kind: SubmissionKind | str, record) -> list[dict[str, str
             [
                 {"label": "Code tags", "value": _display(record.code_tags)},
                 {
+                    "label": "Error Correction Zoo codes",
+                    "value": _display(record.ecz_terms),
+                },
+                {
                     "label": "Experiment tags",
                     "value": _display(record.experiment_tags),
                 },

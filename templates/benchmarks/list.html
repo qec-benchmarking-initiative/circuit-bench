@@ -16,10 +16,10 @@
   {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
   <button class="button-compact" type="submit">Run</button>
   <a class="button-link" href="{% url 'benchmarks:list' %}">Clear</a>
-  <span class="query-mode">Published exact revisions only</span>
+  <span class="query-mode">Published revisions only</span>
 {% endblock %}
 
-{% block explorer_status %}The table contains {% scientific_number result_count "count" %} exact published benchmark revision{{ result_count|pluralize }}. Its membership, columns, and sort are reproducible from this URL.{% endblock %}
+{% block explorer_status %}The table contains {% scientific_number result_count "count" %} published benchmark revision{{ result_count|pluralize }}. Its membership, columns, and sort are reproducible from this URL.{% endblock %}
 
 {% block explorer_results %}
   {% include "components/table_toolbar.html" with table_id="benchmarks" %}

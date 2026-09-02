@@ -10,8 +10,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from registry.filter_grids import choice_cell, filter_grid, range_cell
 from registry.forms_taxonomy import TagEditForm
-from registry.models import Tag
-from registry.services.circuits import circuit_catalogue
+from registry.models import Tag, TagEczMapping
 from registry.services.decoders import public_decoder_catalogue
 from registry.services.tags import active_tag_queryset, tag_detail_queryset
 from registry.services.taxonomy import (
@@ -32,8 +31,13 @@ from registry.table_controls import (
     parse_nonnegative_int,
     parse_sort,
     table_context,
+    url_without,
 )
 from registry.tag_taxonomy_graph import build_local_tag_graph
+from registry.tag_usage import (
+    circuit_usage_context,
+    include_descendants_from_request,
+)
 
 ALGORITHM_COLUMNS = (
     ColumnSpec("name", "Decoder"),
@@ -41,19 +45,6 @@ ALGORITHM_COLUMNS = (
     ColumnSpec("skeleton", "Skeleton preparation"),
     ColumnSpec("priors", "Prior preparation"),
     ColumnSpec("probability", "Failure probability"),
-    ColumnSpec("results", "Results", numeric=True, default_direction="desc"),
-    ColumnSpec("published", "Published", default_direction="desc"),
-)
-
-CIRCUIT_COLUMNS = (
-    ColumnSpec("name", "Circuit"),
-    ColumnSpec("noise_model", "Noise model"),
-    ColumnSpec("priors", "Randomised priors"),
-    ColumnSpec("css", "CSS"),
-    ColumnSpec("code_distance", "Code d ≤", numeric=True),
-    ColumnSpec("circuit_distance", "Circuit d ≤", numeric=True),
-    ColumnSpec("detectors", "Detectors", numeric=True),
-    ColumnSpec("errors", "Errors", numeric=True),
     ColumnSpec("results", "Results", numeric=True, default_direction="desc"),
     ColumnSpec("published", "Published", default_direction="desc"),
 )
@@ -70,6 +61,7 @@ def create_tag_json(request):
             description=request.POST.get("description", ""),
             aliases=request.POST.get("aliases", ""),
             parents=request.POST.getlist("parents"),
+            ecz_parents=request.POST.getlist("ecz_parents"),
         )
     except TaxonomyPermissionError as error:
         return JsonResponse({"error": str(error)}, status=403)
@@ -118,6 +110,11 @@ def tag_detail(request, namespace, slug):
         if tag.namespace == Tag.Namespace.ALGORITHM
         else _circuit_usage(request, tag)
     )
+    ecz_mappings = list(
+        TagEczMapping.objects.filter(tag=tag)
+        .select_related("ecz_term", "mapped_by", "revoked_by")
+        .order_by("-mapped_at", "-id")
+    )
     return render(
         request,
         "taxonomy/tag_detail.html",
@@ -138,6 +135,7 @@ def tag_detail(request, namespace, slug):
                 "tags": (),
             },
             "tag_graph": build_local_tag_graph(tag),
+            "ecz_mappings": ecz_mappings,
             **usage,
         },
     )
@@ -158,6 +156,7 @@ def tag_edit(request, namespace, slug):
         "description": tag.description,
         "aliases": "\n".join(alias.alias for alias in tag.display_aliases),
         "parents": list(tag.parents.values_list("id", flat=True)),
+        "ecz_parents": list(tag.ecz_parents.values_list("id", flat=True)),
     }
     form = TagEditForm(request.POST or None, tag=tag, initial=initial)
     if request.method == "POST" and form.is_valid():
@@ -172,6 +171,8 @@ def tag_edit(request, namespace, slug):
             return redirect(tag.get_absolute_url())
     current_parent_ids = list(tag.parents.values_list("id", flat=True))
     parent_tags = list(active_tag_queryset(include_ids=current_parent_ids))
+    for parent in parent_tags:
+        parent.picker_key = str(parent.id)
     selected_parent_ids = {
         str(parent_id)
         for parent_id in form["parents"].value()
@@ -185,6 +186,12 @@ def tag_edit(request, namespace, slug):
             "form": form,
             "parent_tags": [item for item in parent_tags if item.id != tag.id],
             "selected_parent_ids": selected_parent_ids,
+            "selected_ecz_parents": list(
+                form.fields["ecz_parents"].queryset.filter(
+                    id__in=form["ecz_parents"].value() or ()
+                )
+            ),
+            "excluded_taxonomy_key": f"cb:{tag.id}",
         },
     )
 
@@ -221,11 +228,14 @@ def _algorithm_usage(request, tag):
     result_max_raw = request.GET.get("result_max", "")
     result_min = parse_nonnegative_int(result_min_raw)
     result_max = parse_nonnegative_int(result_max_raw)
-    base = public_decoder_catalogue(tag_slugs=(tag.slug,))
+    include_descendants = include_descendants_from_request(request)
+    tag_match = "children" if include_descendants else "any"
+    base = public_decoder_catalogue(tag_slugs=(tag.slug,), tag_match=tag_match)
     result_values = list(base.values_list("published_result_count", flat=True))
     queryset = public_decoder_catalogue(
         query=query,
         tag_slugs=(tag.slug,),
+        tag_match=tag_match,
         skeleton_preparation=skeleton,
         priors_preparation=priors,
         probability_output=probability,
@@ -336,189 +346,52 @@ def _algorithm_usage(request, tag):
         grid=grid,
         label="Decoder versions using this tag",
         empty="No published decoder versions using this tag match these controls.",
+        include_descendants=include_descendants,
+        descendant_control_label=(
+            "Show decoder versions tagged with this tag or any child of it"
+        ),
+        search_label="Search within these decoder versions",
     )
 
 
 def _circuit_usage(request, tag):
-    query = request.GET.get("q", "").strip()
-    priors = request.GET.get("priors", "").strip()
-    css = request.GET.get("css", "").strip()
-    raw = {
-        name: request.GET.get(name, "")
-        for name in (
-            "code_d_min",
-            "code_d_max",
-            "circuit_d_min",
-            "circuit_d_max",
-            "detector_min",
-            "detector_max",
-            "error_min",
-            "error_max",
-        )
-    }
-    tag_identity = f"{tag.namespace}:{tag.slug}"
-    base = circuit_catalogue(tag=tag_identity)
-    distributions = {
-        "code_distance": list(base.values_list("code_distance_upper_bound", flat=True)),
-        "circuit_distance": list(
-            base.values_list("circuit_distance_upper_bound", flat=True)
-        ),
-        "detectors": list(base.values_list("num_detectors", flat=True)),
-        "errors": list(base.values_list("num_errors", flat=True)),
-    }
-    filters = {
-        "randomises_priors": priors,
-        "is_css": css,
-        "code_distance_min": parse_nonnegative_int(raw["code_d_min"]),
-        "code_distance_max": parse_nonnegative_int(raw["code_d_max"]),
-        "circuit_distance_min": parse_nonnegative_int(raw["circuit_d_min"]),
-        "circuit_distance_max": parse_nonnegative_int(raw["circuit_d_max"]),
-        "detector_min": parse_nonnegative_int(raw["detector_min"]),
-        "detector_max": parse_nonnegative_int(raw["detector_max"]),
-        "error_min": parse_nonnegative_int(raw["error_min"]),
-        "error_max": parse_nonnegative_int(raw["error_max"]),
-    }
-    queryset = circuit_catalogue(query=query, tag=tag_identity, **filters)
-    sort_keys = parse_sort(
-        request.GET.get("sort", ""), CIRCUIT_COLUMNS, (("name", "asc"),)
-    )
-    queryset = apply_sort(
-        queryset,
-        sort_keys,
-        {
-            "name": "name",
-            "noise_model": "noise_model__name",
-            "priors": "noise_model__randomises_priors",
-            "css": "is_css",
-            "code_distance": "code_distance_upper_bound",
-            "circuit_distance": "circuit_distance_upper_bound",
-            "detectors": "num_detectors",
-            "errors": "num_errors",
-            "results": "published_result_count",
-            "published": "published_at",
-        },
-    )
-    records = list(queryset)
-    table = table_context(request, CIRCUIT_COLUMNS, sort_keys)
-    rows = []
-    for circuit in records:
-        cells = {
-            "name": {
-                "key": "name",
-                "value": circuit.name,
-                "url": reverse("circuits:detail", args=[circuit.slug]),
-            },
-            "noise_model": {
-                "key": "noise_model",
-                "value": circuit.noise_model.name,
-                "url": reverse("noise-models:detail", args=[circuit.noise_model.slug]),
-            },
-            "priors": {
-                "key": "priors",
-                "value": "Yes" if circuit.noise_model.randomises_priors else "No",
-            },
-            "css": {"key": "css", "value": "Yes" if circuit.is_css else "No"},
-            "code_distance": {
-                "key": "code_distance",
-                "value": circuit.code_distance_upper_bound,
-                "numeric": True,
-            },
-            "circuit_distance": {
-                "key": "circuit_distance",
-                "value": circuit.circuit_distance_upper_bound,
-                "numeric": True,
-            },
-            "detectors": {
-                "key": "detectors",
-                "value": circuit.num_detectors,
-                "numeric": True,
-            },
-            "errors": {
-                "key": "errors",
-                "value": circuit.num_errors,
-                "numeric": True,
-            },
-            "results": {
-                "key": "results",
-                "value": circuit.published_result_count,
-                "numeric": True,
-            },
-            "published": {"key": "published", "value": circuit.published_at},
+    include_descendants = include_descendants_from_request(request)
+    match = "children" if include_descendants else "any"
+    if tag.namespace == Tag.Namespace.CODE:
+        scope_arguments = {
+            "code_tag_slugs": (f"cb:{tag.id}",),
+            "code_tag_match": match,
         }
-        rows.append(
-            {"cells": cells_for_visible_columns(table["visible_column_keys"], cells)}
-        )
-    cells = [
-        choice_cell(
-            key="randomised_priors",
-            label="Randomised priors",
-            name="priors",
-            value=priors,
-            choices=(("", "Any"), ("yes", "Yes"), ("no", "No")),
-        ),
-        choice_cell(
-            key="css",
-            label="CSS",
-            name="css",
-            value=css,
-            choices=(("", "Any"), ("yes", "Yes"), ("no", "No")),
-        ),
-    ]
-    for key, label, minimum, maximum, histogram_label in (
-        (
-            "code_distance",
-            "Code distance upper bound",
-            "code_d_min",
-            "code_d_max",
-            "Code-distance upper bounds",
-        ),
-        (
-            "circuit_distance",
-            "Circuit distance upper bound",
-            "circuit_d_min",
-            "circuit_d_max",
-            "Circuit-distance upper bounds",
-        ),
-        (
-            "detectors",
-            "Detector count",
-            "detector_min",
-            "detector_max",
-            "Detector counts",
-        ),
-        ("errors", "Error count", "error_min", "error_max", "Error counts"),
-    ):
-        cells.append(
-            range_cell(
-                key=key,
-                label=label,
-                minimum_name=minimum,
-                maximum_name=maximum,
-                minimum_value=raw[minimum],
-                maximum_value=raw[maximum],
-                values=distributions[key],
-                histogram_label=histogram_label,
-            )
-        )
-    grid = filter_grid(
-        grid_id=f"tag-{tag.slug}-circuit-filters",
-        title="Circuit filters",
-        cells=cells,
-    )
-    return _usage_context(
+    else:
+        scope_arguments = {
+            "experiment_tag_slugs": (tag.slug,),
+            "experiment_tag_match": match,
+        }
+    return circuit_usage_context(
         request,
-        tag,
-        query=query,
-        records=records,
-        rows=rows,
-        table=table,
-        grid=grid,
+        scope_arguments=scope_arguments,
+        reset_url=tag.get_absolute_url(),
+        grid_id=f"tag-{tag.slug}-circuit-filters",
         label="Circuit revisions using this tag",
         empty="No published circuit revisions using this tag match these controls.",
     )
 
 
-def _usage_context(request, tag, *, query, records, rows, table, grid, label, empty):
+def _usage_context(
+    request,
+    tag,
+    *,
+    query,
+    records,
+    rows,
+    table,
+    grid,
+    label,
+    empty,
+    include_descendants,
+    descendant_control_label,
+    search_label,
+):
     return {
         "usage_query": query,
         "usage_records": records,
@@ -526,10 +399,16 @@ def _usage_context(request, tag, *, query, records, rows, table, grid, label, em
         "usage_grid": grid,
         "usage_label": label,
         "usage_empty": empty,
-        "usage_filters_active": bool(query or grid["filtered"]),
+        "usage_search_label": search_label,
+        "usage_search_id": f"tag-{tag.slug}-usage-search",
+        "include_descendants": include_descendants,
+        "descendant_control_label": descendant_control_label,
+        "usage_filters_active": bool(
+            query or grid["filtered"] or not include_descendants
+        ),
         "usage_reset_url": tag.get_absolute_url(),
         "result_count": len(records),
-        "reset_sort_url": tag.get_absolute_url(),
+        "reset_sort_url": url_without(request, "sort"),
         "raw_sort": request.GET.get("sort", ""),
         "raw_columns": request.GET.get("columns", ""),
         **table,

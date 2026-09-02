@@ -1,10 +1,22 @@
 from django.urls import path
 
-from registry import views_tags, views_taxonomy
+from registry import views_ecz, views_tags, views_taxonomy
 
 app_name = "taxonomy"
 
 urlpatterns = [
+    path("ecz/<str:code_id>/", views_ecz.term_detail, name="ecz-detail"),
+    path("taxonomy/ecz/", views_ecz.sync_status, name="ecz-status"),
+    path(
+        "taxonomy/ecz/mappings/new/",
+        views_ecz.mapping_create,
+        name="ecz-mapping-create",
+    ),
+    path(
+        "taxonomy/ecz/mappings/<uuid:mapping_id>/revoke/",
+        views_ecz.mapping_revoke,
+        name="ecz-mapping-revoke",
+    ),
     path(
         "tags/<str:namespace>/<slug:slug>/",
         views_tags.tag_detail,

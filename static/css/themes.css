@@ -119,6 +119,7 @@ html[data-theme="aubergine"] {
   --danger: #ed918a;
   --danger-soft: #4b292d;
   --focus: #eda85c;
+  --ecz-blue: #73bfe8;
 }
 
 html[data-theme="graphite"] {
@@ -144,6 +145,7 @@ html[data-theme="graphite"] {
   --danger: #ed918a;
   --danger-soft: #4b2a2a;
   --focus: #e4a34d;
+  --ecz-blue: #74bee5;
 }
 
 html[data-theme="sepia"] {

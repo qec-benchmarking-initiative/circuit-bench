@@ -6,7 +6,7 @@
 {% block record_heading %}
   {% include "components/record_header.html" with record=record only %}
   {% if result.state == "withdrawn" %}
-    <p class="record-warning"><strong>Withdrawn record.</strong> This exact page remains available as immutable scientific history and is excluded from public leaderboards.</p>
+    <p class="record-warning"><strong>Withdrawn record.</strong> This page remains available as immutable scientific history and is excluded from public leaderboards.</p>
   {% endif %}
 {% endblock %}
 
@@ -120,7 +120,7 @@
 {% endblock %}
 
 {% block record_aside %}
-  <h2>Exact provenance</h2>
+  <h2>Provenance</h2>
   <dl class="metadata-list">
     {% for item in provenance %}
       <div>

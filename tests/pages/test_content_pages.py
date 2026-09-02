@@ -41,14 +41,27 @@ def test_query_reference_matches_the_result_record_0_1_contract(client):
         assert field.name in content
 
 
+def test_tags_page_is_rendered_and_linked_from_about(client):
+    tags_url = reverse("pages:static-reference", args=["tags"])
+    response = client.get(tags_url)
+
+    assert response.status_code == 200
+    assert b"Tag system" in response.content
+    assert b"decoding-algorithm tags" in response.content
+    assert b'href="https://errorcorrectionzoo.org/"' in response.content
+
+    about = client.get(reverse("pages:about"))
+    assert tags_url.encode() in about.content
+
+
 def test_blog_index_is_newest_first_and_posts_have_stable_routes(client):
     response = client.get(reverse("pages:blog-index"))
 
     assert response.status_code == 200
     content = response.content.decode()
-    assert content.index("Why Circuit Bench starts from exact records") < content.index(
-        "A single query contract for tables and scripts"
-    )
+    assert content.index(
+        "Why Circuit Bench starts from individual records"
+    ) < content.index("A single query contract for tables and scripts")
 
     detail = client.get(reverse("pages:blog-detail", args=["why-exact-records"]))
     assert detail.status_code == 200
@@ -150,6 +163,7 @@ def test_markdown_renderer_does_not_extract_footnotes_from_code_fences():
 def test_all_static_content_pages_use_the_shared_reading_column(client):
     urls = [
         reverse("pages:about"),
+        reverse("pages:static-reference", args=["tags"]),
         reverse("pages:query-syntax"),
         reverse("pages:blog-index"),
         reverse("pages:blog-detail", args=["why-exact-records"]),

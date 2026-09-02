@@ -36,6 +36,7 @@ It is difficult to strike a balance between the need to allow for constant innov
 1. Noise models are collected and referenced in a dedicated database, and a circuit must specify the noise model used to create it. We do not attempt to capture the details of a noise model in the database, instead allowing members of the community to link a paper with a proper description. The steering committee will designate certain noise models as **official** (in particular those used in official benchmarks), with a view to helping with standardisation.
 2. Circuits and decoders are categorised by their contributors using systems of tags. Multiple tags may be attached to one circuit or decoder; contributors are encouraged to use **official tags** where applicable but may invent their own and use others designated by the community; over time community tags may be granted **official** status by the steering committee.
 
+See [Tag system](/about/tags/) for the tag families, parent relationships, community tags, and Error Correction Zoo integration.
 
 
 

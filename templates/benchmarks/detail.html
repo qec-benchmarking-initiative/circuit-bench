@@ -30,7 +30,7 @@
         </section>
       </div>
       <aside class="record-aside" aria-label="Benchmark metadata">
-        <h2>Exact revision</h2>
+        <h2>Revision</h2>
         <dl class="stacked-metadata compact-technical-metadata">
           <div><dt>Recognition</dt><dd>{{ benchmark.get_recognition_status_display }}</dd></div>
           <div><dt>Lifecycle</dt><dd>{{ benchmark.get_state_display }}</dd></div>
@@ -47,7 +47,7 @@
 
     <section class="record-related" aria-labelledby="benchmark-manifest-heading">
       <h2 id="benchmark-manifest-heading">Ordered circuit manifest</h2>
-      <p>This is the frozen circuit order for this exact revision. Required and optional membership are shown explicitly.</p>
+      <p>This is the frozen circuit order for this revision. Required and optional membership are shown explicitly.</p>
       {% if manifest_has_hidden_items %}<p role="alert">One or more manifest circuits are not public and have been withheld from this view.</p>{% endif %}
       {% if public_items %}
         <div class="table-scroll record-table-scroll">
@@ -85,7 +85,7 @@
           {% if summary.issues %}<ul>{% for issue in summary.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
           <div class="table-scroll record-table-scroll">
             <table class="data-table">
-              <thead><tr><th class="numeric">Position</th><th>Circuit revision</th><th>Requirement</th><th>Exact result</th><th>Evaluator</th><th>Machine</th></tr></thead>
+              <thead><tr><th class="numeric">Position</th><th>Circuit revision</th><th>Requirement</th><th>Result</th><th>Evaluator</th><th>Machine</th></tr></thead>
               <tbody>
                 {% for row in summary.items %}
                   <tr>
@@ -108,13 +108,13 @@
           </div>
         </article>
       {% empty %}
-        {% include "components/empty_state.html" with title="No published attempts" message="No published attempt currently resolves against this exact benchmark revision." only %}
+        {% include "components/empty_state.html" with title="No published attempts" message="No published attempt currently resolves against this benchmark revision." only %}
       {% endfor %}
     </section>
 
     <section class="record-related" aria-labelledby="benchmark-results-heading">
-      <h2 id="benchmark-results-heading">Exact constituent result comparison</h2>
-      <p>These are the individual published results referenced by attempts on this exact benchmark revision. The plot and table do not pool circuits or calculate an aggregate benchmark score.</p>
+      <h2 id="benchmark-results-heading">Constituent result comparison</h2>
+      <p>These are the individual published results referenced by attempts on this benchmark revision. The plot and table do not pool circuits or calculate an aggregate benchmark score.</p>
       <form class="leaderboard-filter-form" method="get">
         {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
         {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
@@ -138,11 +138,11 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902a" defer></script>
+  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902e" defer></script>
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
-  <script src="{% static 'js/filter-query.js' %}" defer></script>
-  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902a" defer></script>
-  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902a" defer></script>
+  <script src="{% static 'js/filter-query.js' %}?v=0.1.20260902c" defer></script>
+  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902b" defer></script>
+  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902c" defer></script>
   <script src="{% static 'js/plot-settings.js' %}?v=0.1.20260831k" defer></script>
 <script src="{% static 'js/result-plot.js' %}?v=0.1.20260901p" defer></script>
 {% endblock %}

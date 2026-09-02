@@ -323,7 +323,7 @@ def test_predecessor_successor_duplicate_and_withdrawn_reapproval(benchmark_data
     assert successor.state == "pending_review"
     assert successor.record_events.filter(action="revision_created").exists()
 
-    with pytest.raises(BenchmarkStateError, match="already has an exact successor"):
+    with pytest.raises(BenchmarkStateError, match="already has a successor"):
         create_benchmark_submission(
             _payload(
                 benchmark_data,
@@ -408,7 +408,7 @@ def test_approval_rejects_a_valid_file_with_the_wrong_manifest_meaning(
         manifest_artifact=wrong_file
     )
 
-    with pytest.raises(BenchmarkValidationError, match="does not exactly match"):
+    with pytest.raises(BenchmarkValidationError, match="does not match.*byte-for-byte"):
         approve_benchmark_submission(benchmark.id, reviewer=benchmark_data["admin"])
 
     benchmark.refresh_from_db()
@@ -609,7 +609,7 @@ def test_attempt_rejects_one_result_reused_for_two_manifest_positions(
         items=_items((benchmark_data["circuit"], True), (second, True)),
     )
 
-    with pytest.raises(BenchmarkValidationError, match="same exact result"):
+    with pytest.raises(BenchmarkValidationError, match="same result"):
         create_benchmark_attempt(
             benchmark=benchmark,
             decoder=benchmark_data["decoder"],

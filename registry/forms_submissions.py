@@ -5,12 +5,14 @@ import uuid
 from decimal import Decimal, InvalidOperation
 
 from django import forms
+from django.db.models import Q
 from django.http import QueryDict
 
 from registry.models import (
     Artifact,
     CircuitRevision,
     DecoderVersion,
+    EczTerm,
     EvaluatorRelease,
     Machine,
     NoiseModel,
@@ -99,7 +101,7 @@ class DecoderSubmissionForm(BaseSubmissionForm):
     )
     revision_description = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 3}),
-        help_text="What this exact version introduced or changed.",
+        help_text="What this version introduced or changed.",
     )
     circuit_skeleton_preparation = forms.ChoiceField(choices=DecoderVersion.Preparation)
     circuit_priors_preparation = forms.ChoiceField(choices=DecoderVersion.Preparation)
@@ -208,7 +210,14 @@ class CircuitSubmissionForm(BaseSubmissionForm):
         label="Manifest file",
         widget=forms.HiddenInput(),
     )
-    code_tags = forms.ModelMultipleChoiceField(queryset=Tag.objects.none())
+    code_tags = forms.ModelMultipleChoiceField(
+        queryset=Tag.objects.none(), required=False
+    )
+    ecz_terms = forms.ModelMultipleChoiceField(
+        queryset=EczTerm.objects.none(),
+        required=False,
+        label="Error Correction Zoo codes",
+    )
     experiment_tags = forms.ModelMultipleChoiceField(queryset=Tag.objects.none())
 
     def __init__(self, *args, **kwargs):
@@ -229,6 +238,14 @@ class CircuitSubmissionForm(BaseSubmissionForm):
         ):
             self.fields[name].queryset = artifacts
         self.fields["code_tags"].queryset = active_tag_queryset(Tag.Namespace.CODE)
+        current_ecz_ids = (
+            self.record.ecz_terms.values_list("id", flat=True)
+            if self.record is not None
+            else ()
+        )
+        self.fields["ecz_terms"].queryset = EczTerm.objects.filter(
+            Q(status=EczTerm.Status.CURRENT) | Q(id__in=current_ecz_ids)
+        ).order_by("display_name", "ecz_code_id")
         self.fields["experiment_tags"].queryset = active_tag_queryset(
             Tag.Namespace.EXPERIMENT
         )
@@ -254,6 +271,11 @@ class CircuitSubmissionForm(BaseSubmissionForm):
         ) and not cleaned.get("is_css"):
             self.add_error(
                 "is_css", "Detector-basis restrictions require a CSS circuit."
+            )
+        if not cleaned.get("code_tags") and not cleaned.get("ecz_terms"):
+            self.add_error(
+                "code_tags",
+                "Choose at least one Circuit Bench or Error Correction Zoo code.",
             )
         if (
             cleaned.get("num_detectors")
@@ -394,7 +416,7 @@ class ResultSubmissionForm(BaseSubmissionForm):
         ):
             self.add_error(
                 "supersedes_result",
-                "A successor must use the predecessor's exact decoder and circuit.",
+                "A successor must use the predecessor's decoder and circuit.",
             )
         return cleaned
 

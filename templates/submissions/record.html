@@ -6,7 +6,7 @@
 {% block content %}
   <div class="page-shell compact-page">
     <header class="page-heading compact-page-heading">
-      <p class="eyebrow">Exact {{ spec.label }} submission</p>
+      <p class="eyebrow">{{ spec.label|capfirst }} submission</p>
       <h1>{{ record_label }}</h1>
       <p><strong>State:</strong> <span class="status-badge status-{{ record.state }}">{{ record.get_state_display }}</span></p>
     </header>

@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -21,6 +22,7 @@ from registry.models import (
     CircuitRevision,
     Credit,
     DecoderVersion,
+    EczTerm,
     Machine,
     RecordEvent,
     RecordHistory,
@@ -28,6 +30,11 @@ from registry.models import (
     Tag,
 )
 from registry.services.artifacts import store_artifact_chunks
+from registry.services.ecz_sync import (
+    apply_prepared_sync,
+    prepare_sync,
+    source_for_directory,
+)
 from registry.services.submissions import (
     SubmissionValidationError,
     create_submission,
@@ -241,7 +248,7 @@ def test_pending_record_has_private_exact_view_for_owner_and_admin(
     client.force_login(workflow_data["contributor"])
     owner_response = client.get(url)
     assert owner_response.status_code == 200
-    assert b"Exact decoder version submission" in owner_response.content
+    assert b"Decoder version submission" in owner_response.content
     assert b"Algorithm tags" in owner_response.content
     history_tag = (
         owner_response.content.decode()
@@ -816,6 +823,11 @@ def test_replacement_revision_withdraws_source_and_enters_reapproval(
 ):
     contributor = workflow_data["contributor"]
     predecessor = CircuitRevision.objects.get(id=demo_id("circuit/rotated-memory-d5"))
+    fixture = Path(__file__).parents[1] / "fixtures" / "eczoo" / "snapshot_a"
+    apply_prepared_sync(
+        prepare_sync(source=source_for_directory(fixture), source_directory=fixture)
+    )
+    predecessor.ecz_terms.add(EczTerm.objects.get(ecz_code_id="surface"))
     payload = submission_payload_for_record(SubmissionKind.CIRCUIT, predecessor)
     payload.update(
         {

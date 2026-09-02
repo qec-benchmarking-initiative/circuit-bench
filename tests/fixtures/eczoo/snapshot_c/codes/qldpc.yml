@@ -1,0 +1,5 @@
+code_id: qldpc
+name: Quantum LDPC code
+relations:
+  parents:
+    - code_id: root

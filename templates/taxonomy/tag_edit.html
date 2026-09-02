@@ -32,8 +32,9 @@
           <div class="form-bar-row">
             <span class="form-bar-label">Parent tags <span class="muted">(optional)</span></span>
             <div class="form-bar-control">
-              {% include "components/tag_parent_selector.html" with picker_id="tag-edit-parents" tags=parent_tags selected_parent_ids=selected_parent_ids input_name="parents" only %}
+              {% include "components/pickers/tag.html" with picker_id="tag-edit-parents" label="Parent tags" input_name="parents" ecz_input_name="ecz_parents" tags=parent_tags selected_keys=selected_parent_ids selected_ecz_terms=selected_ecz_parents mode="submission" open_label="Choose parent tags…" tag_namespace=tag.namespace excluded_key=excluded_taxonomy_key only %}
               {% if form.parents.errors %}<div class="field-errors" role="alert">{{ form.parents.errors }}</div>{% endif %}
+              {% if form.ecz_parents.errors %}<div class="field-errors" role="alert">{{ form.ecz_parents.errors }}</div>{% endif %}
             </div>
           </div>
         </div>
@@ -47,5 +48,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  {% load static %}<script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902a" defer></script>
+  {% load static %}<script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902c" defer></script>
 {% endblock %}

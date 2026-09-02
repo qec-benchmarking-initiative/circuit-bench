@@ -5,7 +5,7 @@
 {% block content %}
   <div class="page-shell compact-page">
     <header class="page-heading compact-page-heading"><p class="eyebrow">Submission</p><h1>Submit benchmark attempt</h1></header>
-    <aside class="policy-bar"><strong>Approval Process v0.1:</strong> A benchmark attempt groups already-published exact results and is published after administrator review. It does not assign an aggregate score.</aside>
+    <aside class="policy-bar"><strong>Approval Process v0.1:</strong> A benchmark attempt groups already-published results and is published after administrator review. It does not assign an aggregate score.</aside>
     {% if not results_form %}
       <form method="get" class="form-bar-shell">{% include "components/form_bar_list.html" with form=selection_form only %}<div class="form-actions"><button type="submit">Choose results</button></div></form>
     {% else %}

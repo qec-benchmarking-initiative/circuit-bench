@@ -89,6 +89,7 @@ def tag_cell(
     selected_keys: Sequence[str],
     match_name: str,
     match_value: str,
+    tag_namespace: str,
 ) -> dict[str, Any]:
     selected_keys = tuple(selected_keys)
     return {
@@ -101,7 +102,11 @@ def tag_cell(
         "selected_keys": selected_keys,
         "match_name": match_name,
         "match_value": match_value,
-        "match_label": "any of" if match_value == "any" else "all of",
+        "tag_namespace": tag_namespace,
+        "match_label": {
+            "any": "any of",
+            "children": "any child of",
+        }.get(match_value, "all of"),
         "filtered": bool(selected_keys),
     }
 
@@ -182,6 +187,7 @@ def algorithm_grid(
             selected_keys=selected_tags,
             match_name=tag_match_name,
             match_value=tag_match,
+            tag_namespace="algorithm",
         ),
         choice_cell(
             key="skeleton",
@@ -282,6 +288,7 @@ def circuit_grid(
             selected_keys=selected_code_tags,
             match_name="code_tag_match",
             match_value=code_tag_match,
+            tag_namespace="code",
         ),
         tag_cell(
             key="experiment_tags",
@@ -292,6 +299,7 @@ def circuit_grid(
             selected_keys=selected_experiment_tags,
             match_name="experiment_tag_match",
             match_value=experiment_tag_match,
+            tag_namespace="experiment",
         ),
         related_records_cell(
             key="noise_model",

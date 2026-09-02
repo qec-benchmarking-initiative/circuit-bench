@@ -1,7 +1,7 @@
 <details class="record-history" id="record-history-{{ history.history_id }}" data-ui-state-key="record-history-{{ history.history_id }}">
   <summary>
     <span>Record history</span>
-    <span>{{ history.events|length }} event{{ history.events|length|pluralize }} · exact revisions and publication decisions</span>
+    <span>{{ history.events|length }} event{{ history.events|length|pluralize }} · revisions and publication decisions</span>
   </summary>
   {% if history.revised_from_label or history.revised_to_label %}
     <nav class="record-history-lineage" aria-label="Revision lineage">

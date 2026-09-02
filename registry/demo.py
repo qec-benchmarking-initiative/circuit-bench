@@ -16,10 +16,12 @@ from registry.models import (
     BenchmarkRevisionItem,
     CircuitRevision,
     CircuitRevisionCodeTag,
+    CircuitRevisionEczTerm,
     CircuitRevisionExperimentTag,
     Credit,
     DecoderVersion,
     DecoderVersionAlgorithmTag,
+    EczTerm,
     EvaluatorRelease,
     ExternalLink,
     Machine,
@@ -31,12 +33,49 @@ from registry.models import (
     ScoreDefinition,
     Tag,
     TagAlias,
+    TagEczParent,
 )
 from registry.services.artifacts import store_artifact_chunks
 from registry.services.histories import append_history_event, submission_snapshot
 
 DEMO_NAMESPACE = uuid.UUID("f333b191-09a8-4631-8775-3cb6fc51426e")
 DEMO_ACCOUNT_ID = uuid.uuid5(DEMO_NAMESPACE, "account/uploader")
+
+LEGACY_DEMO_CODE_TAG_SLUGS = (
+    "bacon-shor-code",
+    "bivariate-bicycle-144",
+    "bivariate-bicycle-code",
+    "bosonic-code",
+    "cat-code",
+    "colour-code",
+    "css-code",
+    "gkp-code",
+    "homological-product-code",
+    "hypergraph-product-code",
+    "planar-surface-code",
+    "quantum-error-correcting-code",
+    "quantum-ldpc-code",
+    "rotated-surface-code",
+    "stabilizer-code",
+    "subsystem-code",
+    "surface-code",
+    "topological-code",
+    "toric-code",
+    "triangular-colour-code",
+    "xzzx-surface-code",
+)
+
+DEMO_CIRCUIT_ECZ_CODES = {
+    "circuit/rotated-memory-d5": "rotated_surface",
+    "circuit/rotated-memory-d3": "rotated_surface",
+    "circuit/rotated-memory-d7": "rotated_surface",
+    "circuit/rotated-memory-d9": "rotated_surface",
+    "circuit/planar-stability-d5": "rotated_surface",
+    "circuit/colour-memory-d5": "triangular_color",
+    "circuit/bicycle-memory-144": "gross",
+    "circuit/surface-cnot-d3": "rotated_surface",
+    "submission/circuit/rotated-memory-d7": "rotated_surface",
+}
 
 
 def demo_id(name: str) -> uuid.UUID:
@@ -133,16 +172,19 @@ def seed_demo_data() -> dict[str, int]:
         status="custom",
         submitted_by=contributor,
     )
-    rotated_surface = Tag.objects.create(
-        id=demo_id("tag/code/rotated-surface-code"),
+    bicycle_162 = Tag.objects.create(
+        id=demo_id("tag/code/bivariate-bicycle-162"),
         schema_release=releases["tag"],
-        history=_demo_history("tag/code/rotated-surface-code", "tag"),
+        history=_demo_history("tag/code/bivariate-bicycle-162", "tag"),
         namespace="code",
-        slug="rotated-surface-code",
-        label="Rotated surface code",
-        description="A rotated-layout surface-code circuit.",
+        slug="bivariate-bicycle-162",
+        label="Bivariate bicycle 162",
+        description=(
+            "The 162-data-qubit member of a bivariate bicycle-code family. "
+            "This member is not currently represented by an ECZ entry."
+        ),
         status="official",
-        display_color="#87563d",
+        display_color="#526e3d",
         submitted_by=uploader,
         curated_by=uploader,
         curated_at=published_at,
@@ -182,7 +224,9 @@ def seed_demo_data() -> dict[str, int]:
         history=_demo_history("noise/randomised-phenomenological", "noise_model"),
         slug="randomised-phenomenological",
         name="Randomised phenomenological noise",
-        short_description="Draws exact priors before freezing each circuit instance.",
+        short_description=(
+            "Draws realised priors before freezing each circuit instance."
+        ),
         paper_url="https://example.org/papers/randomised-noise",
         randomises_priors=True,
         curation_status="community",
@@ -291,7 +335,6 @@ def seed_demo_data() -> dict[str, int]:
         state="published",
         published_at=published_at,
     )
-    CircuitRevisionCodeTag.objects.create(circuit_revision=circuit, tag=rotated_surface)
     CircuitRevisionExperimentTag.objects.create(circuit_revision=circuit, tag=memory)
 
     machine = Machine.objects.create(
@@ -527,7 +570,7 @@ def seed_demo_data() -> dict[str, int]:
         (
             matching,
             belief_propagation,
-            rotated_surface,
+            bicycle_162,
             memory,
             fixed_noise,
             randomised_noise,
@@ -542,6 +585,10 @@ def seed_demo_data() -> dict[str, int]:
         )
     )
     _ensure_demo_tag_aliases(uploader)
+    reconcile_demo_code_taxonomy()
+    from registry.demo_algorithm_taxonomy import reconcile_demo_algorithm_taxonomy
+
+    reconcile_demo_algorithm_taxonomy()
 
     return demo_counts()
 
@@ -633,7 +680,7 @@ def _refresh_demo_presentation() -> None:
     )
     colours = {
         "tag/algorithm/matching": "#315f7d",
-        "tag/code/rotated-surface-code": "#87563d",
+        "tag/code/bivariate-bicycle-162": "#526e3d",
         "tag/experiment/memory": "#4f704b",
     }
     for key, display_color in colours.items():
@@ -648,29 +695,20 @@ def _refresh_demo_presentation() -> None:
     )
     uploader = Account.objects.filter(id=DEMO_ACCOUNT_ID).first()
     if uploader is not None:
+        _ensure_demo_specific_code_tag(uploader)
         _ensure_demo_tag_aliases(uploader)
+        reconcile_demo_code_taxonomy()
+        from registry.demo_algorithm_taxonomy import reconcile_demo_algorithm_taxonomy
+
+        reconcile_demo_algorithm_taxonomy()
 
 
 def _ensure_demo_tag_aliases(uploader: Account) -> None:
     aliases = {
-        "tag/algorithm/matching": (
-            "MWPM",
-            "MWM",
-            "Blossom",
-            "Minimum-weight perfect matching",
+        "tag/code/bivariate-bicycle-162": (
+            "162-qubit BB code",
+            "BB 162",
         ),
-        "tag/algorithm/ordered-statistics": ("OSD",),
-        "tag/algorithm/tensor-network": ("TN",),
-        "tag/algorithm/neural-network": ("NN",),
-        "tag/algorithm/union-find": ("UF",),
-        "tag/algorithm/belief-propagation": ("BP",),
-        "tag/algorithm/fallback": ("Post processing",),
-        "tag/code/rotated-surface-code": ("Rotated planar code",),
-        "tag/code/css-code": ("Calderbank–Shor–Steane code",),
-        "tag/code/quantum-ldpc-code": ("qLDPC code",),
-        "tag/code/bivariate-bicycle-code": ("BB code",),
-        "tag/code/hypergraph-product-code": ("HGP code",),
-        "tag/code/gkp-code": ("Gottesman–Kitaev–Preskill code",),
         "tag/experiment/memory": ("Quantum memory",),
     }
     for tag_key, values in aliases.items():
@@ -700,6 +738,92 @@ def _ensure_demo_tag_aliases(uploader: Account) -> None:
                         "alias": alias,
                     },
                 )
+
+
+def _ensure_demo_specific_code_tag(uploader: Account) -> Tag:
+    """Keep one genuinely local exact-code term in the demo vocabulary."""
+
+    release = SchemaRelease.objects.get(record_type="tag", version="0.1")
+    published_at = timezone.now()
+    tag, _created = Tag.objects.get_or_create(
+        id=demo_id("tag/code/bivariate-bicycle-162"),
+        defaults={
+            "schema_release": release,
+            "history": _demo_history("tag/code/bivariate-bicycle-162", "tag"),
+            "namespace": Tag.Namespace.CODE,
+            "slug": "bivariate-bicycle-162",
+            "label": "Bivariate bicycle 162",
+            "description": (
+                "The 162-data-qubit member of a bivariate bicycle-code family. "
+                "This member is not currently represented by an ECZ entry."
+            ),
+            "status": Tag.Status.OFFICIAL,
+            "display_color": "#526e3d",
+            "submitted_by": uploader,
+            "curated_by": uploader,
+            "curated_at": published_at,
+        },
+    )
+    _ensure_demo_history_events((tag,))
+    return tag
+
+
+@transaction.atomic
+def reconcile_demo_code_taxonomy() -> dict[str, int]:
+    """Replace obsolete native demo code tags with exact ECZ memberships."""
+
+    uploader = Account.objects.filter(id=DEMO_ACCOUNT_ID).first()
+    if uploader is None:
+        return {"retired_native_tags": 0, "ecz_memberships": 0}
+
+    specific_tag = _ensure_demo_specific_code_tag(uploader)
+    _ensure_demo_tag_aliases(uploader)
+    legacy_ids = [demo_id(f"tag/code/{slug}") for slug in LEGACY_DEMO_CODE_TAG_SLUGS]
+    retired = 0
+    from registry.services.taxonomy import retire_tag
+
+    for tag in Tag.objects.filter(
+        id__in=legacy_ids,
+        status__in=(Tag.Status.CUSTOM, Tag.Status.OFFICIAL),
+    ).order_by("id"):
+        retire_tag(tag.id, actor=uploader)
+        retired += 1
+
+    demo_circuit_ids = [demo_id(key) for key in DEMO_CIRCUIT_ECZ_CODES]
+    CircuitRevisionCodeTag.objects.filter(
+        circuit_revision_id__in=demo_circuit_ids,
+        tag_id__in=legacy_ids,
+    ).delete()
+
+    current_terms = {
+        term.ecz_code_id: term
+        for term in EczTerm.objects.filter(
+            ecz_code_id__in=set(DEMO_CIRCUIT_ECZ_CODES.values()),
+            status=EczTerm.Status.CURRENT,
+        )
+    }
+    memberships = 0
+    for circuit_key, code_id in DEMO_CIRCUIT_ECZ_CODES.items():
+        term = current_terms.get(code_id)
+        if term is None:
+            continue
+        circuit_id = demo_id(circuit_key)
+        if not CircuitRevision.objects.filter(id=circuit_id).exists():
+            continue
+        _membership, created = CircuitRevisionEczTerm.objects.get_or_create(
+            circuit_revision_id=circuit_id,
+            ecz_term=term,
+        )
+        memberships += int(created)
+
+    bb_family = EczTerm.objects.filter(
+        ecz_code_id="qcga",
+        status=EczTerm.Status.CURRENT,
+    ).first()
+    if bb_family is not None:
+        TagEczParent.objects.get_or_create(tag=specific_tag, ecz_term=bb_family)
+
+    return {"retired_native_tags": retired, "ecz_memberships": memberships}
 
 
 def demo_counts() -> dict[str, int]:

@@ -18,7 +18,7 @@ from registry.forms_taxonomy import (
     TagDeprecationForm,
     TagPromotionForm,
 )
-from registry.models import NoiseModel, Tag
+from registry.models import EczTerm, NoiseModel, Tag
 from registry.services.tags import active_tag_queryset
 from registry.services.taxonomy import (
     TaxonomyError,
@@ -158,6 +158,15 @@ def custom_tag_preview(request, preview_id):
                         Tag.objects.filter(id__in=payload.get("parents", ()))
                         .order_by("label")
                         .values_list("label", flat=True)
+                    )
+                    or "None",
+                ),
+                (
+                    "Error Correction Zoo parents",
+                    ", ".join(
+                        EczTerm.objects.filter(id__in=payload.get("ecz_parents", ()))
+                        .order_by("display_name")
+                        .values_list("display_name", flat=True)
                     )
                     or "None",
                 ),

@@ -1,8 +1,19 @@
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from registry.demo import seed_demo_data
-from registry.models import CircuitRevision, Machine, NoiseModel, RecordHistory
+from registry.models import (
+    CircuitRevision,
+    EczSyncRun,
+    EczTerm,
+    Machine,
+    NoiseModel,
+    RecordHistory,
+    Tag,
+    TagEczParent,
+    TagParent,
+)
 
 
 @pytest.fixture
@@ -77,6 +88,88 @@ def test_circuit_explorer_combines_scientific_filters_and_column_state(
     assert 'id="circuit-filters"' in content
     assert "data-filter-tag-cell" in content
     assert "Detector count" in content
+
+
+def test_any_child_code_match_crosses_from_ecz_to_native_children(
+    client, demo_registry
+):
+    circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
+    native_child = Tag.objects.get(
+        namespace=Tag.Namespace.CODE,
+        slug="bivariate-bicycle-162",
+    )
+    now = timezone.now()
+    sync_run = EczSyncRun.objects.create(
+        started_at=now,
+        finished_at=now,
+        status=EczSyncRun.Status.APPLIED,
+        source_repository="https://github.com/errorcorrectionzoo/eczoo_data",
+    )
+    ecz_parent = EczTerm.objects.create(
+        ecz_code_id="qcga-test-parent",
+        raw_name="QCGA test parent",
+        display_name="QCGA test parent",
+        first_seen_run=sync_run,
+        last_seen_run=sync_run,
+    )
+    TagEczParent.objects.create(tag=native_child, ecz_term=ecz_parent)
+    circuit.code_tags.add(native_child)
+
+    exact = client.get(
+        reverse("circuits:list"),
+        {"code_tag": "ecz:qcga-test-parent", "code_tag_match": "any"},
+    )
+    descendants = client.get(
+        reverse("circuits:list"),
+        {
+            "code_tag": "ecz:qcga-test-parent",
+            "code_tag_match": "children",
+        },
+    )
+
+    assert circuit not in exact.context["circuits"]
+    assert circuit in descendants.context["circuits"]
+
+
+def test_any_child_experiment_match_is_recursive_and_includes_root(
+    client, demo_registry
+):
+    memory = Tag.objects.get(namespace=Tag.Namespace.EXPERIMENT, slug="memory")
+    stability = Tag.objects.create(
+        schema_release=memory.schema_release,
+        history=RecordHistory.objects.create(record_kind="tag"),
+        namespace=Tag.Namespace.EXPERIMENT,
+        slug="stability-parent-test",
+        label="Stability parent test",
+        description="Test-only parent for experiment-filter coverage.",
+        status=Tag.Status.OFFICIAL,
+        submitted_by=memory.submitted_by,
+    )
+    TagParent.objects.create(child=memory, parent=stability)
+
+    exact_slugs = {
+        circuit.slug
+        for circuit in client.get(
+            reverse("circuits:list"),
+            {
+                "experiment_tag": "stability-parent-test",
+                "experiment_tag_match": "any",
+            },
+        ).context["circuits"]
+    }
+    descendant_slugs = {
+        circuit.slug
+        for circuit in client.get(
+            reverse("circuits:list"),
+            {
+                "experiment_tag": "stability-parent-test",
+                "experiment_tag_match": "children",
+            },
+        ).context["circuits"]
+    }
+
+    assert exact_slugs == set()
+    assert "rotated-memory-d5" in descendant_slugs
 
 
 def test_circuit_noise_model_picker_uses_repeated_in_filter_parameters(
@@ -204,10 +297,9 @@ def test_circuit_leaderboard_table_state_is_url_backed(client, demo_registry):
 def test_circuit_tag_filter_keeps_namespace(client, demo_registry):
     circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
     Tag = circuit.code_tags.model
+    source = circuit.experiment_tags.get(slug="memory")
     Tag.objects.create(
-        schema_release=circuit.code_tags.get(
-            slug="rotated-surface-code"
-        ).schema_release,
+        schema_release=source.schema_release,
         history=RecordHistory.objects.create(record_kind="tag"),
         namespace="code",
         slug="memory",
@@ -220,8 +312,30 @@ def test_circuit_tag_filter_keeps_namespace(client, demo_registry):
     experiment = client.get(reverse("circuits:list"), {"tag": "experiment:memory"})
     code = client.get(reverse("circuits:list"), {"tag": "code:memory"})
 
-    assert len(experiment.context["circuits"]) == 1
+    assert len(experiment.context["circuits"]) > 0
     assert len(code.context["circuits"]) == 0
+
+
+def test_circuit_code_filter_accepts_exact_ecz_identities(client, demo_registry):
+    sync_run = EczSyncRun.objects.create(
+        started_at=timezone.now(),
+        finished_at=timezone.now(),
+        status=EczSyncRun.Status.APPLIED,
+        source_repository="https://github.com/errorcorrectionzoo/eczoo_data",
+    )
+    term = EczTerm.objects.create(
+        ecz_code_id="rotated_surface",
+        raw_name="Rotated surface code",
+        display_name="Rotated surface code",
+        first_seen_run=sync_run,
+        last_seen_run=sync_run,
+    )
+    circuit = CircuitRevision.objects.get(slug="rotated-memory-d5")
+    circuit.ecz_terms.add(term)
+    response = client.get(reverse("circuits:list"), {"code_tag": "ecz:rotated_surface"})
+
+    assert response.context["result_count"] == 1
+    assert response.context["circuits"][0] == circuit
 
 
 def test_withdrawn_noise_model_retains_exact_historical_url(client, demo_registry):

@@ -599,12 +599,13 @@
   const syncTagPanel = (panel) => {
     const picker = panel.querySelector("[data-tag-picker]");
     if (!picker) return;
-    const selected = picker.querySelectorAll('[data-tag-choice] input:checked').length;
+    const selected = picker.querySelectorAll("[data-tag-selection]").length;
     const match = picker.querySelector("[data-tag-match-input]")?.value || "all";
     setControlState(panel, selected > 0);
-    panel.querySelector("[data-tag-rule-label]").textContent = (
-      match === "any" ? "any of" : "all of"
-    );
+    panel.querySelector("[data-tag-rule-label]").textContent = ({
+      any: "any of",
+      children: "any child of",
+    })[match] || "all of";
     updateAppliedCount(panel.closest("[data-filter-grid]"));
   };
 
@@ -616,8 +617,23 @@
       ...panel.querySelectorAll("[data-tag-summary] > *"),
       panel.querySelector("[data-tag-dialog-open]"),
     ].filter(Boolean);
+    const intrinsicWidth = (item) => {
+      const measuringCopy = item.cloneNode(true);
+      Object.assign(measuringCopy.style, {
+        position: "fixed",
+        visibility: "hidden",
+        width: "max-content",
+        maxWidth: "none",
+        whiteSpace: "nowrap",
+        pointerEvents: "none",
+      });
+      document.body.append(measuringCopy);
+      const width = measuringCopy.getBoundingClientRect().width;
+      measuringCopy.remove();
+      return width;
+    };
     const itemWidth = summaryItems.reduce(
-      (total, item) => total + item.getBoundingClientRect().width,
+      (total, item) => total + intrinsicWidth(item),
       Math.max(0, summaryItems.length - 1) * 5
     );
     const headingWidth = panel.querySelector(".filter-grid-tag-heading").scrollWidth;
@@ -625,8 +641,9 @@
     const padding = parseFloat(panelStyle.paddingLeft) + parseFloat(panelStyle.paddingRight);
     const desiredWidth = Math.max(itemWidth + padding, headingWidth + padding);
     const span = Math.max(2, Math.min(columns, Math.ceil(desiredWidth / trackWidth)));
-    if (panel.style.getPropertyValue("--filter-tag-span") !== String(span)) {
-      panel.style.setProperty("--filter-tag-span", String(span));
+    const gridColumn = `span ${span}`;
+    if (panel.style.gridColumn !== gridColumn) {
+      panel.style.gridColumn = gridColumn;
     }
   };
 
@@ -747,8 +764,19 @@
       activeOverlay.dragging = handle.dataset.controlRangeHandle;
     });
 
-    grid.addEventListener("tagpicker:layoutchange", scheduleTagResize);
-    grid.addEventListener("control:commit", () => updateAppliedCount(grid));
+    grid.addEventListener("tagpicker:layoutchange", (event) => {
+      const panel = event.target.closest("[data-filter-tag-cell]");
+      if (panel) syncTagPanel(panel);
+      scheduleTagResize();
+    });
+    grid.addEventListener("control:commit", (event) => {
+      const panel = event.target.closest("[data-filter-tag-cell]");
+      if (panel) {
+        syncTagPanel(panel);
+        resizeTagPanel(panel);
+      }
+      updateAppliedCount(grid);
+    });
   });
 
   document.addEventListener("pointerdown", (event) => {

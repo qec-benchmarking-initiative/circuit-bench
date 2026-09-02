@@ -60,6 +60,11 @@ class Tag(UUIDModel):
         symmetrical=False,
         related_name="children",
     )
+    ecz_parents = models.ManyToManyField(
+        "registry.EczTerm",
+        through="registry.TagEczParent",
+        related_name="native_children",
+    )
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

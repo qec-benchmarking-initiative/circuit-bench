@@ -21,7 +21,7 @@ def test_demo_data_is_complete_and_idempotent():
             "noise_models": 2,
             "results": 1,
             "scores": 2,
-            "tags": 4,
+            "tags": 25,
         }
     )
     decoder = DecoderVersion.objects.get(slug="clear-matcher-0-2")

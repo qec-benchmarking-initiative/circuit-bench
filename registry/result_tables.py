@@ -5,6 +5,10 @@ from django.urls import NoReverseMatch, reverse
 from registry.formatting import format_scientific_value
 from registry.models import Result
 from registry.result_query import FIELD_BY_NAME, annotate_result_metrics
+from registry.services.ecz_taxonomy import (
+    circuit_code_taxonomy,
+    taxonomy_display_dict,
+)
 from registry.table_controls import ColumnSpec
 
 RESULT_METRIC_COLUMNS = (
@@ -85,6 +89,7 @@ def result_cell_map(
             "tags": [
                 {
                     "label": tag.label,
+                    "status": tag.status,
                     "display_color": tag.display_color,
                     "url": tag.get_absolute_url(),
                 }
@@ -99,12 +104,7 @@ def result_cell_map(
         "code_tags": {
             "key": "code_tags",
             "tags": [
-                {
-                    "label": tag.label,
-                    "display_color": tag.display_color,
-                    "url": tag.get_absolute_url(),
-                }
-                for tag in circuit.display_code_tags
+                taxonomy_display_dict(item) for item in circuit_code_taxonomy(circuit)
             ],
         },
         "experiment_tags": {
@@ -112,6 +112,7 @@ def result_cell_map(
             "tags": [
                 {
                     "label": tag.label,
+                    "status": tag.status,
                     "display_color": tag.display_color,
                     "url": tag.get_absolute_url(),
                 }

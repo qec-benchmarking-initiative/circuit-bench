@@ -13,6 +13,7 @@
   const BOUNDARY_LANE = 14;
   const LAYER_LABEL_GUTTER = 58;
   const LATERAL_HINT_STEP = 28;
+  const graphStates = new WeakMap();
 
   const svgElement = (name, attributes = {}) => {
     const element = document.createElementNS(SVG_NS, name);
@@ -206,10 +207,11 @@
     return tasks;
   };
 
-  const appendNode = (group, node, position) => {
+  const appendNode = (group, node, position, isFocus) => {
     const link = svgElement("a", {
       href: node.url,
-      class: `taxonomy-graph-node taxonomy-graph-node-${node.layer} taxonomy-graph-node-${node.status}`,
+      class: `taxonomy-graph-node taxonomy-graph-node-layer-${node.layer} taxonomy-graph-node-status-${node.status} taxonomy-graph-node-source-${node.source || "circuit_bench"}${isFocus ? " taxonomy-graph-node-focus" : ""}`,
+      "data-taxonomy-graph-node-id": node.id,
       "aria-label": `${node.label}${node.deleted ? ", deleted" : ""}`,
     });
     if (node.colour) link.style.setProperty("--tag-node-colour", node.colour);
@@ -242,6 +244,61 @@
       link.append(deleted);
     }
     group.append(link);
+  };
+
+  const overflowLabel = (count) => `${count} ${count === 1 ? "item" : "items"} hidden`;
+
+  const overflowChevron = (side, count) => {
+    const chevrons = document.createElement("span");
+    chevrons.className = `taxonomy-graph-overflow-chevrons taxonomy-graph-overflow-chevrons-${side}`;
+    chevrons.setAttribute("aria-hidden", "true");
+    Array.from({ length: Math.min(count, 3) }, () => {
+      const chevron = document.createElement("span");
+      chevron.className = "taxonomy-graph-overflow-chevron";
+      chevrons.append(chevron);
+    });
+    return chevrons;
+  };
+
+  const overflowContents = (side, count) => {
+    const label = document.createElement("span");
+    label.className = "taxonomy-graph-overflow-label";
+    label.textContent = overflowLabel(count);
+    return [
+      overflowChevron(side, count),
+      label,
+      overflowChevron(side, count),
+    ];
+  };
+
+  const updateOverflowIndicators = (panel) => {
+    const canvas = panel.querySelector("[data-taxonomy-graph-canvas]");
+    const state = graphStates.get(canvas);
+    if (!state) return;
+    const visibleLeft = canvas.scrollLeft;
+    const visibleRight = visibleLeft + canvas.clientWidth;
+    let leftCount = 0;
+    let rightCount = 0;
+    state.graph.nodes.forEach((node) => {
+      const position = state.positions.get(node.id);
+      if (!position) return;
+      const nodeLeft = position.x - position.width / 2;
+      const nodeRight = position.x + position.width / 2;
+      if (nodeRight <= visibleLeft) leftCount += 1;
+      if (nodeLeft >= visibleRight) rightCount += 1;
+    });
+    [["left", leftCount], ["right", rightCount]].forEach(([side, count]) => {
+      const indicator = panel.querySelector(
+        `[data-taxonomy-graph-overflow="${side}"]`
+      );
+      if (!indicator) return;
+      indicator.hidden = count === 0;
+      indicator.replaceChildren(...(count ? overflowContents(side, count) : []));
+      indicator.setAttribute(
+        "aria-label",
+        `${overflowLabel(count)} beyond the ${side} edge`
+      );
+    });
   };
 
   const renderGraph = (panel) => {
@@ -286,8 +343,10 @@
 
     const defs = svgElement("defs");
     const edgeMarkerId = `${panel.id}-arrow`;
+    const eczEdgeMarkerId = `${panel.id}-ecz-arrow`;
     const boundaryMarkerId = `${panel.id}-boundary-arrow`;
     appendMarker(defs, edgeMarkerId, "taxonomy-graph-arrowhead");
+    appendMarker(defs, eczEdgeMarkerId, "taxonomy-graph-arrowhead-ecz");
     appendMarker(defs, boundaryMarkerId, "taxonomy-graph-boundary-arrowhead");
     svg.append(defs);
 
@@ -330,7 +389,16 @@
       const child = positions.get(edge.child);
       const parent = positions.get(edge.parent);
       if (child && parent) {
-        appendEdge(edges, child, parent, edgeMarkerId, "taxonomy-graph-edge");
+        const isEczEdge = edge.source === "ecz";
+        appendEdge(
+          edges,
+          child,
+          parent,
+          isEczEdge ? eczEdgeMarkerId : edgeMarkerId,
+          isEczEdge
+            ? "taxonomy-graph-edge taxonomy-graph-edge-source-ecz"
+            : "taxonomy-graph-edge"
+        );
       }
     });
     boundaryTasks(graph, positions, layout).forEach((task) => {
@@ -346,19 +414,46 @@
     svg.append(edges);
 
     const nodes = svgElement("g");
-    graph.nodes.forEach((node) => appendNode(nodes, node, positions.get(node.id)));
+    graph.nodes.forEach((node) => appendNode(
+      nodes,
+      node,
+      positions.get(node.id),
+      node.id === graph.focus
+    ));
     svg.append(nodes);
     canvas.replaceChildren(svg);
-    canvas.scrollLeft = Math.max(0, (width - canvas.clientWidth) / 2);
+    graphStates.set(canvas, { graph, positions });
+    const focusPosition = positions.get(graph.focus);
+    canvas.scrollLeft = Math.max(
+      0,
+      Math.min(
+        canvas.scrollWidth - canvas.clientWidth,
+        focusPosition.x - canvas.clientWidth / 2
+      )
+    );
+    updateOverflowIndicators(panel);
     panel.dataset.taxonomyGraphRendered = "true";
   };
 
   const clearGraph = (panel) => {
-    panel.querySelector("[data-taxonomy-graph-canvas]")?.replaceChildren();
+    const canvas = panel.querySelector("[data-taxonomy-graph-canvas]");
+    canvas?.replaceChildren();
+    if (canvas) graphStates.delete(canvas);
+    panel.querySelectorAll("[data-taxonomy-graph-overflow]").forEach((indicator) => {
+      indicator.hidden = true;
+      indicator.textContent = "";
+    });
     delete panel.dataset.taxonomyGraphRendered;
   };
 
   document.querySelectorAll("[data-taxonomy-graph-panel]").forEach((panel) => {
+    const canvas = panel.querySelector("[data-taxonomy-graph-canvas]");
+    canvas?.addEventListener("scroll", () => updateOverflowIndicators(panel), {
+      passive: true,
+    });
+    if (canvas && "ResizeObserver" in window) {
+      new ResizeObserver(() => updateOverflowIndicators(panel)).observe(canvas);
+    }
     if (panel.open) renderGraph(panel);
     panel.addEventListener("toggle", () => {
       if (panel.open) {

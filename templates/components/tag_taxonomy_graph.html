@@ -6,15 +6,19 @@
   {% if graph.open_by_default %}open{% endif %}
 >
   <summary>
-    <span>Local graph</span>
+    <span>{{ graph.title|default:"Local graph" }}</span>
     <span>{{ graph.relationship_count }} relationship{{ graph.relationship_count|pluralize }}</span>
   </summary>
-  <div
-    class="taxonomy-graph-canvas"
-    data-taxonomy-graph-canvas
-    tabindex="0"
-    aria-label="Local taxonomy graph"
-  ></div>
+  <div class="taxonomy-graph-viewport" data-taxonomy-graph-viewport>
+    <div
+      class="taxonomy-graph-canvas"
+      data-taxonomy-graph-canvas
+      tabindex="0"
+      aria-label="Local taxonomy graph"
+    ></div>
+    <div class="taxonomy-graph-overflow taxonomy-graph-overflow-left" data-taxonomy-graph-overflow="left" hidden aria-hidden="true"></div>
+    <div class="taxonomy-graph-overflow taxonomy-graph-overflow-right" data-taxonomy-graph-overflow="right" hidden aria-hidden="true"></div>
+  </div>
   <noscript><p class="taxonomy-graph-noscript">Enable JavaScript to render the taxonomy graph.</p></noscript>
 </details>
 {{ graph.payload|json_script:graph.data_id }}

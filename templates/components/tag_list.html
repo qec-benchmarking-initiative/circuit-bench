@@ -1,7 +1,7 @@
 {% if tags %}
   <ul class="tag-list" aria-label="{{ label|default:'Tags' }}">
     {% for tag in tags %}
-      <li><a class="tag tag-{{ tag.status }}"{% if tag.status == "official" and tag.display_color %} style="--tag-color: {{ tag.display_color }}"{% endif %} href="{% if tag.url %}{{ tag.url }}{% else %}{{ tag.get_absolute_url }}{% endif %}">{% include "components/tag_text.html" with tag=tag only %}</a></li>
+      <li><a class="tag tag-{{ tag.status }}{% if tag.source %} tag-source-{{ tag.source }}{% endif %}"{% if tag.status == "official" and tag.display_color %} style="--tag-color: {{ tag.display_color }}"{% endif %} href="{% if tag.url %}{{ tag.url }}{% else %}{{ tag.get_absolute_url }}{% endif %}">{% include "components/tag_text.html" with tag=tag only %}</a></li>
     {% endfor %}
   </ul>
 {% else %}

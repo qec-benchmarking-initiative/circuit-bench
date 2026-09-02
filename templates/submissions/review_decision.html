@@ -10,7 +10,7 @@
       <p><a href="{% url 'submissions:record' kind=kind record_id=record.id %}">{{ record_label }}</a> · {{ record.get_state_display }}</p>
     </header>
 
-    {% if decision == "reject" %}<aside class="notice-bar"><strong>Final decision:</strong> Rejection leaves this exact candidate private and read-only.</aside>{% endif %}
+    {% if decision == "reject" %}<aside class="notice-bar"><strong>Final decision:</strong> Rejection leaves this candidate private and read-only.</aside>{% endif %}
     <form method="post" class="form-bar-shell">
       {% csrf_token %}
       {% include "components/form_bar_list.html" with form=form only %}

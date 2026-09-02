@@ -45,7 +45,6 @@ def seed_submission_demo_data() -> dict[str, int]:
 
     matching = Tag.objects.get(id=demo_id("tag/algorithm/matching"))
     memory = Tag.objects.get(id=demo_id("tag/experiment/memory"))
-    code = Tag.objects.get(id=demo_id("tag/code/rotated-surface-code"))
     base_decoder = DecoderVersion.objects.get(id=demo_id("decoder/clear-matcher/0.2"))
     base_circuit = CircuitRevision.objects.get(id=demo_id("circuit/rotated-memory-d5"))
     base_result = Result.objects.get(id=demo_id("result/clear-matcher-rotated-memory"))
@@ -121,7 +120,7 @@ def seed_submission_demo_data() -> dict[str, int]:
         },
     )
     if created:
-        pending_circuit.code_tags.add(code)
+        pending_circuit.ecz_terms.set(base_circuit.ecz_terms.all())
         pending_circuit.experiment_tags.add(memory)
         Credit.objects.create(
             id=demo_id("submission/credit/circuit"),

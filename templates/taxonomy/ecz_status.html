@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}ECZ synchronisation · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
+      <p class="eyebrow">Admin</p>
+      <h1>Error Correction Zoo synchronisation</h1>
+      <p class="page-action-bar"><a class="button button-secondary" href="{% url 'taxonomy:ecz-mapping-create' %}">Create equivalence mapping</a> <a class="button button-secondary" href="{% url 'taxonomy:curation' %}">Taxonomy curation</a></p>
+    </header>
+
+    {% if stale %}<p class="notice-bar notice-warning">No successful ECZ synchronisation has completed in the last seven days.</p>{% endif %}
+
+    <dl class="form-bar-list">
+      <div class="form-bar-row"><dt class="form-bar-label">Current terms</dt><dd class="form-bar-control">{{ current_count }}</dd></div>
+      <div class="form-bar-row"><dt class="form-bar-label">Retired terms</dt><dd class="form-bar-control">{{ retired_count }}</dd></div>
+      <div class="form-bar-row"><dt class="form-bar-label">Applied source</dt><dd class="form-bar-control">{% if successful.source_commit %}<a href="https://github.com/errorcorrectionzoo/eczoo_data/commit/{{ successful.source_commit }}"><code>{{ successful.source_commit }}</code></a>{% else %}No deployed source has been applied.{% endif %}</dd></div>
+      <div class="form-bar-row"><dt class="form-bar-label">Last successful check</dt><dd class="form-bar-control">{{ successful.finished_at|default:"Never" }}</dd></div>
+    </dl>
+
+    {% if retired_target_mappings %}
+      <section class="table-section">
+        <h2>Mappings requiring review</h2>
+        <div class="table-scroll"><table class="data-table"><thead><tr><th>Tag</th><th>Retired ECZ target</th><th>Action</th></tr></thead><tbody>{% for mapping in retired_target_mappings %}<tr><td><a href="{{ mapping.tag.get_absolute_url }}">{{ mapping.tag.label }}</a></td><td><a href="{{ mapping.ecz_term.get_absolute_url }}">{{ mapping.ecz_term.display_name }} (ECZ)</a></td><td><a class="table-action" href="{% url 'taxonomy:ecz-mapping-revoke' mapping.id %}">Demerge</a></td></tr>{% endfor %}</tbody></table></div>
+      </section>
+    {% endif %}
+
+    <section class="table-section">
+      <h2>Active equivalence mappings</h2>
+      <div class="table-scroll"><table class="data-table"><thead><tr><th>Circuit Bench tag</th><th>ECZ term</th><th>Mapped by</th><th>Rationale</th><th>Action</th></tr></thead><tbody>{% for mapping in active_mappings %}<tr><td><a href="{{ mapping.tag.get_absolute_url }}">{{ mapping.tag.label }}</a></td><td><a href="{{ mapping.ecz_term.get_absolute_url }}">{{ mapping.ecz_term.display_name }} (ECZ)</a></td><td>{{ mapping.mapped_by.display_name }}</td><td>{{ mapping.mapping_note }}</td><td><a class="table-action" href="{% url 'taxonomy:ecz-mapping-revoke' mapping.id %}">Demerge</a></td></tr>{% empty %}<tr><td colspan="5" class="table-empty">No active equivalence mappings.</td></tr>{% endfor %}</tbody></table></div>
+    </section>
+
+    <section class="table-section">
+      <h2>Synchronisation runs</h2>
+      <div class="table-scroll"><table class="data-table"><thead><tr><th>Started</th><th>Status</th><th>Source</th><th>Terms</th><th>Names</th><th>Parent edges</th><th>Diagnostics</th></tr></thead><tbody>{% for run in runs %}<tr><td>{{ run.started_at }}</td><td>{{ run.get_status_display }}</td><td>{% if run.source_commit %}<a href="https://github.com/errorcorrectionzoo/eczoo_data/commit/{{ run.source_commit }}"><code>{{ run.source_commit|slice:":12" }}</code></a>{% else %}<code>{{ run.source_repository }}</code>{% endif %}</td><td>+{{ run.terms_added }} / −{{ run.terms_retired }}{% if run.terms_restored %} / {{ run.terms_restored }} restored{% endif %}</td><td>{{ run.names_changed }}</td><td>+{{ run.parent_edges_added }} / −{{ run.parent_edges_removed }}</td><td>{% if run.diagnostics.error %}{{ run.diagnostics.error }}{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="7" class="table-empty">No synchronisation has been attempted.</td></tr>{% endfor %}</tbody></table></div>
+    </section>
+  </div>
+{% endblock %}

@@ -30,7 +30,7 @@ from registry.table_controls import (
 )
 
 RESULT_COLUMNS = (
-    ColumnSpec("result", "Result", help_text="Exact result UUID"),
+    ColumnSpec("result", "Result", help_text="Result UUID"),
     ColumnSpec("decoder", "Decoder"),
     ColumnSpec("version", "Version"),
     ColumnSpec("algorithm_tags", "Algorithm tags", sortable=False),

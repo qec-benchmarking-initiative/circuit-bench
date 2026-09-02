@@ -31,10 +31,73 @@
   font-weight: 400;
 }
 
-.taxonomy-graph-canvas:not(:empty) {
-  overflow-x: auto;
+.taxonomy-graph-viewport {
+  position: relative;
   border-top: 1px solid var(--line-strong);
   background: var(--paper);
+}
+
+.taxonomy-graph-canvas {
+  overflow-x: auto;
+}
+
+.taxonomy-graph-overflow {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  display: grid;
+  width: 1.35rem;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  justify-items: center;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface-muted) 88%, transparent);
+  font: 700 0.65rem/1 var(--font-interface);
+  letter-spacing: 0.025em;
+  pointer-events: none;
+}
+
+.taxonomy-graph-overflow[hidden] {
+  display: none;
+}
+
+.taxonomy-graph-overflow-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.taxonomy-graph-overflow-chevrons {
+  display: flex;
+  width: 1.08rem;
+  height: 0.55rem;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  gap: 0.06rem;
+  writing-mode: horizontal-tb;
+}
+
+.taxonomy-graph-overflow-chevron {
+  display: block;
+  width: 0.16rem;
+  height: 0.48rem;
+  flex: 0 0 0.16rem;
+  background: currentcolor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%, 0 76%, 52% 50%, 0 24%);
+}
+
+.taxonomy-graph-overflow-chevrons-left .taxonomy-graph-overflow-chevron {
+  transform: scaleX(-1);
+}
+
+.taxonomy-graph-overflow-left {
+  left: 0;
+  border-right: 1px solid var(--line);
+}
+
+.taxonomy-graph-overflow-right {
+  right: 0;
+  border-left: 1px solid var(--line);
 }
 
 .taxonomy-graph-svg {
@@ -72,6 +135,14 @@
   fill: color-mix(in srgb, var(--ink) 55%, var(--line));
 }
 
+.taxonomy-graph-edge-source-ecz {
+  stroke: var(--ecz-blue);
+}
+
+.taxonomy-graph-arrowhead-ecz {
+  fill: var(--ecz-blue);
+}
+
 .taxonomy-graph-boundary-arrowhead {
   fill: var(--muted);
   opacity: 0.72;
@@ -84,17 +155,28 @@
   vector-effect: non-scaling-stroke;
 }
 
-.taxonomy-graph-node-current rect {
+.taxonomy-graph-node-focus rect {
   fill: color-mix(in srgb, var(--accent) 10%, var(--surface));
   stroke: var(--accent);
   stroke-width: 1.8;
 }
 
-.taxonomy-graph-node-official rect {
+.taxonomy-graph-node-status-official rect {
   stroke: var(--tag-node-colour, var(--accent));
 }
 
-.taxonomy-graph-node-retired rect {
+.taxonomy-graph-node-source-ecz rect {
+  fill: color-mix(in srgb, var(--ecz-blue) 9%, var(--surface));
+  stroke: var(--ecz-blue);
+  stroke-dasharray: 4 2;
+}
+
+.taxonomy-graph-node-source-ecz.taxonomy-graph-node-focus rect {
+  fill: color-mix(in srgb, var(--ecz-blue) 16%, var(--surface));
+  stroke-width: 1.8;
+}
+
+.taxonomy-graph-node-status-retired rect {
   fill: var(--surface-muted);
   stroke: var(--muted);
   stroke-dasharray: 4 3;
@@ -102,11 +184,15 @@
 
 .taxonomy-graph-node text {
   fill: var(--ink);
-  font: 700 9.5px/1.1 var(--font-interface);
+  font: 400 9.5px/1.1 var(--font-interface);
   pointer-events: none;
 }
 
-.taxonomy-graph-node-retired .taxonomy-graph-node-label {
+.taxonomy-graph-node-focus text {
+  font-weight: 700;
+}
+
+.taxonomy-graph-node-status-retired .taxonomy-graph-node-label {
   fill: var(--muted);
   text-decoration: line-through;
 }

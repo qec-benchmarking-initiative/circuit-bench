@@ -33,3 +33,7 @@ def test_render_blueprint_uses_staging_branch_and_durable_services():
     assert "63b9cf4fbc03f05e1dc6c4e33c421d0a.r2.cloudflarestorage.com" in blueprint
     assert "R2_SECRET_ACCESS_KEY" in blueprint
     assert "sync: false" in blueprint
+    assert "name: circuit-bench-ecz-sync-staging" in blueprint
+    assert 'schedule: "17 3 * * *"' in blueprint
+    assert "startCommand: python manage.py sync_ecz_taxonomy" in blueprint
+    assert "ECZ_GITHUB_TOKEN" in blueprint

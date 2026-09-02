@@ -1,0 +1,24 @@
+<div class="compact-search-form taxonomy-usage-search">
+  <label for="{{ usage_search_id }}">{{ usage_search_label }}</label>
+  <input id="{{ usage_search_id }}" type="search" name="q" value="{{ usage_query }}">
+  <button type="submit">Search</button>
+</div>
+<div class="taxonomy-usage-options">
+  <input
+    type="hidden"
+    name="include_descendants"
+    value="0"
+    data-checkbox-fallback-for="{{ usage_search_id }}-include-descendants"
+  >
+  <label for="{{ usage_search_id }}-include-descendants">
+    <input
+      id="{{ usage_search_id }}-include-descendants"
+      type="checkbox"
+      name="include_descendants"
+      value="1"
+      data-filter-commit
+      {% if include_descendants %}checked{% endif %}
+    >
+    <span>{{ descendant_control_label }}</span>
+  </label>
+</div>

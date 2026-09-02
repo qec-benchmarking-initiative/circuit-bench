@@ -159,7 +159,7 @@ def _serialize_result(record: Result) -> dict[str, Any]:
         "identifier": str(record.id),
         "label": f"{record.decoder_version} on {record.circuit_revision}",
         "secondary_label": str(record.id)[:12],
-        "description": record.description or "Exact published result",
+        "description": record.description or "Published result",
         "curation_status": status,
         "curation_label": status_label,
         "detail_url": reverse("results:detail", args=[record.id]),

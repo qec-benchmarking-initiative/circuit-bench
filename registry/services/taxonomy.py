@@ -19,6 +19,7 @@ from django.utils.text import slugify
 
 from accounts.models import Account
 from registry.models import (
+    EczTerm,
     NoiseModel,
     RecordEvent,
     SchemaRelease,
@@ -87,6 +88,7 @@ def create_custom_tag(
     description: str,
     aliases: Iterable[str] = (),
     parents: Iterable[Tag | str] = (),
+    ecz_parents: Iterable[str] = (),
 ) -> TagCreationOutcome:
     """Create an immediately usable custom tag with an explicit system route."""
 
@@ -96,6 +98,7 @@ def create_custom_tag(
     description = description.strip()
     aliases = normalise_tag_aliases(aliases)
     parent_ids = normalise_tag_parent_ids(parents)
+    ecz_parents = tuple(ecz_parents)
     slug = slug.strip() if slug is not None else ""
     if not slug:
         slug = _available_tag_slug(namespace, label)
@@ -105,7 +108,7 @@ def create_custom_tag(
     try:
         with transaction.atomic():
             graph_edges = _lock_tag_taxonomy_graph()
-            parent_tags = _locked_parent_tags(parent_ids)
+            parent_tags = _locked_parent_tags(parent_ids, namespace=namespace)
             if Tag.objects.filter(namespace=namespace, slug=slug).exists():
                 raise TaxonomyConflictError(
                     "That tag identity is already present as a tag name or alias."
@@ -152,6 +155,7 @@ def create_custom_tag(
                         "description": description,
                         "aliases": list(aliases),
                         "parent_tag_ids": [str(parent_id) for parent_id in parent_ids],
+                        "ecz_parent_ids": [str(parent_id) for parent_id in ecz_parents],
                         "status": Tag.Status.CUSTOM,
                     },
                 ),
@@ -166,6 +170,20 @@ def create_custom_tag(
                 TagParent(child=tag, parent=parent_tags[parent_id])
                 for parent_id in parent_ids
             )
+            if ecz_parents:
+                from registry.services.ecz_taxonomy import (
+                    EczTaxonomyError,
+                    set_tag_ecz_parents,
+                )
+
+                try:
+                    set_tag_ecz_parents(
+                        tag.id,
+                        actor=submitter,
+                        ecz_terms=ecz_parents,
+                    )
+                except EczTaxonomyError as error:
+                    raise TaxonomyValidationError(str(error)) from error
             approval_event = append_history_event(
                 kind="tag",
                 record=tag,
@@ -270,10 +288,12 @@ def update_tag(
     description: str,
     aliases: Iterable[str] | str,
     parents: Iterable[Tag | str] | Tag | str | None = None,
+    ecz_parents: Iterable[str] | None = None,
 ) -> Tag:
     """Edit tag prose and reconcile its durable alias rows."""
 
     parent_ids = normalise_tag_parent_ids(parents) if parents is not None else None
+    ecz_parents = tuple(ecz_parents) if ecz_parents is not None else None
     graph_edges = _lock_tag_taxonomy_graph() if parent_ids is not None else None
     tag = _locked_tag(tag_id)
     if not can_edit_tag(tag, actor):
@@ -304,8 +324,9 @@ def update_tag(
             aliases_changed = True
 
     parents_changed = False
+    ecz_parents_changed = False
     if parent_ids is not None:
-        parent_tags = _locked_parent_tags(parent_ids)
+        parent_tags = _locked_parent_tags(parent_ids, namespace=tag.namespace)
         existing_parent_ids = {
             parent_id
             for parent_id in TagParent.objects.filter(child=tag).values_list(
@@ -329,6 +350,33 @@ def update_tag(
                 for parent_id in added_parent_ids
             )
         parents_changed = bool(removed_parent_ids or added_parent_ids)
+    if ecz_parents is not None:
+        if tag.namespace != Tag.Namespace.CODE:
+            if ecz_parents:
+                raise TaxonomyValidationError(
+                    "Only code tags can have Error Correction Zoo parents."
+                )
+            ecz_parents = None
+    if ecz_parents is not None:
+        from registry.services.ecz_taxonomy import (
+            EczTaxonomyError,
+            set_tag_ecz_parents,
+        )
+
+        existing_ecz_parent_ids = set(tag.ecz_parents.values_list("id", flat=True))
+        requested_ecz_parent_ids = {
+            item.id if isinstance(item, EczTerm) else EczTerm._meta.pk.to_python(item)
+            for item in ecz_parents
+        }
+        ecz_parents_changed = existing_ecz_parent_ids != requested_ecz_parent_ids
+        try:
+            set_tag_ecz_parents(
+                tag.id,
+                actor=actor,
+                ecz_terms=ecz_parents,
+            )
+        except EczTaxonomyError as error:
+            raise TaxonomyValidationError(str(error)) from error
     for key, alias in desired_by_key.items():
         if key not in existing_by_key:
             _add_tag_alias_locked(tag, actor=actor, alias=alias)
@@ -343,6 +391,8 @@ def update_tag(
         changed_fields.append("description")
     if parents_changed:
         changed_fields.append("parents")
+    if ecz_parents_changed:
+        changed_fields.append("ecz_parents")
     if changed_fields:
         concrete_changed_fields = [
             field for field in changed_fields if field in {"label", "description"}
@@ -373,6 +423,10 @@ def update_tag(
                             if parent_ids is not None
                             else tag.parents.values_list("id", flat=True)
                         )
+                    ],
+                    "ecz_parent_ids": [
+                        str(term_id)
+                        for term_id in tag.ecz_parents.values_list("id", flat=True)
                     ],
                     "status": tag.status,
                 },
@@ -594,7 +648,7 @@ def submit_noise_model(
                     )
                 if NoiseModel.objects.filter(predecessor=locked_predecessor).exists():
                     raise TaxonomyConflictError(
-                        "That exact noise model already has a successor."
+                        "That noise model already has a successor."
                     )
             if NoiseModel.objects.filter(slug=slug).exists():
                 raise TaxonomyConflictError("That noise-model slug is already in use.")
@@ -947,7 +1001,7 @@ def _lock_tag_taxonomy_graph() -> set[tuple]:
     )
 
 
-def _locked_parent_tags(parent_ids: tuple) -> dict:
+def _locked_parent_tags(parent_ids: tuple, *, namespace: str) -> dict:
     if not parent_ids:
         return {}
     records = {
@@ -958,6 +1012,10 @@ def _locked_parent_tags(parent_ids: tuple) -> dict:
     }
     if set(records) != set(parent_ids):
         raise TaxonomyValidationError("A selected parent tag does not exist.")
+    if any(tag.namespace != namespace for tag in records.values()):
+        raise TaxonomyValidationError(
+            "A parent tag must use the same tag type as its child."
+        )
     return records
 
 

@@ -49,9 +49,10 @@ def test_auto_and_explicit_axis_ranges_have_distinct_control_states(client):
     automatic_content = automatic.content.decode()
     assert automatic_content.count(">Auto</span>") >= 2
     assert "data-reset-plot-axes disabled" in automatic_content
-    assert automatic_content.count(
-        'class="control-panel control-grid plot-control-grid"'
-    ) == 2
+    assert (
+        automatic_content.count('class="control-panel control-grid plot-control-grid"')
+        == 2
+    )
     assert "data-filter-key" not in automatic_content
     assert "is-filtered" not in automatic_content
 

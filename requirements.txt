@@ -59,6 +59,8 @@ pyjwt==2.13.0
     # via django-allauth
 python-dateutil==2.9.0.post0
     # via botocore
+pyyaml==6.0.3
+    # via decoderbench
 referencing==0.37.0
     # via
     #   jsonschema

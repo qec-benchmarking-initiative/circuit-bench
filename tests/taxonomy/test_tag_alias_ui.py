@@ -35,41 +35,41 @@ def test_alias_changes_are_durable_and_audited(accounts):
     tag = create_custom_tag(
         submitter=contributor,
         namespace=Tag.Namespace.ALGORITHM,
-        label="Union find",
+        label="Parity forest",
         description="Uses disjoint-set merging.",
-        aliases=("UF", "Disjoint set"),
+        aliases=("PF", "Forest method"),
     ).tag
 
-    assert tag.slug == "union-find"
+    assert tag.slug == "parity-forest"
     assert set(tag.aliases.filter(is_active=True).values_list("alias", flat=True)) == {
-        "UF",
-        "Disjoint set",
+        "PF",
+        "Forest method",
     }
     assert set(
         tag.record_events.filter(action=RecordEvent.Action.ADDED_ALIAS).values_list(
             "details__alias", flat=True
         )
-    ) == {"UF", "Disjoint set"}
+    ) == {"PF", "Forest method"}
 
     update_tag(
         tag.id,
         actor=contributor,
-        label="Union–find",
+        label="Parity forest method",
         description="Uses a disjoint-set data structure.",
-        aliases=("Disjoint set", "Union find decoder"),
+        aliases=("Forest method", "Parity forest decoder"),
     )
 
     assert set(tag.aliases.filter(is_active=True).values_list("alias", flat=True)) == {
-        "Disjoint set",
-        "Union find decoder",
+        "Forest method",
+        "Parity forest decoder",
     }
-    removed = TagAlias.objects.get(tag=tag, alias="UF")
+    removed = TagAlias.objects.get(tag=tag, alias="PF")
     assert not removed.is_active
     assert removed.removed_by == contributor
     assert removed.removed_at is not None
     assert tag.record_events.filter(
         action=RecordEvent.Action.REMOVED_ALIAS,
-        details__alias="UF",
+        details__alias="PF",
     ).exists()
 
 
@@ -125,9 +125,13 @@ def test_inline_creation_api_and_alias_aware_picker(accounts, client):
 
     form_page = client.get(reverse("submissions:create", args=["decoder"]))
     content = form_page.content.decode()
-    assert 'data-tag-alias="leaf removal"' in content
     assert "Please check carefully if there is an existing tag" in content
     assert reverse("taxonomy:tag-create-json") in content
+    search = client.get(
+        reverse("pickers:taxonomy-terms"),
+        {"namespace": "algorithm", "q": "leaf removal"},
+    ).json()
+    assert search["circuit_bench"]["shown"][0]["matched_alias"] == "leaf removal"
 
     conflict = client.post(
         reverse("taxonomy:tag-create-json"),
@@ -181,6 +185,51 @@ def test_tag_detail_links_usage_history_and_owner_edit(accounts, client):
     }
 
 
+def test_native_tag_usage_defaults_to_selected_tag_and_descendants(accounts, client):
+    message_passing = Tag.objects.get(
+        namespace=Tag.Namespace.ALGORITHM,
+        slug="message-passing",
+    )
+
+    default = client.get(message_passing.get_absolute_url())
+    exact = client.get(
+        message_passing.get_absolute_url(),
+        {"include_descendants": "0"},
+    )
+
+    assert default.context["include_descendants"] is True
+    assert default.context["result_count"] == 1
+    assert "Clear Matcher" in default.content.decode()
+    assert "Show decoder versions tagged with this tag or any child of it" in (
+        default.content.decode()
+    )
+    assert exact.context["include_descendants"] is False
+    assert exact.context["result_count"] == 0
+
+
+def test_native_experiment_parent_usage_uses_same_descendant_control(accounts, client):
+    memory = Tag.objects.get(namespace=Tag.Namespace.EXPERIMENT, slug="memory")
+    parent = create_custom_tag(
+        submitter=accounts["contributor"],
+        namespace=Tag.Namespace.EXPERIMENT,
+        label="Storage experiment",
+        description="A broad test-only experiment family.",
+    ).tag
+    TagParent.objects.create(child=memory, parent=parent)
+
+    default = client.get(parent.get_absolute_url())
+    exact = client.get(
+        parent.get_absolute_url(),
+        {"include_descendants": "0"},
+    )
+
+    assert default.context["result_count"] == 1
+    assert "Show circuits tagged with this tag or any child of it" in (
+        default.content.decode()
+    )
+    assert exact.context["result_count"] == 0
+
+
 def test_multiple_parents_are_durable_and_cycles_are_rejected(accounts):
     contributor = accounts["contributor"]
     broad_a = create_custom_tag(
@@ -191,13 +240,13 @@ def test_multiple_parents_are_durable_and_cycles_are_rejected(accounts):
     ).tag
     broad_b = create_custom_tag(
         submitter=contributor,
-        namespace=Tag.Namespace.CODE,
+        namespace=Tag.Namespace.ALGORITHM,
         label="Broad method B",
-        description="Another broad method in another namespace.",
+        description="Another broad method.",
     ).tag
     child = create_custom_tag(
         submitter=contributor,
-        namespace=Tag.Namespace.EXPERIMENT,
+        namespace=Tag.Namespace.ALGORITHM,
         label="Narrow method",
         description="A narrower method.",
         parents=(broad_a, broad_b.id),
@@ -218,6 +267,41 @@ def test_multiple_parents_are_durable_and_cycles_are_rejected(accounts):
             parents=(child,),
         )
     assert not broad_a.parents.exists()
+
+
+def test_parent_tags_must_share_the_child_namespace(accounts):
+    contributor = accounts["contributor"]
+    code_parent = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.CODE,
+        label="Example code family",
+        description="A code-family parent.",
+    ).tag
+    algorithm = create_custom_tag(
+        submitter=contributor,
+        namespace=Tag.Namespace.ALGORITHM,
+        label="Example decoder method",
+        description="A decoder-method tag.",
+    ).tag
+
+    with pytest.raises(TaxonomyValidationError, match="same tag type"):
+        create_custom_tag(
+            submitter=contributor,
+            namespace=Tag.Namespace.ALGORITHM,
+            label="Invalid decoder child",
+            description="This parent relationship crosses namespaces.",
+            parents=(code_parent,),
+        )
+    with pytest.raises(TaxonomyValidationError, match="same tag type"):
+        update_tag(
+            algorithm.id,
+            actor=contributor,
+            label=algorithm.label,
+            description=algorithm.description,
+            aliases=(),
+            parents=(code_parent,),
+        )
+    assert not algorithm.parents.exists()
 
 
 def test_parent_edit_family_tree_and_contextual_picker(accounts, client):
@@ -270,9 +354,9 @@ def test_parent_edit_family_tree_and_contextual_picker(accounts, client):
     content = submission_page.content.decode()
     assert "Parent tags" in content
     assert "Unselected parent tags" in content
-    assert "(recommended)" in content
-    assert f'data-parent-id="{grandparent.id}"' in content
-    assert "Available parent tags" in content
+    assert "(recommended)" not in content
+    assert "data-dynamic-tag-parent-selector" in content
+    assert "Search possible parent tags" in content
 
     edit = client.post(
         reverse(

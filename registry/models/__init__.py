@@ -14,6 +14,14 @@ from .benchmarks import (
 )
 from .circuits import CircuitRevision, NoiseModel
 from .decoders import DecoderVersion
+from .ecz import (
+    CircuitRevisionEczTerm,
+    EczParent,
+    EczSyncRun,
+    EczTerm,
+    TagEczMapping,
+    TagEczParent,
+)
 from .evaluations import (
     EvaluatorRelease,
     Machine,
@@ -43,11 +51,15 @@ __all__ = [
     "CircuitRevision",
     "CircuitRevisionCodeTag",
     "CircuitRevisionExperimentTag",
+    "CircuitRevisionEczTerm",
     "Credit",
     "CreditClaim",
     "DecoderVersion",
     "DecoderVersionAlgorithmTag",
     "EvaluatorRelease",
+    "EczParent",
+    "EczSyncRun",
+    "EczTerm",
     "ExternalLink",
     "Machine",
     "RecordEvent",
@@ -60,5 +72,7 @@ __all__ = [
     "ScoreDefinition",
     "Tag",
     "TagAlias",
+    "TagEczMapping",
+    "TagEczParent",
     "TagParent",
 ]

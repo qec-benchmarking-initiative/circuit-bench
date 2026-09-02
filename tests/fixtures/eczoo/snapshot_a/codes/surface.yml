@@ -1,0 +1,5 @@
+code_id: surface
+name: Kitaev surface code
+relations:
+  parents:
+    - code_id: root

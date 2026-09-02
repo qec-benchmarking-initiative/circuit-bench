@@ -4,7 +4,7 @@
       <strong>{{ cell.label }}</strong>
       <span data-tag-rule-label>{{ cell.match_label }}</span>
     </header>
-    {% include "components/pickers/tag.html" with picker_id=cell.picker_id label=cell.label input_name=cell.input_name tags=cell.tags selected_keys=cell.selected_keys match_name=cell.match_name match_value=cell.match_value mode="filter" open_label="Add tags…" only %}
+    {% include "components/pickers/tag.html" with picker_id=cell.picker_id label=cell.label input_name=cell.input_name tags=cell.tags selected_keys=cell.selected_keys match_name=cell.match_name match_value=cell.match_value mode="filter" open_label="Add tags…" tag_namespace=cell.tag_namespace only %}
   </section>
 {% elif cell.type == "choice" %}
   <div class="control-grid-cell control-choice-cell{% if cell.filtered %} is-applied{% endif %}" data-control-grid-cell data-control-choice-cell data-control-state-class="is-applied">

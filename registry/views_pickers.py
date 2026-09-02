@@ -8,8 +8,35 @@ from registry.record_pickers import (
     serialize_picker_record,
 )
 from registry.services.artifact_access import readable_artifacts_for
+from registry.services.taxonomy_search import search_taxonomy_terms
 
 PICKER_PAGE_SIZE = 25
+
+
+@require_GET
+def taxonomy_terms(request):
+    try:
+        result = search_taxonomy_terms(
+            namespace=request.GET.get("namespace", ""),
+            query=request.GET.get("q", ""),
+            selected_keys=request.GET.getlist("selected"),
+            context_keys=request.GET.getlist("context"),
+            excluded_keys=request.GET.getlist("exclude"),
+            cb_offset=_nonnegative_int(request.GET.get("cb_offset")),
+            ecz_offset=_nonnegative_int(request.GET.get("ecz_offset")),
+            parent_cb_offset=_nonnegative_int(request.GET.get("parent_cb_offset")),
+            parent_ecz_offset=_nonnegative_int(request.GET.get("parent_ecz_offset")),
+        )
+    except (TypeError, ValueError) as error:
+        return JsonResponse({"error": str(error)}, status=400)
+    return JsonResponse(result.as_dict())
+
+
+def _nonnegative_int(value) -> int:
+    try:
+        return max(0, int(value or 0))
+    except ValueError:
+        return 0
 
 
 @require_GET

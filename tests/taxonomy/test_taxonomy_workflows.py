@@ -46,7 +46,7 @@ def taxonomy_data():
     }
 
 
-def _custom_tag(submitter, *, slug="union-find", namespace="algorithm"):
+def _custom_tag(submitter, *, slug="community-decoder-method", namespace="algorithm"):
     return create_custom_tag(
         submitter=submitter,
         namespace=namespace,
@@ -75,9 +75,9 @@ def test_custom_tag_is_immediately_usable_with_exact_system_attribution(
     outcome = create_custom_tag(
         submitter=contributor,
         namespace="algorithm",
-        slug="union-find",
-        label="Union find",
-        description="Uses a union-find decoding stage.",
+        slug="community-decoder-method",
+        label="Community decoder method",
+        description="A community-provided decoding method.",
     )
     tag = outcome.tag
 
@@ -117,7 +117,12 @@ def test_duplicate_tag_identity_and_database_race_leave_no_orphan_history(
     monkeypatch.setattr(QuerySet, "exists", lambda self: False)
     with pytest.raises(TaxonomyConflictError, match="another request"):
         _custom_tag(contributor)
-    assert Tag.objects.filter(namespace="algorithm", slug="union-find").count() == 1
+    assert (
+        Tag.objects.filter(
+            namespace="algorithm", slug="community-decoder-method"
+        ).count()
+        == 1
+    )
     assert RecordHistory.objects.count() == history_count
     assert tag.history_id is not None
 

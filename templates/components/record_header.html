@@ -8,4 +8,6 @@
   </div>
   {% include "components/status_badge.html" with status=record.status label=record.status_label only %}
 </div>
-{% include "components/tag_list.html" with tags=record.tags label="Classification tags" only %}
+{% if not hide_tags %}
+  {% include "components/tag_list.html" with tags=record.tags label="Classification tags" only %}
+{% endif %}

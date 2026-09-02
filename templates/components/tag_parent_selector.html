@@ -1,51 +1,26 @@
-<div class="tag-parent-selector" data-tag-parent-selector>
+<div class="tag-parent-selector is-disabled" data-tag-parent-selector data-dynamic-tag-parent-selector aria-disabled="true">
   <div class="tag-parent-selector-head">
     <div class="tag-picker-summary" data-tag-parent-summary>
-      {% for tag in tags %}
-        {% if tag.id|stringformat:"s" in selected_parent_ids %}
-          <span class="selected-tag selected-tag-{{ tag.status }}" data-selected-parent="{{ tag.id }}"{% if tag.status == "official" and tag.display_color %} style="--tag-color: {{ tag.display_color }}"{% endif %}>
-            <span class="tag-glyph" aria-hidden="true">✓</span>
-            {% include "components/tag_text.html" with tag=tag only %}
-            <a class="tag-info-link" href="{{ tag.get_absolute_url }}" aria-label="Information about {{ tag.label }}">i</a>
-            <button type="button" data-tag-parent-remove="{{ tag.id }}" aria-label="Remove {{ tag.label }} as a parent">×</button>
-          </span>
-        {% endif %}
-      {% empty %}
-        <span class="tag-picker-empty-summary">No parent tags selected</span>
-      {% endfor %}
+      <span class="tag-picker-empty-summary">No parent tags selected</span>
     </div>
-    <button class="button-secondary button-compact" type="button" data-tag-parent-toggle aria-expanded="false">Choose parent tags…</button>
+    <button class="button-secondary button-compact" type="button" data-tag-parent-toggle aria-expanded="false" disabled>Choose parent tags…</button>
   </div>
   <div class="tag-parent-selector-panel" data-tag-parent-panel hidden>
     <label for="{{ picker_id }}-parent-search">Search possible parent tags</label>
-    <input id="{{ picker_id }}-parent-search" type="search" autocomplete="off" data-tag-parent-search>
+    <input id="{{ picker_id }}-parent-search" type="search" autocomplete="off" data-tag-parent-search disabled>
     <section class="tag-available" aria-labelledby="{{ picker_id }}-parent-available-title">
       <h3 id="{{ picker_id }}-parent-available-title">Available parent tags</h3>
-      <div class="tag-choice-grid" data-tag-parent-options>
-        {% for tag in tags %}
-          <div
-            class="tag-choice tag-choice-{{ tag.status }}"
-            data-tag-parent-choice-card
-            data-tag-label="{{ tag.label|lower }}"
-            data-tag-label-display="{{ tag.label }}"
-            data-tag-status="{{ tag.status }}"
-            data-tag-color="{{ tag.display_color|default:'' }}"
-            data-tag-url="{{ tag.get_absolute_url }}"
-            data-tag-id="{{ tag.id }}"
-            {% if tag.status == "official" and tag.display_color %}style="--tag-color: {{ tag.display_color }}"{% endif %}
-          >
-            <label class="tag-choice-main">
-              <input type="checkbox"{% if input_name %} name="{{ input_name }}"{% endif %} value="{{ tag.id }}" data-tag-parent-choice data-label="{{ tag.label }}" data-status="{{ tag.status }}" data-color="{{ tag.display_color|default:'' }}" data-url="{{ tag.get_absolute_url }}"{% if tag.id|stringformat:"s" in selected_parent_ids %} checked{% endif %}>
-              <span class="tag-choice-content"><span class="tag-glyph" aria-hidden="true">{% if tag.id|stringformat:"s" in selected_parent_ids %}✓{% elif tag.status == "official" %}◆{% else %}◇{% endif %}</span> {% include "components/tag_text.html" with tag=tag only %} <span class="tag-choice-alias" data-tag-alias-match></span></span>
-            </label>
-            <a class="tag-info-link" href="{{ tag.get_absolute_url }}" aria-label="Information about {{ tag.label }}">i</a>
-            <span hidden data-tag-aliases>{% for alias in tag.display_aliases %}<span data-tag-alias="{{ alias.alias|lower }}" data-tag-alias-display="{{ alias.alias }}"></span>{% endfor %}</span>
-            {% include "components/tag_parent_metadata.html" with tag=tag only %}
-          </div>
-        {% endfor %}
+      <div class="taxonomy-source-results" data-tag-create-parent-source="circuit_bench">
+        <h4>Circuit Bench</h4>
+        <div class="tag-choice-grid" data-tag-create-parent-results="circuit_bench"></div>
+        <span class="taxonomy-result-remainder" data-tag-create-parent-remaining="circuit_bench" hidden></span>
+      </div>
+      <div class="taxonomy-source-results" data-tag-create-parent-source="ecz" hidden>
+        <h4>Error Correction Zoo</h4>
+        <div class="tag-choice-grid" data-tag-create-parent-results="ecz"></div>
+        <span class="taxonomy-result-remainder" data-tag-create-parent-remaining="ecz" hidden></span>
       </div>
       <p class="picker-empty hidden" data-tag-parent-no-results>No matching tags.</p>
     </section>
-    {% include "components/tag_context_parents.html" with picker_id=picker_id|add:"-parent-selector" recommended=recommended only %}
   </div>
 </div>

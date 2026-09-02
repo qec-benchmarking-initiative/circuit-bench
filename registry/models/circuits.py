@@ -139,6 +139,11 @@ class CircuitRevision(UUIDModel, PublishedLifecycleModel):
         through="registry.CircuitRevisionExperimentTag",
         related_name="experiment_circuit_revisions",
     )
+    ecz_terms = models.ManyToManyField(
+        "registry.EczTerm",
+        through="registry.CircuitRevisionEczTerm",
+        related_name="circuit_revisions",
+    )
 
     class Meta(PublishedLifecycleModel.Meta):
         db_table = "circuit_revision"

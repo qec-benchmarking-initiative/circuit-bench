@@ -163,7 +163,7 @@ class SearchRelevancePolicy:
             key=CatalogueOrderingMode.SEARCH_RELEVANCE,
             label="Search relevance",
             explanation=(
-                "Exact name, slug, or version matches appear first where those "
+                "Whole-field name, slug, or version matches appear first where those "
                 "fields exist, followed by prefixes and then other matching "
                 "metadata; ties use name and record ID."
             ),

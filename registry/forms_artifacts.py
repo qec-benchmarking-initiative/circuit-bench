@@ -20,7 +20,7 @@ class DevelopmentArtifactUploadForm(forms.Form):
     expected_byte_size = forms.IntegerField(
         min_value=0,
         required=False,
-        help_text="Optional exact byte-size assertion.",
+        help_text="Optional expected byte size.",
     )
 
     def clean_file(self):

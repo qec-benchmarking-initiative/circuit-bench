@@ -13,15 +13,18 @@ from registry.demo import (
     _ensure_demo_history_events,
     _ensure_demo_tag_aliases,
     demo_id,
+    reconcile_demo_code_taxonomy,
     seed_demo_data,
 )
+from registry.demo_algorithm_taxonomy import reconcile_demo_algorithm_taxonomy
 from registry.models import (
     CircuitRevision,
-    CircuitRevisionCodeTag,
+    CircuitRevisionEczTerm,
     CircuitRevisionExperimentTag,
     Credit,
     DecoderVersion,
     DecoderVersionAlgorithmTag,
+    EczTerm,
     EvaluatorRelease,
     Machine,
     NoiseModel,
@@ -31,9 +34,7 @@ from registry.models import (
     SchemaRelease,
     ScoreDefinition,
     Tag,
-    TagParent,
 )
-from registry.services.histories import append_history_event, submission_snapshot
 
 DECODER_SPECS = (
     {
@@ -123,7 +124,7 @@ CIRCUIT_SPECS = (
         "slug": "rotated-memory-d3",
         "name": "Rotated surface-code memory d=3",
         "noise": "fixed-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 3,
@@ -138,7 +139,7 @@ CIRCUIT_SPECS = (
         "slug": "rotated-memory-d7",
         "name": "Rotated surface-code memory d=7",
         "noise": "randomised-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 7,
@@ -153,7 +154,7 @@ CIRCUIT_SPECS = (
         "slug": "rotated-memory-d9",
         "name": "Rotated surface-code memory d=9",
         "noise": "randomised-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 9,
@@ -168,7 +169,7 @@ CIRCUIT_SPECS = (
         "slug": "planar-stability-d5",
         "name": "Planar stability experiment d=5",
         "noise": "fixed-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "stability",
         "is_css": True,
         "distance": 5,
@@ -183,7 +184,7 @@ CIRCUIT_SPECS = (
         "slug": "colour-memory-d5",
         "name": "Triangular colour-code memory d=5",
         "noise": "fixed-phenomenological",
-        "code_tag": "colour-code",
+        "ecz_code_id": "triangular_color",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 5,
@@ -198,7 +199,7 @@ CIRCUIT_SPECS = (
         "slug": "bicycle-memory-144",
         "name": "Bivariate bicycle 144 memory",
         "noise": "randomised-phenomenological",
-        "code_tag": "bivariate-bicycle-144",
+        "ecz_code_id": "gross",
         "experiment_tag": "memory",
         "is_css": True,
         "distance": 12,
@@ -213,7 +214,7 @@ CIRCUIT_SPECS = (
         "slug": "surface-cnot-d3",
         "name": "Surface-code logical CNOT d=3",
         "noise": "fixed-phenomenological",
-        "code_tag": "rotated-surface-code",
+        "ecz_code_id": "rotated_surface",
         "experiment_tag": "logical-operation",
         "is_css": True,
         "distance": 3,
@@ -255,8 +256,8 @@ def seed_plot_demo_data() -> dict[str, int]:
 
     tags = _seed_tags(releases["tag"], uploader, published_at)
     _ensure_demo_history_events(tags.values())
-    _seed_tag_parents(tags, uploader)
     _ensure_demo_tag_aliases(uploader)
+    reconcile_demo_algorithm_taxonomy()
     machines = _seed_machines(releases["machine"], uploader, published_at)
     decoders = _seed_decoders(releases["decoder"], uploader, published_at, tags)
     circuits = _seed_circuits(
@@ -273,6 +274,7 @@ def seed_plot_demo_data() -> dict[str, int]:
         decoders,
         circuits,
     )
+    reconcile_demo_code_taxonomy()
     return plot_demo_counts()
 
 
@@ -315,51 +317,6 @@ def _seed_tags(schema_release, uploader, published_at):
         ("algorithm", "fallback", "Fallback", "#755844"),
         ("algorithm", "predecoder", "Predecoder", "#497178"),
         ("algorithm", "ensemble", "Ensemble", "#765278"),
-        (
-            "code",
-            "quantum-error-correcting-code",
-            "Quantum error-correcting code",
-            "#5e6572",
-        ),
-        ("code", "stabilizer-code", "Stabilizer code", "#596f7a"),
-        ("code", "css-code", "CSS code", "#5d7588"),
-        ("code", "topological-code", "Topological code", "#617b5d"),
-        ("code", "surface-code", "Surface code", "#6b7950"),
-        ("code", "planar-surface-code", "Planar surface code", "#7c7148"),
-        ("code", "colour-code", "Colour code", "#8d4771"),
-        (
-            "code",
-            "triangular-colour-code",
-            "Triangular colour code",
-            "#984f76",
-        ),
-        ("code", "toric-code", "Toric code", "#4d7770"),
-        ("code", "xzzx-surface-code", "XZZX surface code", "#6e6950"),
-        ("code", "quantum-ldpc-code", "Quantum LDPC code", "#4b6f64"),
-        (
-            "code",
-            "bivariate-bicycle-code",
-            "Bivariate bicycle code",
-            "#567346",
-        ),
-        ("code", "bivariate-bicycle-144", "Bivariate bicycle 144", "#526e3d"),
-        (
-            "code",
-            "hypergraph-product-code",
-            "Hypergraph product code",
-            "#48715d",
-        ),
-        (
-            "code",
-            "homological-product-code",
-            "Homological product code",
-            "#4e6877",
-        ),
-        ("code", "subsystem-code", "Subsystem code", "#765d46"),
-        ("code", "bacon-shor-code", "Bacon–Shor code", "#866546"),
-        ("code", "bosonic-code", "Bosonic code", "#765a78"),
-        ("code", "gkp-code", "GKP code", "#715888"),
-        ("code", "cat-code", "Cat code", "#83536d"),
         ("experiment", "stability", "Stability", "#93622f"),
         ("experiment", "logical-operation", "Logical operation", "#445f91"),
     )
@@ -370,63 +327,6 @@ def _seed_tags(schema_release, uploader, published_at):
         ),
         "predecoder": "A preliminary decoding stage applied before the main decoder.",
         "ensemble": ("Combines outputs from multiple decoders or decoding hypotheses."),
-        "quantum-error-correcting-code": (
-            "A code that protects quantum information against physical errors."
-        ),
-        "stabilizer-code": (
-            "A quantum code defined by the joint eigenspace of a stabilizer group."
-        ),
-        "css-code": (
-            "A stabilizer code whose checks separate into X-type and Z-type operators."
-        ),
-        "topological-code": (
-            "A code whose logical information is protected by topological structure."
-        ),
-        "surface-code": (
-            "A topological stabilizer-code family defined on a two-dimensional surface."
-        ),
-        "planar-surface-code": (
-            "A surface-code family with boundaries on a planar patch."
-        ),
-        "colour-code": (
-            "A topological CSS-code family built from colourable cell complexes."
-        ),
-        "triangular-colour-code": (
-            "A colour-code family encoded on a triangular patch."
-        ),
-        "toric-code": "A surface code with periodic boundary conditions.",
-        "xzzx-surface-code": (
-            "A surface-code variant whose plaquette checks alternate X and Z operators."
-        ),
-        "quantum-ldpc-code": ("A quantum code with sparse checks of bounded weight."),
-        "bivariate-bicycle-code": (
-            "A quantum LDPC-code family constructed from bivariate circulant matrices."
-        ),
-        "bivariate-bicycle-144": (
-            "The 144-data-qubit member of a bivariate bicycle-code family."
-        ),
-        "hypergraph-product-code": (
-            "A CSS quantum LDPC code constructed as a product of classical codes."
-        ),
-        "homological-product-code": (
-            "A quantum-code family constructed from products of chain complexes."
-        ),
-        "subsystem-code": (
-            "A code that protects logical information while leaving gauge degrees "
-            "of freedom."
-        ),
-        "bacon-shor-code": (
-            "A subsystem-code family combining Shor-code structure with gauge checks."
-        ),
-        "bosonic-code": (
-            "A code that encodes logical information in bosonic oscillator modes."
-        ),
-        "gkp-code": (
-            "A bosonic code based on a lattice of phase-space displacement operators."
-        ),
-        "cat-code": (
-            "A bosonic code whose logical states are superpositions of coherent states."
-        ),
     }
     tags = {tag.slug: tag for tag in Tag.objects.all()}
     for namespace, slug, label, colour in specifications:
@@ -456,73 +356,6 @@ def _seed_tags(schema_release, uploader, published_at):
         )
         tags[tag.slug] = tag
     return tags
-
-
-def _seed_tag_parents(tags, uploader):
-    for child_slug, parent_slug in (
-        ("ordered-statistics", "fallback"),
-        ("union-find", "clustering"),
-        ("stabilizer-code", "quantum-error-correcting-code"),
-        ("topological-code", "quantum-error-correcting-code"),
-        ("quantum-ldpc-code", "quantum-error-correcting-code"),
-        ("subsystem-code", "quantum-error-correcting-code"),
-        ("bosonic-code", "quantum-error-correcting-code"),
-        ("css-code", "stabilizer-code"),
-        ("surface-code", "topological-code"),
-        ("surface-code", "css-code"),
-        ("surface-code", "quantum-ldpc-code"),
-        ("planar-surface-code", "surface-code"),
-        ("rotated-surface-code", "planar-surface-code"),
-        ("toric-code", "surface-code"),
-        ("xzzx-surface-code", "surface-code"),
-        ("colour-code", "topological-code"),
-        ("colour-code", "css-code"),
-        ("colour-code", "quantum-ldpc-code"),
-        ("triangular-colour-code", "colour-code"),
-        ("bivariate-bicycle-code", "quantum-ldpc-code"),
-        ("bivariate-bicycle-code", "css-code"),
-        ("bivariate-bicycle-144", "bivariate-bicycle-code"),
-        ("hypergraph-product-code", "quantum-ldpc-code"),
-        ("hypergraph-product-code", "css-code"),
-        ("homological-product-code", "quantum-ldpc-code"),
-        ("bacon-shor-code", "subsystem-code"),
-        ("bacon-shor-code", "css-code"),
-        ("gkp-code", "bosonic-code"),
-        ("cat-code", "bosonic-code"),
-    ):
-        relationship, _created = TagParent.objects.get_or_create(
-            child=tags[child_slug],
-            parent=tags[parent_slug],
-        )
-        if not relationship.child.record_events.filter(
-            action="edited",
-            details__fixture_parent_id=str(relationship.parent_id),
-        ).exists():
-            append_history_event(
-                kind="tag",
-                record=relationship.child,
-                actor=uploader,
-                action="edited",
-                note="Added a deterministic development-data parent tag.",
-                details={
-                    "fixture": True,
-                    "changed_fields": ["parents"],
-                    "fixture_parent_id": str(relationship.parent_id),
-                },
-                payload_snapshot=submission_snapshot(
-                    "tag",
-                    {
-                        "fixture": True,
-                        "record_id": str(relationship.child_id),
-                        "parent_tag_ids": [
-                            str(parent_id)
-                            for parent_id in relationship.child.parents.values_list(
-                                "id", flat=True
-                            )
-                        ],
-                    },
-                ),
-            )
 
 
 def _seed_machines(schema_release, uploader, published_at):
@@ -702,10 +535,15 @@ def _seed_circuits(schema_release, contributor, published_at, tags, noises):
                 state="published",
                 published_at=published_at,
             )
-        CircuitRevisionCodeTag.objects.get_or_create(
-            circuit_revision=circuit,
-            tag=tags[spec["code_tag"]],
-        )
+        ecz_term = EczTerm.objects.filter(
+            ecz_code_id=spec["ecz_code_id"],
+            status=EczTerm.Status.CURRENT,
+        ).first()
+        if ecz_term is not None:
+            CircuitRevisionEczTerm.objects.get_or_create(
+                circuit_revision=circuit,
+                ecz_term=ecz_term,
+            )
         CircuitRevisionExperimentTag.objects.get_or_create(
             circuit_revision=circuit,
             tag=tags[spec["experiment_tag"]],

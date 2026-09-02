@@ -4,7 +4,7 @@ from django import forms
 from django.core.validators import RegexValidator
 from django.db.models import Q
 
-from registry.models import NoiseModel, Tag
+from registry.models import EczTerm, NoiseModel, Tag, TagEczMapping
 
 LOWERCASE_SLUG_VALIDATOR = RegexValidator(
     regex=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
@@ -35,12 +35,20 @@ class CustomTagForm(forms.Form):
         required=False,
         label="Parent tags",
     )
+    ecz_parents = forms.ModelMultipleChoiceField(
+        queryset=EczTerm.objects.none(),
+        required=False,
+        label="Error Correction Zoo parents",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["parents"].queryset = Tag.objects.exclude(
             status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED)
         ).order_by("namespace", "label", "id")
+        self.fields["ecz_parents"].queryset = EczTerm.objects.filter(
+            status=EczTerm.Status.CURRENT
+        ).order_by("display_name", "ecz_code_id")
 
     def payload(self) -> dict:
         if not self.is_valid():
@@ -52,6 +60,7 @@ class CustomTagForm(forms.Form):
             "description": self.cleaned_data["description"],
             "aliases": self.cleaned_data["aliases"],
             "parents": [str(tag.id) for tag in self.cleaned_data["parents"]],
+            "ecz_parents": [str(term.id) for term in self.cleaned_data["ecz_parents"]],
         }
 
 
@@ -68,25 +77,37 @@ class TagEditForm(forms.Form):
         required=False,
         label="Parent tags",
     )
+    ecz_parents = forms.ModelMultipleChoiceField(
+        queryset=EczTerm.objects.none(),
+        required=False,
+        label="Error Correction Zoo parents",
+    )
 
     def __init__(self, *args, tag: Tag, **kwargs):
         super().__init__(*args, **kwargs)
         current_parent_ids = tag.parents.values_list("id", flat=True)
         self.fields["parents"].queryset = (
-            Tag.objects.exclude(id=tag.id)
+            Tag.objects.filter(namespace=tag.namespace)
+            .exclude(id=tag.id)
             .filter(
                 Q(status__in=(Tag.Status.CUSTOM, Tag.Status.OFFICIAL))
                 | Q(id__in=current_parent_ids)
             )
             .order_by("namespace", "label", "id")
         )
+        current_ecz_parent_ids = tag.ecz_parents.values_list("id", flat=True)
+        self.fields["ecz_parents"].queryset = EczTerm.objects.filter(
+            Q(status=EczTerm.Status.CURRENT) | Q(id__in=current_ecz_parent_ids)
+        ).order_by("display_name", "ecz_code_id")
+        if tag.namespace != Tag.Namespace.CODE:
+            self.fields["ecz_parents"].disabled = True
 
 
 class NoiseModelSubmissionForm(forms.Form):
     slug = forms.CharField(
         max_length=200,
         validators=[LOWERCASE_SLUG_VALIDATOR],
-        help_text="Permanent URL name for this exact revision.",
+        help_text="Permanent URL name for this revision.",
     )
     name = forms.CharField(max_length=200)
     short_description = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}))
@@ -149,4 +170,38 @@ class CurationNoteForm(forms.Form):
     note = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 3}),
         help_text="This reason is retained in the permanent history.",
+    )
+
+
+class EczMappingForm(forms.Form):
+    tag = forms.ModelChoiceField(queryset=Tag.objects.none())
+    ecz_term = forms.ModelChoiceField(
+        queryset=EczTerm.objects.none(),
+        label="Error Correction Zoo term",
+    )
+    note = forms.CharField(
+        label="Mapping rationale",
+        widget=forms.Textarea(attrs={"rows": 4}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        mapped_tag_ids = TagEczMapping.objects.filter(
+            status=TagEczMapping.Status.ACTIVE
+        ).values_list("tag_id", flat=True)
+        self.fields["tag"].queryset = (
+            Tag.objects.filter(namespace=Tag.Namespace.CODE)
+            .exclude(status=Tag.Status.RETIRED)
+            .exclude(id__in=mapped_tag_ids)
+            .order_by("label", "id")
+        )
+        self.fields["ecz_term"].queryset = EczTerm.objects.filter(
+            status=EczTerm.Status.CURRENT
+        ).order_by("display_name", "ecz_code_id")
+
+
+class EczMappingRevocationForm(forms.Form):
+    note = forms.CharField(
+        label="Demerge rationale",
+        widget=forms.Textarea(attrs={"rows": 4}),
     )

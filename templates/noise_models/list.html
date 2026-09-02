@@ -11,7 +11,6 @@
   {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
   <button class="button-compact" type="submit">Run</button>
   <a class="button-link" href="{% url 'noise-models:list' %}">Clear</a>
-  <span class="query-mode">Plain-text search · scripted query syntax is not enabled yet</span>
 {% endblock %}
 
 {% block explorer_status %}The table contains {% scientific_number result_count "count" %} published noise model{{ result_count|pluralize }}. Its filters, columns, and sort are reproducible from this URL.{% endblock %}

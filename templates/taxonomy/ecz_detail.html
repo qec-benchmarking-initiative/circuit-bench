@@ -1,0 +1,97 @@
+{% extends "layouts/record_detail.html" %}
+{% load static %}
+
+{% block title %}{{ term.display_name }} (ECZ) · Circuit Bench{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/tag-taxonomy-graph.css' %}?v=0.1.20260902q">
+{% endblock %}
+
+{% block record_heading %}
+  {% include "components/record_header.html" with record=record hide_tags=True only %}
+  {% if can_curate %}
+    <p class="page-action-bar"><a class="button button-secondary" href="{% url 'taxonomy:ecz-mapping-create' %}">Create equivalence mapping</a> <a class="button button-secondary" href="{% url 'taxonomy:ecz-status' %}">ECZ synchronisation</a></p>
+  {% endif %}
+{% endblock %}
+
+{% block record_main %}
+  <div class="record-sections">
+    <section class="record-section ecz-source-statement">
+      <h2>Error Correction Zoo reference</h2>
+      <p>Circuit Bench imports this tag and its direct taxonomy relationships. The Error Correction Zoo is the source of truth for its scientific meaning.</p>
+      <p><a class="button" href="{{ term.canonical_url }}">Open {{ term.display_name }} in the Error Correction Zoo</a></p>
+      {% if term.status == "retired" %}<p class="notice-bar">This identifier is absent from the current imported ECZ snapshot. Existing Circuit Bench records retain it.</p>{% endif %}
+    </section>
+    <section class="record-section tag-taxonomy-section">
+      <h2>Taxonomy</h2>
+      {% include "components/tag_taxonomy_graph.html" with graph=tag_graph only %}
+    </section>
+    {% if mappings %}
+      <section class="record-section">
+        <h2>Circuit Bench equivalence mappings</h2>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>Tag</th><th>Status</th><th>Mapped by</th><th>Rationale</th><th>Action</th></tr></thead>
+            <tbody>
+              {% for mapping in mappings %}
+                <tr>
+                  <td><a href="{{ mapping.tag.get_absolute_url }}">{{ mapping.tag.label }}</a></td>
+                  <td>{{ mapping.get_status_display }}</td>
+                  <td>{{ mapping.mapped_by.display_name }}</td>
+                  <td>{{ mapping.mapping_note }}{% if mapping.revocation_note %}<br><span class="muted">Demerged: {{ mapping.revocation_note }}</span>{% endif %}</td>
+                  <td>{% if can_curate and mapping.status == "active" %}<a class="table-action" href="{% url 'taxonomy:ecz-mapping-revoke' mapping.id %}">Demerge</a>{% else %}—{% endif %}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block record_aside %}
+  <h2>Imported tag</h2>
+  <dl class="stacked-metadata compact-technical-metadata">
+    <div><dt>Source</dt><dd>Error Correction Zoo</dd></div>
+    <div><dt>ECZ code ID</dt><dd><code>{{ term.ecz_code_id }}</code></dd></div>
+    <div><dt>Local UUID</dt><dd><code>{{ term.id }}</code></dd></div>
+    <div><dt>Status</dt><dd>{{ term.get_status_display }}</dd></div>
+    <div><dt>First imported</dt><dd>{{ term.created_at }}</dd></div>
+    <div><dt>Last updated</dt><dd>{{ term.updated_at }}</dd></div>
+  </dl>
+  <details class="record-disclosure">
+    <summary><span>Import provenance</span></summary>
+    <dl class="stacked-metadata compact-technical-metadata">
+      {% if term.last_seen_run.source_commit %}<div><dt>Source commit</dt><dd><a href="https://github.com/errorcorrectionzoo/eczoo_data/commit/{{ term.last_seen_run.source_commit }}"><code>{{ term.last_seen_run.source_commit }}</code></a></dd></div>{% endif %}
+      {% if term.last_seen_run.workflow_run_url %}<div><dt>Deployment</dt><dd><a href="{{ term.last_seen_run.workflow_run_url }}">Workflow run {{ term.last_seen_run.workflow_run_id }}</a></dd></div>{% endif %}
+      <div><dt>Synchronised</dt><dd>{{ term.last_seen_run.finished_at }}</dd></div>
+      <div><dt>Licence</dt><dd><a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a></dd></div>
+    </dl>
+    <p class="muted">This projection contains ECZ identifiers, names and direct parent relationships. Circuit Bench does not reproduce the ECZ scientific description.</p>
+  </details>
+{% endblock %}
+
+{% block record_related %}
+  <h2>{{ usage_label }}</h2>
+  <form class="leaderboard-filter-form" method="get" data-filter-form>
+    {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
+    {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}
+    {% include "components/taxonomy_usage_controls.html" %}
+    {% include "components/filters/grid.html" with grid=usage_grid only %}
+    <div class="leaderboard-filter-actions">
+      {% include "components/filters/query_actions.html" with show_reset=usage_filters_active reset_url=usage_reset_url only %}
+    </div>
+  </form>
+  <div class="table-region" aria-live="polite">
+    {% include "components/table_toolbar.html" with table_id="ecz-circuits" %}
+    {% include "components/data_table.html" with columns=table_columns rows=usage_rows empty_message=usage_empty only %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260902e" defer></script>
+  <script src="{% static 'js/filter-query.js' %}?v=0.1.20260902c" defer></script>
+  <script src="{% static 'js/table-controls.js' %}?v=0.1.20260902b" defer></script>
+  <script src="{% static 'js/tag-taxonomy-graph.js' %}?v=0.1.20260902q" defer></script>
+{% endblock %}

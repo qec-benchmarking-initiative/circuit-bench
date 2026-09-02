@@ -1,8 +1,9 @@
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from registry.demo import seed_demo_data
-from registry.models import Machine
+from registry.models import EczSyncRun, EczTerm, Machine, Result, Tag, TagEczParent
 
 pytestmark = pytest.mark.django_db
 
@@ -41,7 +42,7 @@ def test_result_explorer_uses_all_three_reusable_filter_grids(client):
     assert content.index('class="explorer-query-status"') > content.index(
         "data-autoquery-toggle"
     )
-    assert "The current population contains 1 exact published result." in content
+    assert "The current population contains 1 published result." in content
 
 
 def test_result_metrics_are_independent_sortable_columns(client):
@@ -69,7 +70,7 @@ def test_result_explorer_combines_algorithm_circuit_and_machine_filters(client):
         {
             "algorithm_tag": "matching",
             "decoder_priors": "not_required",
-            "code_tag": "rotated-surface-code",
+            "experiment_tag": "memory",
             "circuit_priors": "no",
             "machine_class": "cpu",
         },
@@ -88,6 +89,66 @@ def test_result_explorer_combines_algorithm_circuit_and_machine_filters(client):
     matching_content = matching.content.decode()
     assert matching_content.count(", 2 applied") == 2
     assert matching_content.count(", 1 applied") == 1
+
+
+def test_any_child_algorithm_match_includes_descendant_tagged_results(client):
+    exact = client.get(
+        reverse("results:list"),
+        {"algorithm_tag": "message-passing", "algorithm_tag_match": "any"},
+    )
+    descendants = client.get(
+        reverse("results:list"),
+        {
+            "algorithm_tag": "message-passing",
+            "algorithm_tag_match": "children",
+        },
+    )
+
+    assert exact.context["result_count"] == 0
+    assert descendants.context["result_count"] == 1
+    assert (
+        descendants.context["algorithm_filter_grid"]["cells"][0]["match_label"]
+        == "any child of"
+    )
+
+
+def test_result_any_child_code_match_crosses_ecz_native_parent_edge(client):
+    result = Result.objects.get(state="published")
+    native_child = Tag.objects.get(
+        namespace=Tag.Namespace.CODE,
+        slug="bivariate-bicycle-162",
+    )
+    now = timezone.now()
+    sync_run = EczSyncRun.objects.create(
+        started_at=now,
+        finished_at=now,
+        status=EczSyncRun.Status.APPLIED,
+        source_repository="https://github.com/errorcorrectionzoo/eczoo_data",
+    )
+    ecz_parent = EczTerm.objects.create(
+        ecz_code_id="result-parent-test",
+        raw_name="Result parent test",
+        display_name="Result parent test",
+        first_seen_run=sync_run,
+        last_seen_run=sync_run,
+    )
+    TagEczParent.objects.create(tag=native_child, ecz_term=ecz_parent)
+    result.circuit_revision.code_tags.add(native_child)
+
+    exact = client.get(
+        reverse("results:list"),
+        {"code_tag": "ecz:result-parent-test", "code_tag_match": "any"},
+    )
+    descendants = client.get(
+        reverse("results:list"),
+        {
+            "code_tag": "ecz:result-parent-test",
+            "code_tag_match": "children",
+        },
+    )
+
+    assert exact.context["result_count"] == 0
+    assert descendants.context["result_count"] == 1
 
 
 def test_result_explorer_accepts_multiple_noise_models_as_scalar_in_filter(client):

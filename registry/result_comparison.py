@@ -316,7 +316,7 @@ def _query_status(error, scripted, result_count):
     return {
         "kind": "plain",
         "message": (
-            f"The current population contains {result_count} exact published "
+            f"The current population contains {result_count} published "
             f"result{plural}. Its filters, query, plot, and sort describe the "
             "same population."
         ),

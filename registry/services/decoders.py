@@ -21,6 +21,7 @@ from registry.models import (
     Result,
     Tag,
 )
+from registry.services.tag_hierarchy import descendant_slug_groups
 from registry.services.tags import active_tag_queryset
 
 PUBLIC_DETAIL_STATES = ("published", "withdrawn")
@@ -76,16 +77,22 @@ def public_decoder_catalogue(
     selected_tags = tuple(tag for tag in tag_slugs if tag)
     if tag_slug.strip() and tag_slug.strip() not in selected_tags:
         selected_tags = (*selected_tags, tag_slug.strip())
-    if tag_match == "any" and selected_tags:
+    if tag_match == "children" and selected_tags:
+        tag_groups = descendant_slug_groups(Tag.Namespace.ALGORITHM, selected_tags)
+        decoders = decoders.filter(
+            algorithm_tags__namespace="algorithm",
+            algorithm_tags__slug__in={slug for group in tag_groups for slug in group},
+        )
+    elif tag_match == "any" and selected_tags:
         decoders = decoders.filter(
             algorithm_tags__namespace="algorithm",
             algorithm_tags__slug__in=selected_tags,
         )
     else:
-        for selected_tag in selected_tags:
+        for tag_slug_value in selected_tags:
             decoders = decoders.filter(
                 algorithm_tags__namespace="algorithm",
-                algorithm_tags__slug=selected_tag,
+                algorithm_tags__slug=tag_slug_value,
             )
 
     if skeleton_preparation in {"required", "not_required"}:
