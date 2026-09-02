@@ -295,6 +295,14 @@ def test_parent_edit_family_tree_and_contextual_picker(accounts, client):
         details__changed_fields__contains=["parents"],
     ).exists()
 
+    ordinary_picker = client.get(reverse("decoders:list")).content.decode()
+    assert "Unselected parent tags" in ordinary_picker
+    assert "(recommended)" not in ordinary_picker
+
+    creation_page = client.get(reverse("taxonomy:tag-create")).content.decode()
+    assert "Unselected parent tags" in creation_page
+    assert "(recommended)" in creation_page
+
 
 def test_taxonomy_validator_detects_out_of_band_cycle(accounts):
     contributor = accounts["contributor"]

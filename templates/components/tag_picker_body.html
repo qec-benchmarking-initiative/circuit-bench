@@ -49,7 +49,11 @@
     <p class="tag-no-results hidden" data-tag-no-results role="status">No matching tags.</p>
   </section>
 
-  {% include "components/tag_context_parents.html" with picker_id=picker_id only %}
+  {% if mode == "create" %}
+    {% include "components/tag_context_parents.html" with picker_id=picker_id recommended=True only %}
+  {% else %}
+    {% include "components/tag_context_parents.html" with picker_id=picker_id only %}
+  {% endif %}
 
   {% if allow_create %}
     <section class="tag-create-section is-disabled" data-tag-create-section aria-disabled="true" aria-labelledby="{{ picker_id }}-create-title">
@@ -63,7 +67,7 @@
         <textarea id="{{ picker_id }}-aliases" rows="2" data-tag-create-aliases disabled></textarea>
         <span class="tag-create-parent-label">Parent tags <span class="muted">(optional)</span></span>
         <div class="tag-create-parent-control">
-          {% include "components/tag_parent_selector.html" with picker_id=picker_id|add:"-new-tag" tags=parent_tags selected_parent_ids=empty_parent_ids input_name="" only %}
+          {% include "components/tag_parent_selector.html" with picker_id=picker_id|add:"-new-tag" tags=parent_tags selected_parent_ids=empty_parent_ids input_name="" recommended=True only %}
         </div>
       </div>
       <p class="tag-create-status" data-tag-create-status role="status">Type a proposed tag name above.</p>

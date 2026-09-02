@@ -47,7 +47,7 @@ def test_plot_demo_data_is_rich_idempotent_and_plot_ready():
         )
         for tag in Tag.objects.filter(namespace="algorithm")
     }
-    assert algorithm_tags["Matching"] >= {"MWM", "MWPM"}
+    assert algorithm_tags["Matching"] >= {"MWM", "MWPM", "Blossom"}
     assert algorithm_tags["Ordered statistics"] == {"OSD"}
     assert algorithm_tags["Tensor network"] == {"TN"}
     assert algorithm_tags["Neural network"] == {"NN"}

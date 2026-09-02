@@ -656,6 +656,7 @@ def _ensure_demo_tag_aliases(uploader: Account) -> None:
         "tag/algorithm/matching": (
             "MWPM",
             "MWM",
+            "Blossom",
             "Minimum-weight perfect matching",
         ),
         "tag/algorithm/ordered-statistics": ("OSD",),
