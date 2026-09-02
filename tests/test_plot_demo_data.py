@@ -23,11 +23,11 @@ def test_plot_demo_data_is_rich_idempotent_and_plot_ready():
             "machines": 3,
             "results": 56,
             "scores": 112,
-            "tags": 17,
+            "tags": 35,
         }
     )
     assert RecordHistory.objects.count() == first_history_count
-    assert TagParent.objects.count() == 2
+    assert TagParent.objects.count() == 29
     assert plot_demo_counts() == first_counts
     assert Result.objects.values("decoder_version").distinct().count() == 7
     assert Result.objects.values("circuit_revision").distinct().count() == 8

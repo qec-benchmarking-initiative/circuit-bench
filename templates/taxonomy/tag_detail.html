@@ -3,9 +3,18 @@
 
 {% block title %}{{ tag.label }} · Circuit Bench{% endblock %}
 
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/tag-taxonomy-graph.css' %}?v=0.1.20260902e">
+{% endblock %}
+
 {% block entity_heading %}
   {% include "components/entity_header.html" with entity=entity only %}
-  {% if can_edit %}<p class="page-action-bar"><a class="button button-secondary" href="{% url 'taxonomy:tag-edit' namespace=tag.namespace slug=tag.slug %}">Edit tag</a></p>{% endif %}
+  {% if can_edit or can_retire %}
+    <p class="page-action-bar">
+      {% if can_edit %}<a class="button button-secondary" href="{% url 'taxonomy:tag-edit' namespace=tag.namespace slug=tag.slug %}">Edit tag</a>{% endif %}
+      {% if can_retire %}<a class="button button-danger" href="{% url 'taxonomy:tag-delete' namespace=tag.namespace slug=tag.slug %}">Delete tag</a>{% endif %}
+    </p>
+  {% endif %}
 {% endblock %}
 
 {% block entity_main %}
@@ -22,25 +31,10 @@
         <p class="null-value">No active aliases.</p>
       {% endif %}
     </section>
-    {% if tag_family.has_family %}
-      <section class="record-section tag-family-section">
-        <h2>Taxonomy family</h2>
-        <div class="tag-family-columns">
-          {% if tag_family.ancestors %}
-            <section>
-              <h3>Parents and ancestors</h3>
-              <ul class="tag-family-tree">{% for node in tag_family.ancestors %}{% include "taxonomy/tag_family_branch.html" with node=node only %}{% endfor %}</ul>
-            </section>
-          {% endif %}
-          {% if tag_family.descendants %}
-            <section>
-              <h3>Children and descendants</h3>
-              <ul class="tag-family-tree">{% for node in tag_family.descendants %}{% include "taxonomy/tag_family_branch.html" with node=node only %}{% endfor %}</ul>
-            </section>
-          {% endif %}
-        </div>
-      </section>
-    {% endif %}
+    <section class="record-section tag-taxonomy-section">
+      <h2>Taxonomy</h2>
+      {% include "components/tag_taxonomy_graph.html" with graph=tag_graph only %}
+    </section>
     {% if tag.canonical_tag %}
       <section class="record-section">
         <h2>Canonical replacement</h2>
@@ -89,4 +83,5 @@
   <script src="{% static 'js/filter-grid.js' %}?v=0.1.20260831k" defer></script>
   <script src="{% static 'js/filter-query.js' %}" defer></script>
   <script src="{% static 'js/explorer.js' %}?v=0.1.20260902i" defer></script>
+  <script src="{% static 'js/tag-taxonomy-graph.js' %}?v=0.1.20260902h" defer></script>
 {% endblock %}

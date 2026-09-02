@@ -666,6 +666,11 @@ def _ensure_demo_tag_aliases(uploader: Account) -> None:
         "tag/algorithm/belief-propagation": ("BP",),
         "tag/algorithm/fallback": ("Post processing",),
         "tag/code/rotated-surface-code": ("Rotated planar code",),
+        "tag/code/css-code": ("Calderbank–Shor–Steane code",),
+        "tag/code/quantum-ldpc-code": ("qLDPC code",),
+        "tag/code/bivariate-bicycle-code": ("BB code",),
+        "tag/code/hypergraph-product-code": ("HGP code",),
+        "tag/code/gkp-code": ("Gottesman–Kitaev–Preskill code",),
         "tag/experiment/memory": ("Quantum memory",),
     }
     for tag_key, values in aliases.items():

@@ -315,8 +315,51 @@ def _seed_tags(schema_release, uploader, published_at):
         ("algorithm", "fallback", "Fallback", "#755844"),
         ("algorithm", "predecoder", "Predecoder", "#497178"),
         ("algorithm", "ensemble", "Ensemble", "#765278"),
+        (
+            "code",
+            "quantum-error-correcting-code",
+            "Quantum error-correcting code",
+            "#5e6572",
+        ),
+        ("code", "stabilizer-code", "Stabilizer code", "#596f7a"),
+        ("code", "css-code", "CSS code", "#5d7588"),
+        ("code", "topological-code", "Topological code", "#617b5d"),
+        ("code", "surface-code", "Surface code", "#6b7950"),
+        ("code", "planar-surface-code", "Planar surface code", "#7c7148"),
         ("code", "colour-code", "Colour code", "#8d4771"),
+        (
+            "code",
+            "triangular-colour-code",
+            "Triangular colour code",
+            "#984f76",
+        ),
+        ("code", "toric-code", "Toric code", "#4d7770"),
+        ("code", "xzzx-surface-code", "XZZX surface code", "#6e6950"),
+        ("code", "quantum-ldpc-code", "Quantum LDPC code", "#4b6f64"),
+        (
+            "code",
+            "bivariate-bicycle-code",
+            "Bivariate bicycle code",
+            "#567346",
+        ),
         ("code", "bivariate-bicycle-144", "Bivariate bicycle 144", "#526e3d"),
+        (
+            "code",
+            "hypergraph-product-code",
+            "Hypergraph product code",
+            "#48715d",
+        ),
+        (
+            "code",
+            "homological-product-code",
+            "Homological product code",
+            "#4e6877",
+        ),
+        ("code", "subsystem-code", "Subsystem code", "#765d46"),
+        ("code", "bacon-shor-code", "Bacon–Shor code", "#866546"),
+        ("code", "bosonic-code", "Bosonic code", "#765a78"),
+        ("code", "gkp-code", "GKP code", "#715888"),
+        ("code", "cat-code", "Cat code", "#83536d"),
         ("experiment", "stability", "Stability", "#93622f"),
         ("experiment", "logical-operation", "Logical operation", "#445f91"),
     )
@@ -327,6 +370,63 @@ def _seed_tags(schema_release, uploader, published_at):
         ),
         "predecoder": "A preliminary decoding stage applied before the main decoder.",
         "ensemble": ("Combines outputs from multiple decoders or decoding hypotheses."),
+        "quantum-error-correcting-code": (
+            "A code that protects quantum information against physical errors."
+        ),
+        "stabilizer-code": (
+            "A quantum code defined by the joint eigenspace of a stabilizer group."
+        ),
+        "css-code": (
+            "A stabilizer code whose checks separate into X-type and Z-type operators."
+        ),
+        "topological-code": (
+            "A code whose logical information is protected by topological structure."
+        ),
+        "surface-code": (
+            "A topological stabilizer-code family defined on a two-dimensional surface."
+        ),
+        "planar-surface-code": (
+            "A surface-code family with boundaries on a planar patch."
+        ),
+        "colour-code": (
+            "A topological CSS-code family built from colourable cell complexes."
+        ),
+        "triangular-colour-code": (
+            "A colour-code family encoded on a triangular patch."
+        ),
+        "toric-code": "A surface code with periodic boundary conditions.",
+        "xzzx-surface-code": (
+            "A surface-code variant whose plaquette checks alternate X and Z operators."
+        ),
+        "quantum-ldpc-code": ("A quantum code with sparse checks of bounded weight."),
+        "bivariate-bicycle-code": (
+            "A quantum LDPC-code family constructed from bivariate circulant matrices."
+        ),
+        "bivariate-bicycle-144": (
+            "The 144-data-qubit member of a bivariate bicycle-code family."
+        ),
+        "hypergraph-product-code": (
+            "A CSS quantum LDPC code constructed as a product of classical codes."
+        ),
+        "homological-product-code": (
+            "A quantum-code family constructed from products of chain complexes."
+        ),
+        "subsystem-code": (
+            "A code that protects logical information while leaving gauge degrees "
+            "of freedom."
+        ),
+        "bacon-shor-code": (
+            "A subsystem-code family combining Shor-code structure with gauge checks."
+        ),
+        "bosonic-code": (
+            "A code that encodes logical information in bosonic oscillator modes."
+        ),
+        "gkp-code": (
+            "A bosonic code based on a lattice of phase-space displacement operators."
+        ),
+        "cat-code": (
+            "A bosonic code whose logical states are superpositions of coherent states."
+        ),
     }
     tags = {tag.slug: tag for tag in Tag.objects.all()}
     for namespace, slug, label, colour in specifications:
@@ -362,6 +462,33 @@ def _seed_tag_parents(tags, uploader):
     for child_slug, parent_slug in (
         ("ordered-statistics", "fallback"),
         ("union-find", "clustering"),
+        ("stabilizer-code", "quantum-error-correcting-code"),
+        ("topological-code", "quantum-error-correcting-code"),
+        ("quantum-ldpc-code", "quantum-error-correcting-code"),
+        ("subsystem-code", "quantum-error-correcting-code"),
+        ("bosonic-code", "quantum-error-correcting-code"),
+        ("css-code", "stabilizer-code"),
+        ("surface-code", "topological-code"),
+        ("surface-code", "css-code"),
+        ("surface-code", "quantum-ldpc-code"),
+        ("planar-surface-code", "surface-code"),
+        ("rotated-surface-code", "planar-surface-code"),
+        ("toric-code", "surface-code"),
+        ("xzzx-surface-code", "surface-code"),
+        ("colour-code", "topological-code"),
+        ("colour-code", "css-code"),
+        ("colour-code", "quantum-ldpc-code"),
+        ("triangular-colour-code", "colour-code"),
+        ("bivariate-bicycle-code", "quantum-ldpc-code"),
+        ("bivariate-bicycle-code", "css-code"),
+        ("bivariate-bicycle-144", "bivariate-bicycle-code"),
+        ("hypergraph-product-code", "quantum-ldpc-code"),
+        ("hypergraph-product-code", "css-code"),
+        ("homological-product-code", "quantum-ldpc-code"),
+        ("bacon-shor-code", "subsystem-code"),
+        ("bacon-shor-code", "css-code"),
+        ("gkp-code", "bosonic-code"),
+        ("cat-code", "bosonic-code"),
     ):
         relationship, _created = TagParent.objects.get_or_create(
             child=tags[child_slug],

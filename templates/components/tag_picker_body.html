@@ -35,10 +35,10 @@
           {% if mode != "create" %}
             <label class="tag-choice-main">
               <input type="checkbox" name="{{ input_name }}" value="{{ tag.picker_key|default:tag.slug }}" data-tag-id="{{ tag.id }}" data-label="{{ tag.label }}" data-status="{{ tag.status }}" data-color="{{ tag.display_color|default:'' }}" data-url="{{ tag.get_absolute_url }}"{% if tag.picker_key|default:tag.slug in selected_keys %} checked{% endif %}>
-              <span class="tag-choice-content"><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }} <span class="tag-choice-alias" data-tag-alias-match></span></span>
+              <span class="tag-choice-content"><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {% include "components/tag_text.html" with tag=tag only %} <span class="tag-choice-alias" data-tag-alias-match></span></span>
             </label>
           {% else %}
-            <span class="tag-choice-main tag-choice-content"><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {{ tag.label }} <span class="tag-choice-alias" data-tag-alias-match></span></span>
+            <span class="tag-choice-main tag-choice-content"><span class="tag-glyph" aria-hidden="true">{% if tag.status == "official" %}◆{% else %}◇{% endif %}</span> {% include "components/tag_text.html" with tag=tag only %} <span class="tag-choice-alias" data-tag-alias-match></span></span>
           {% endif %}
           <a class="tag-info-link" href="{{ tag.get_absolute_url }}" aria-label="Information about {{ tag.label }}" title="Information about {{ tag.label }}">i</a>
           <span hidden data-tag-aliases>{% for alias in tag.display_aliases %}<span data-tag-alias="{{ alias.alias|lower }}" data-tag-alias-display="{{ alias.alias }}"></span>{% endfor %}</span>

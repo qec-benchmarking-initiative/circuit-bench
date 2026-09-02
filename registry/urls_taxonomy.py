@@ -16,6 +16,11 @@ urlpatterns = [
         name="tag-edit",
     ),
     path(
+        "tags/<str:namespace>/<slug:slug>/delete/",
+        views_tags.tag_delete,
+        name="tag-delete",
+    ),
+    path(
         "taxonomy/tags/create.json",
         views_tags.create_tag_json,
         name="tag-create-json",

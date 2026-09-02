@@ -21,16 +21,19 @@ from registry.forms_taxonomy import TagEditForm
 from registry.models import Tag
 from registry.services.circuits import circuit_catalogue
 from registry.services.decoders import public_decoder_catalogue
-from registry.services.tags import active_tag_queryset, tag_detail_queryset, tag_family
+from registry.services.tags import active_tag_queryset, tag_detail_queryset
 from registry.services.taxonomy import (
     TaxonomyConflictError,
     TaxonomyError,
     TaxonomyPermissionError,
     can_edit_tag,
+    can_retire_tag,
     create_custom_tag,
     normalise_tag_aliases,
+    retire_tag,
     update_tag,
 )
+from registry.tag_taxonomy_graph import build_local_tag_graph
 
 ALGORITHM_COLUMNS = (
     ColumnSpec("name", "Decoder"),
@@ -121,15 +124,20 @@ def tag_detail(request, namespace, slug):
         {
             "tag": tag,
             "can_edit": can_edit_tag(tag, request.user),
+            "can_retire": can_retire_tag(tag, request.user),
             "entity": {
                 "kind": f"{tag.get_namespace_display()} tag",
                 "name": tag.label,
                 "status": tag.status,
-                "status_label": tag.get_status_display(),
+                "status_label": (
+                    "Deleted"
+                    if tag.status == Tag.Status.RETIRED
+                    else tag.get_status_display()
+                ),
                 "version": None,
                 "tags": (),
             },
-            "tag_family": tag_family(tag),
+            "tag_graph": build_local_tag_graph(tag),
             **usage,
         },
     )
@@ -179,6 +187,29 @@ def tag_edit(request, namespace, slug):
             "selected_parent_ids": selected_parent_ids,
         },
     )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def tag_delete(request, namespace, slug):
+    tag = get_object_or_404(
+        tag_detail_queryset(),
+        namespace=namespace,
+        slug=slug,
+    )
+    if not can_retire_tag(tag, request.user):
+        raise PermissionDenied("You cannot delete this tag.")
+    if request.method == "POST":
+        try:
+            retire_tag(tag.id, actor=request.user)
+        except TaxonomyPermissionError as error:
+            raise PermissionDenied(str(error)) from error
+        except TaxonomyError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, "The tag was deleted from active use.")
+            return redirect(tag.get_absolute_url())
+    return render(request, "taxonomy/tag_delete.html", {"tag": tag})
 
 
 def _algorithm_usage(request, tag):

@@ -249,20 +249,21 @@ def test_parent_edit_family_tree_and_contextual_picker(accounts, client):
         description="No family relationships.",
     ).tag
 
-    child_page = client.get(child.get_absolute_url()).content.decode()
-    assert "Taxonomy family" in child_page
+    child_response = client.get(child.get_absolute_url())
+    child_page = child_response.content.decode()
+    assert child_response.context["tag_graph"]["open_by_default"]
+    assert "Local graph" in child_page
     assert "Graph decoder" in child_page
-    assert "Decoder family" in child_page
-    assert "Children and descendants" not in child_page
+    assert "Decoder family" not in child_page
 
-    root_page = client.get(grandparent.get_absolute_url()).content.decode()
-    assert "Children and descendants" in root_page
-    assert "Graph decoder" in root_page
-    assert "Leaf decoder" in root_page
-    assert (
-        "Taxonomy family"
-        not in client.get(unrelated.get_absolute_url()).content.decode()
-    )
+    root_response = client.get(grandparent.get_absolute_url())
+    assert root_response.context["tag_graph"]["open_by_default"]
+    assert "Graph decoder" in root_response.content.decode()
+    assert "Leaf decoder" not in root_response.content.decode()
+
+    unrelated_response = client.get(unrelated.get_absolute_url())
+    assert unrelated_response.context["tag_graph"]["is_trivial"]
+    assert not unrelated_response.context["tag_graph"]["open_by_default"]
 
     client.force_login(contributor)
     submission_page = client.get(reverse("submissions:create", args=["decoder"]))

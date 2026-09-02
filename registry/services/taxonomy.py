@@ -242,9 +242,23 @@ def normalise_tag_parent_ids(
 def can_edit_tag(tag: Tag, actor: Account | None) -> bool:
     if actor is None or not actor.is_active:
         return False
+    if tag.status == Tag.Status.RETIRED:
+        return False
     if actor.is_admin:
         return True
     return tag.status == Tag.Status.CUSTOM and tag.submitted_by_id == actor.id
+
+
+def can_retire_tag(tag: Tag, actor: Account | None) -> bool:
+    """Return whether an account may perform the user-facing delete action."""
+
+    if actor is None or not actor.is_active:
+        return False
+    if tag.status == Tag.Status.CUSTOM:
+        return tag.submitted_by_id == actor.id
+    if tag.status == Tag.Status.OFFICIAL:
+        return actor.is_admin
+    return False
 
 
 @transaction.atomic
@@ -370,6 +384,32 @@ def update_tag(
 
 
 @transaction.atomic
+def retire_tag(tag_id, *, actor: Account) -> Tag:
+    """Retire a tag while preserving its identity and every existing reference."""
+
+    tag = _locked_tag(tag_id)
+    if not can_retire_tag(tag, actor):
+        raise TaxonomyPermissionError("You cannot delete this tag.")
+    previous_status = tag.status
+    tag.status = Tag.Status.RETIRED
+    tag.save(update_fields=["status", "updated_at"])
+    append_history_event(
+        kind="tag",
+        record=tag,
+        actor=actor,
+        action=RecordEvent.Action.RETIRED,
+        note="Deleted this tag from active use.",
+        details={
+            "policy_version": POLICY_VERSION,
+            "previous_status": previous_status,
+            "new_status": Tag.Status.RETIRED,
+            "public_action": "deleted",
+        },
+    )
+    return tag
+
+
+@transaction.atomic
 def add_tag_alias(tag_id, *, actor: Account, alias: str) -> TagAlias:
     tag = _locked_tag(tag_id)
     if not can_edit_tag(tag, actor):
@@ -467,13 +507,15 @@ def deprecate_tag(tag_id, *, curator: Account, canonical_tag_id) -> Tag:
         raise TaxonomyStateError("Tag not found.")
     if canonical is None:
         raise TaxonomyStateError("The canonical replacement does not exist.")
-    if tag.status == Tag.Status.DEPRECATED:
-        raise TaxonomyStateError("This tag is already deprecated.")
+    if tag.status in (Tag.Status.DEPRECATED, Tag.Status.RETIRED):
+        raise TaxonomyStateError("This tag is not active.")
     if canonical.namespace != tag.namespace:
         raise TaxonomyValidationError(
             "The canonical replacement must use the same namespace."
         )
-    if canonical.status == Tag.Status.DEPRECATED or canonical.canonical_tag_id:
+    if canonical.status in (Tag.Status.DEPRECATED, Tag.Status.RETIRED) or (
+        canonical.canonical_tag_id
+    ):
         raise TaxonomyConflictError(
             "The canonical replacement must itself be an active canonical tag."
         )

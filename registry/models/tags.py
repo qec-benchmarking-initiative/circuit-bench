@@ -17,6 +17,7 @@ class Tag(UUIDModel):
         CUSTOM = "custom", "Custom"
         OFFICIAL = "official", "Official"
         DEPRECATED = "deprecated", "Deprecated"
+        RETIRED = "retired", "Retired"
 
     schema_release = models.ForeignKey(
         SchemaRelease,
@@ -83,7 +84,9 @@ class Tag(UUIDModel):
                 name="tag_namespace_valid",
             ),
             models.CheckConstraint(
-                condition=models.Q(status__in=["custom", "official", "deprecated"]),
+                condition=models.Q(
+                    status__in=["custom", "official", "deprecated", "retired"]
+                ),
                 name="tag_status_valid",
             ),
             models.CheckConstraint(

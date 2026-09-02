@@ -1,6 +1,6 @@
 <span class="selected-tag selected-tag-{{ tag.status }}" data-selected-tag="{{ tag.picker_key|default:tag.slug }}"{% if tag.status == "official" and tag.display_color %} style="--tag-color: {{ tag.display_color }}"{% endif %}>
   <span class="tag-glyph" aria-hidden="true">✓</span>
-  {{ tag.label }}
+  {% include "components/tag_text.html" with tag=tag only %}
   <a class="tag-info-link" href="{{ tag.get_absolute_url }}" aria-label="Information about {{ tag.label }}" title="Information about {{ tag.label }}">i</a>
   <button type="button" data-tag-remove="{{ tag.picker_key|default:tag.slug }}" aria-label="Remove {{ tag.label }}">×</button>
 </span>

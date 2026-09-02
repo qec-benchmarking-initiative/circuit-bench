@@ -1,0 +1,1 @@
+<span{% if tag.status == "retired" %} class="tag-deleted-label"{% endif %}>{{ tag.label }}</span>{% if tag.status == "retired" %} <span class="tag-deleted-note">(Deleted)</span>{% endif %}

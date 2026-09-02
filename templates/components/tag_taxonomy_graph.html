@@ -1,0 +1,20 @@
+<details
+  class="taxonomy-graph-panel"
+  id="{{ graph.id }}"
+  data-taxonomy-graph-panel
+  data-taxonomy-graph-data-id="{{ graph.data_id }}"
+  {% if graph.open_by_default %}open{% endif %}
+>
+  <summary>
+    <span>Local graph</span>
+    <span>{{ graph.relationship_count }} relationship{{ graph.relationship_count|pluralize }}</span>
+  </summary>
+  <div
+    class="taxonomy-graph-canvas"
+    data-taxonomy-graph-canvas
+    tabindex="0"
+    aria-label="Local taxonomy graph"
+  ></div>
+  <noscript><p class="taxonomy-graph-noscript">Enable JavaScript to render the taxonomy graph.</p></noscript>
+</details>
+{{ graph.payload|json_script:graph.data_id }}

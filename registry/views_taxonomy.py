@@ -237,14 +237,14 @@ def noise_model_preview(request, preview_id):
 def curation_queue(request):
     _require_admin_view(request)
     active_tags = list(
-        Tag.objects.exclude(status=Tag.Status.DEPRECATED)
+        Tag.objects.exclude(status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED))
         .select_related("submitted_by", "curated_by")
         .order_by("namespace", "status", "label", "id")
     )
     canonical_by_namespace = {
         namespace: list(
             Tag.objects.filter(namespace=namespace)
-            .exclude(status=Tag.Status.DEPRECATED)
+            .exclude(status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED))
             .filter(canonical_tag__isnull=True)
             .order_by("status", "label", "id")
         )

@@ -10,6 +10,19 @@
       ? `-${link.dataset.sortKey}`
       : link.dataset.sortKey);
 
+  const appendTagText = (container, label, status) => {
+    const text = document.createElement("span");
+    text.textContent = label;
+    if (status === "retired") text.className = "tag-deleted-label";
+    container.append(document.createTextNode(" "), text);
+    if (status === "retired") {
+      const note = document.createElement("span");
+      note.className = "tag-deleted-note";
+      note.textContent = "(Deleted)";
+      container.append(document.createTextNode(" "), note);
+    }
+  };
+
   document.addEventListener("click", (event) => {
     const sortLink = event.target.closest("a[data-sort-key]");
     if (sortLink) {
@@ -77,7 +90,9 @@
     icon.className = "tag-glyph";
     icon.setAttribute("aria-hidden", "true");
     icon.textContent = "✓";
-    tag.append(icon, document.createTextNode(` ${checkbox.dataset.label} `));
+    tag.append(icon);
+    appendTagText(tag, checkbox.dataset.label, checkbox.dataset.status);
+    tag.append(document.createTextNode(" "));
 
     if (checkbox.dataset.url) {
       const info = document.createElement("a");
@@ -167,7 +182,8 @@
     glyph.className = "tag-glyph";
     glyph.setAttribute("aria-hidden", "true");
     glyph.textContent = record.status === "official" ? "◆" : "◇";
-    content.append(glyph, document.createTextNode(` ${record.label}`));
+    content.append(glyph);
+    appendTagText(content, record.label, record.status);
     card.append(content);
     if (record.url) {
       const info = document.createElement("a");

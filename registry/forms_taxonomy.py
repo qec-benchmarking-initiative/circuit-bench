@@ -39,7 +39,7 @@ class CustomTagForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["parents"].queryset = Tag.objects.exclude(
-            status=Tag.Status.DEPRECATED
+            status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED)
         ).order_by("namespace", "label", "id")
 
     def payload(self) -> dict:
@@ -139,7 +139,7 @@ class TagDeprecationForm(forms.Form):
         self.fields["canonical_tag"].queryset = (
             Tag.objects.filter(namespace=tag.namespace)
             .exclude(id=tag.id)
-            .exclude(status=Tag.Status.DEPRECATED)
+            .exclude(status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED))
             .filter(canonical_tag__isnull=True)
             .order_by("status", "label", "id")
         )

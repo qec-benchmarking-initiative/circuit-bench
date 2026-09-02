@@ -63,7 +63,7 @@
       "x-definition": "../../definitions/tag/0.1.md#aliases-and-parent-tags"
     },
     "status": {
-      "enum": ["custom", "official", "deprecated"],
+      "enum": ["custom", "official", "deprecated", "retired"],
       "x-definition": "../../definitions/tag/0.1.md#curation-status"
     },
     "display_color": {
