@@ -1609,9 +1609,7 @@ code {
 }
 
 .submission-table-section > h2 {
-  margin: 0 0 0.15rem;
-  padding-bottom: 0.25rem;
-  border-bottom: 1px solid var(--line-strong);
+  margin: 0 0 0.4rem;
   font-size: 1rem;
 }
 
@@ -1879,6 +1877,10 @@ code {
   padding: 0.45rem 0.55rem;
   border-bottom: 1px solid var(--line);
   background: var(--surface-muted);
+}
+
+.settings-section-heading:has(+ .table-scroll) {
+  border-bottom: 0;
 }
 
 .settings-section-heading h2,
