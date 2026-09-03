@@ -54,6 +54,17 @@ def test_tags_page_is_rendered_and_linked_from_about(client):
     assert tags_url.encode() in about.content
 
 
+def test_api_guide_is_rendered_and_linked_from_about(client):
+    api_url = reverse("pages:static-reference", args=["api"])
+    response = client.get(api_url)
+
+    assert response.status_code == 200
+    assert b"Circuit Bench API" in response.content
+    assert b"Authorization" in response.content
+    assert b"/api/0.1/openapi.json" in response.content
+    assert api_url.encode() in client.get(reverse("pages:about")).content
+
+
 def test_blog_index_is_newest_first_and_posts_have_stable_routes(client):
     response = client.get(reverse("pages:blog-index"))
 

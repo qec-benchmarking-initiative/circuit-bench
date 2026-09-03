@@ -1,0 +1,17 @@
+<form id="{{ form_id }}" class="bulk-action-bar" method="post" action="{% url 'bulk:preview' %}">
+  {% csrf_token %}
+  <input type="hidden" name="return_url" value="{{ return_url }}">
+  {% if collection_scope %}<input type="hidden" name="collection_scope" value="{{ collection_scope }}">{% endif %}
+  <label for="{{ form_id }}-action">Selected records</label>
+  <select id="{{ form_id }}-action" name="action">
+    {% if mode == "review" %}
+      <option value="approve">Approve and publish</option><option value="reject">Reject</option>
+    {% else %}
+      <option value="make_public">Make public</option>
+      <option value="make_private">Make private</option>
+      {% if mode != "visibility" %}<option value="withdraw">Withdraw</option>{% endif %}
+    {% endif %}
+  </select>
+  <button class="button button-compact" type="submit">Continue</button>
+  <span class="bulk-selection-count" data-bulk-count>0 selected</span>
+</form>

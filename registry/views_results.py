@@ -77,7 +77,7 @@ def result_list(request):
     parsed_ranges = filter_state.parsed_ranges
     comparison = result_comparison_context(
         request,
-        queryset=public_result_catalogue(**filters),
+        queryset=public_result_catalogue(viewer=request.user, **filters),
         columns=RESULT_COLUMNS,
         default_sort=(("published", "desc"),),
         plot_id="all-results-scatter",

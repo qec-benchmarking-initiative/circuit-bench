@@ -27,6 +27,7 @@ from registry.models import (
     TagAlias,
     TagParent,
 )
+from registry.models.common import RecordVisibility
 from registry.services.histories import (
     append_history_event,
     history_for_new_record,
@@ -89,6 +90,7 @@ def create_custom_tag(
     aliases: Iterable[str] = (),
     parents: Iterable[Tag | str] = (),
     ecz_parents: Iterable[str] = (),
+    visibility: str = "public",
 ) -> TagCreationOutcome:
     """Create an immediately usable custom tag with an explicit system route."""
 
@@ -103,6 +105,8 @@ def create_custom_tag(
     if not slug:
         slug = _available_tag_slug(namespace, label)
     _validate_tag_values(namespace, slug, label, description)
+    if visibility not in RecordVisibility.values:
+        raise TaxonomyValidationError("Visibility must be public or private.")
     _validate_alias_values(label, aliases)
 
     try:
@@ -128,6 +132,7 @@ def create_custom_tag(
                 label=label,
                 description=description,
                 status=Tag.Status.CUSTOM,
+                visibility=visibility,
                 display_color=None,
                 canonical_tag=None,
                 submitted_by=submitter,
@@ -153,6 +158,7 @@ def create_custom_tag(
                         "slug": slug,
                         "label": label,
                         "description": description,
+                        "visibility": visibility,
                         "aliases": list(aliases),
                         "parent_tag_ids": [str(parent_id) for parent_id in parent_ids],
                         "ecz_parent_ids": [str(parent_id) for parent_id in ecz_parents],
@@ -618,6 +624,7 @@ def submit_noise_model(
     paper_url: str,
     randomises_priors: bool,
     predecessor: NoiseModel | None = None,
+    visibility: str = "public",
 ) -> NoiseModelSubmissionOutcome:
     """Store a community noise model as a private pending-review candidate."""
 
@@ -673,6 +680,7 @@ def submit_noise_model(
                 curation_status=NoiseModel.CurationStatus.COMMUNITY,
                 submitted_by=submitter,
                 state=initial_state,
+                visibility=visibility,
                 published_at=None,
                 withdrawn_at=None,
             )
@@ -689,6 +697,7 @@ def submit_noise_model(
                     },
                 )
             payload = {
+                "visibility": visibility,
                 "slug": slug,
                 "name": name,
                 "short_description": short_description,

@@ -20,20 +20,25 @@ from registry.services.tag_hierarchy import (
     descendant_slug_groups,
     inclusive_code_descendant_identities,
 )
+from registry.services.visibility import actor_visibility_q
 
 PUBLIC_DETAIL_STATES = ("published", "withdrawn")
 
 
-def _code_tag_queryset():
-    return Tag.objects.prefetch_related(
-        Prefetch(
-            "ecz_mappings",
-            queryset=TagEczMapping.objects.filter(
-                status=TagEczMapping.Status.ACTIVE
-            ).select_related("ecz_term"),
-            to_attr="active_ecz_mappings",
+def _code_tag_queryset(viewer=None):
+    return (
+        Tag.objects.filter(actor_visibility_q(viewer))
+        .prefetch_related(
+            Prefetch(
+                "ecz_mappings",
+                queryset=TagEczMapping.objects.filter(
+                    status=TagEczMapping.Status.ACTIVE
+                ).select_related("ecz_term"),
+                to_attr="active_ecz_mappings",
+            )
         )
-    ).order_by("label", "id")
+        .order_by("label", "id")
+    )
 
 
 def circuit_catalogue(
@@ -59,12 +64,14 @@ def circuit_catalogue(
     circuits = (
         CircuitRevision.objects.filter(
             state="published",
+            visibility="public",
             noise_model__state__in=PUBLIC_DETAIL_STATES,
+            noise_model__visibility="public",
         )
         .annotate(
             published_result_count=Count(
                 "results",
-                filter=Q(results__state="published"),
+                filter=Q(results__state="published", results__visibility="public"),
                 distinct=True,
             )
         )
@@ -80,7 +87,13 @@ def circuit_catalogue(
                 queryset=EczTerm.objects.order_by("display_name", "ecz_code_id"),
                 to_attr="display_ecz_terms",
             ),
-            "experiment_tags",
+            Prefetch(
+                "experiment_tags",
+                queryset=Tag.objects.filter(visibility="public").order_by(
+                    "label", "id"
+                ),
+                to_attr="display_experiment_tags",
+            ),
         )
     )
     if query:
@@ -188,12 +201,14 @@ def _filter_code_taxonomy(queryset, identities, match):
     return queryset
 
 
-def circuit_detail_queryset() -> QuerySet:
+def circuit_detail_queryset(viewer=None) -> QuerySet:
     return (
         CircuitRevision.objects.filter(
             state__in=PUBLIC_DETAIL_STATES,
             noise_model__state__in=PUBLIC_DETAIL_STATES,
         )
+        .filter(actor_visibility_q(viewer))
+        .filter(actor_visibility_q(viewer, "noise_model__"))
         .select_related(
             "schema_release",
             "noise_model",
@@ -206,7 +221,7 @@ def circuit_detail_queryset() -> QuerySet:
         .prefetch_related(
             Prefetch(
                 "code_tags",
-                queryset=_code_tag_queryset(),
+                queryset=_code_tag_queryset(viewer),
                 to_attr="display_code_tags",
             ),
             Prefetch(
@@ -214,7 +229,13 @@ def circuit_detail_queryset() -> QuerySet:
                 queryset=EczTerm.objects.order_by("display_name", "ecz_code_id"),
                 to_attr="display_ecz_terms",
             ),
-            "experiment_tags",
+            Prefetch(
+                "experiment_tags",
+                queryset=Tag.objects.filter(actor_visibility_q(viewer)).order_by(
+                    "label", "id"
+                ),
+                to_attr="display_experiment_tags",
+            ),
         )
     )
 
@@ -222,6 +243,7 @@ def circuit_detail_queryset() -> QuerySet:
 def circuit_result_leaderboard(
     *,
     circuit: CircuitRevision,
+    viewer=None,
     tag_slugs: tuple[str, ...] = (),
     tag_match: str = "all",
     skeleton_preparation: str = "",
@@ -232,6 +254,7 @@ def circuit_result_leaderboard(
     """Return published results scoped to one circuit and reusable filters."""
     return public_result_catalogue(
         circuit=circuit,
+        viewer=viewer,
         algorithm_tag_slugs=tag_slugs,
         algorithm_tag_match=tag_match,
         skeleton_preparation=skeleton_preparation,
@@ -260,10 +283,15 @@ def noise_model_catalogue(
     circuit_min: int | None = None,
     circuit_max: int | None = None,
 ) -> QuerySet:
-    noise_models = NoiseModel.objects.filter(state="published").annotate(
+    noise_models = NoiseModel.objects.filter(
+        state="published", visibility="public"
+    ).annotate(
         circuit_count=Count(
             "circuit_revisions",
-            filter=Q(circuit_revisions__state="published"),
+            filter=Q(
+                circuit_revisions__state="published",
+                circuit_revisions__visibility="public",
+            ),
             distinct=True,
         )
     )
@@ -284,12 +312,15 @@ def noise_model_catalogue(
     return noise_models
 
 
-def noise_model_detail_queryset() -> QuerySet:
-    published_circuits = CircuitRevision.objects.filter(state="published").order_by(
-        "name", "slug"
+def noise_model_detail_queryset(viewer=None) -> QuerySet:
+    published_circuits = (
+        CircuitRevision.objects.filter(state="published")
+        .filter(actor_visibility_q(viewer))
+        .order_by("name", "slug")
     )
     return (
         NoiseModel.objects.filter(state__in=PUBLIC_DETAIL_STATES)
+        .filter(actor_visibility_q(viewer))
         .select_related(
             "schema_release",
             "submitted_by",

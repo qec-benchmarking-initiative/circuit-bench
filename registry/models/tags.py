@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models.functions import Lower
 
 from .artifacts import SchemaRelease
-from .common import UUIDModel
+from .common import RecordVisibility, UUIDModel
 
 
 class Tag(UUIDModel):
@@ -80,6 +80,11 @@ class Tag(UUIDModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     curated_at = models.DateTimeField(null=True, blank=True)
+    visibility = models.CharField(
+        max_length=10,
+        choices=RecordVisibility,
+        default=RecordVisibility.PUBLIC,
+    )
 
     class Meta:
         db_table = "tag"
@@ -93,6 +98,10 @@ class Tag(UUIDModel):
                     status__in=["custom", "official", "deprecated", "retired"]
                 ),
                 name="tag_status_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(visibility__in=RecordVisibility.values),
+                name="tag_visibility_valid",
             ),
             models.CheckConstraint(
                 condition=(

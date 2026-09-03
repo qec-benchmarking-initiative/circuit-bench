@@ -53,5 +53,31 @@
         </div>
       </section>
     {% endif %}
+
+    <section class="settings-section" aria-labelledby="api-tokens-heading">
+      <header class="settings-section-heading">
+        <h2 id="api-tokens-heading">API access</h2>
+        <p>Personal tokens let scripts and agents submit data without using your browser session.</p>
+      </header>
+      <p><a class="button" href="{% url 'account-api-token-create' %}">Create API token</a> <a class="button button-secondary" href="{% url 'pages:static-reference' slug='api' %}">API guide</a></p>
+      <div class="table-scroll">
+        <table class="data-table settings-token-table">
+          <thead><tr><th>Name</th><th>Token</th><th>Permissions</th><th>Created</th><th>Last used</th><th>Expires</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for token in api_tokens %}
+              <tr>
+                <td>{{ token.name }}</td>
+                <td><code>{{ token.display_prefix }}…</code></td>
+                <td>{{ token.scopes|join:", " }}</td>
+                <td>{{ token.created_at|date:"Y-m-d" }}</td>
+                <td>{% if token.last_used_at %}{{ token.last_used_at|date:"Y-m-d H:i" }} UTC{% else %}<span class="null-value">Never</span>{% endif %}</td>
+                <td>{{ token.expires_at|date:"Y-m-d" }}</td>
+                <td>{% if token.revoked_at %}Revoked{% else %}<form method="post" action="{% url 'account-api-token-revoke' token.id %}">{% csrf_token %}<button class="table-action table-action-danger" type="submit">Revoke</button></form>{% endif %}</td>
+              </tr>
+            {% empty %}<tr><td class="table-empty" colspan="7">No API tokens.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
 {% endblock %}

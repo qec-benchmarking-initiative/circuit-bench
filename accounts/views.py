@@ -10,6 +10,12 @@ from django.views.decorators.http import require_POST
 
 from registry.demo import DEMO_ACCOUNT_ID, demo_id
 
+from .api_tokens import (
+    ApiTokenError,
+    issue_personal_api_token,
+    revoke_personal_api_token,
+)
+from .forms import PersonalApiTokenForm
 from .models import Account, ExternalIdentity
 from .services import IdentityConflict, unlink_external_identity
 
@@ -90,8 +96,40 @@ def identity_list(request: HttpRequest) -> HttpResponse:
                 for provider in PROVIDERS
                 if provider["id"] not in connected_providers
             ],
+            "api_tokens": request.user.personal_api_tokens.order_by("-created_at"),
         },
     )
+
+
+@login_required
+def api_token_create(request: HttpRequest) -> HttpResponse:
+    form = PersonalApiTokenForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            issued = issue_personal_api_token(
+                account=request.user,
+                name=form.cleaned_data["name"],
+                scopes=form.cleaned_data["scopes"],
+                lifetime_days=form.cleaned_data["lifetime_days"],
+            )
+        except ApiTokenError as error:
+            form.add_error(None, str(error))
+        else:
+            return render(
+                request,
+                "accounts/api_token_created.html",
+                {"issued": issued},
+            )
+    return render(request, "accounts/api_token_create.html", {"form": form})
+
+
+@login_required
+@require_POST
+def api_token_revoke(request: HttpRequest, token_id) -> HttpResponse:
+    if not revoke_personal_api_token(account=request.user, token_id=token_id):
+        raise Http404("API token not found")
+    messages.success(request, "API token revoked.")
+    return redirect("account-identity-list")
 
 
 @login_required

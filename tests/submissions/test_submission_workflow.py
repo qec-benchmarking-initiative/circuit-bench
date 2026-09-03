@@ -898,6 +898,13 @@ def test_profile_has_unified_pending_published_only_sections_and_row_actions(
     assert "Window Cluster" in filtered
     assert "demo-simulated-gpu" not in filtered
 
+    empty = client.get(
+        reverse("submissions:profile"), {"q": "no-such-profile-record"}
+    ).content.decode()
+    assert 'id="bulk-pending"' not in empty
+    assert 'id="bulk-withdrawn"' not in empty
+    assert 'id="bulk-published-' not in empty
+
 
 def test_profile_pending_queue_is_paginated(client, workflow_data):
     contributor = workflow_data["contributor"]
@@ -960,6 +967,13 @@ def test_admin_page_is_work_queue_plus_last_seven_days_withdrawals(
     assert "All submitted decoder versions" not in content
     assert "Streaming Cluster" not in content
     assert contributor.display_name in content
+    review_bulk = content.split('id="bulk-review"', 1)[1].split(
+        "</form>", 1
+    )[0]
+    assert "Approve and publish" in review_bulk
+    assert "Reject" in review_bulk
+    assert "Make public" not in review_bulk
+    assert "Withdraw" not in review_bulk
 
 
 def test_approve_form_works_with_enforced_csrf(workflow_data):
@@ -982,6 +996,34 @@ def test_approve_form_works_with_enforced_csrf(workflow_data):
     assert response.status_code == 302
     assert pending.state == "published"
     assert pending.record_events.get(action="approved").actor_account == admin
+
+
+def test_profile_bulk_preview_works_with_enforced_csrf(workflow_data):
+    csrf_client = Client(enforce_csrf_checks=True)
+    contributor = workflow_data["contributor"]
+    pending = DecoderVersion.objects.get(
+        id=demo_id("submission/decoder/window-cluster/0.1")
+    )
+    csrf_client.force_login(contributor)
+    page = csrf_client.get(reverse("submissions:profile"))
+    assert page.status_code == 200
+    assert b'id="bulk-pending"' in page.content
+    assert b'name="csrfmiddlewaretoken"' in page.content
+    token = csrf_client.cookies["csrftoken"].value
+
+    response = csrf_client.post(
+        reverse("bulk:preview"),
+        {
+            "csrfmiddlewaretoken": token,
+            "return_url": reverse("submissions:profile"),
+            "action": "make_private",
+            "target": f"decoder:{pending.id}",
+        },
+    )
+
+    assert response.status_code == 200
+    assert b"Confirm bulk action" in response.content
+    assert b"Make private" in response.content
 
 
 def test_submission_policy_is_rendered_and_listed_with_static_pages(client):

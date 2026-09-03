@@ -10,6 +10,7 @@ from registry.models import (
     BenchmarkRevision,
     BenchmarkRevisionItem,
 )
+from registry.services.visibility import actor_visibility_q
 
 PUBLIC_DETAIL_STATES = ("published", "withdrawn")
 
@@ -43,9 +44,12 @@ def public_benchmark_catalogue(
 ) -> QuerySet[BenchmarkRevision]:
     """Return published exact benchmark revisions for discovery."""
 
-    public_circuit = Q(items__circuit_revision__state__in=PUBLIC_DETAIL_STATES)
+    public_circuit = Q(
+        items__circuit_revision__state__in=PUBLIC_DETAIL_STATES,
+        items__circuit_revision__visibility="public",
+    )
     benchmarks = (
-        BenchmarkRevision.objects.filter(state="published")
+        BenchmarkRevision.objects.filter(state="published", visibility="public")
         .annotate(
             item_count=Count(
                 "items__circuit_revision_id",
@@ -64,7 +68,10 @@ def public_benchmark_catalogue(
             ),
             published_attempt_count=Count(
                 "attempts",
-                filter=Q(attempts__state="published"),
+                filter=Q(
+                    attempts__state="published",
+                    attempts__visibility="public",
+                ),
                 distinct=True,
             ),
         )
@@ -85,13 +92,15 @@ def public_benchmark_catalogue(
     return benchmarks
 
 
-def public_benchmark_detail() -> QuerySet[BenchmarkRevision]:
+def public_benchmark_detail(viewer=None) -> QuerySet[BenchmarkRevision]:
     """Return the bounded public graph needed by an exact revision page."""
 
     public_items = (
         BenchmarkRevisionItem.objects.filter(
-            circuit_revision__state__in=PUBLIC_DETAIL_STATES
+            circuit_revision__state__in=PUBLIC_DETAIL_STATES,
         )
+        .filter(actor_visibility_q(viewer, "circuit_revision__"))
+        .filter(actor_visibility_q(viewer, "circuit_revision__noise_model__"))
         .select_related("circuit_revision")
         .order_by("position", "circuit_revision_id")
     )
@@ -99,6 +108,16 @@ def public_benchmark_detail() -> QuerySet[BenchmarkRevision]:
         BenchmarkAttemptResult.objects.filter(
             circuit_revision__state__in=PUBLIC_DETAIL_STATES,
             result__state__in=PUBLIC_DETAIL_STATES,
+        )
+        .filter(actor_visibility_q(viewer, "circuit_revision__"))
+        .filter(actor_visibility_q(viewer, "result__"))
+        .filter(actor_visibility_q(viewer, "result__decoder_version__"))
+        .filter(actor_visibility_q(viewer, "result__circuit_revision__"))
+        .filter(actor_visibility_q(viewer, "result__circuit_revision__noise_model__"))
+        .filter(actor_visibility_q(viewer, "result__evaluator_version__"))
+        .filter(
+            Q(result__machine__isnull=True)
+            | actor_visibility_q(viewer, "result__machine__")
         )
         .select_related(
             "circuit_revision",
@@ -112,6 +131,8 @@ def public_benchmark_detail() -> QuerySet[BenchmarkRevision]:
     )
     public_attempts = (
         BenchmarkAttempt.objects.filter(state="published")
+        .filter(actor_visibility_q(viewer))
+        .filter(actor_visibility_q(viewer, "decoder_version__"))
         .select_related("decoder_version", "submitted_by")
         .prefetch_related(
             Prefetch(
@@ -124,6 +145,7 @@ def public_benchmark_detail() -> QuerySet[BenchmarkRevision]:
     )
     return (
         BenchmarkRevision.objects.filter(state__in=PUBLIC_DETAIL_STATES)
+        .filter(actor_visibility_q(viewer))
         .annotate(
             manifest_item_count=Count("items__circuit_revision_id", distinct=True),
             manifest_required_item_count=Count(

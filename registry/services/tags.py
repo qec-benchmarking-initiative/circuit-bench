@@ -4,12 +4,14 @@ from django.db.models import Case, IntegerField, Prefetch, Q, QuerySet, Value, W
 from django.db.models.functions import Lower
 
 from registry.models import Tag, TagAlias
+from registry.services.visibility import actor_visibility_q
 
 
 def active_tag_queryset(
     namespace: str | None = None,
     *,
     include_ids=(),
+    actor=None,
 ) -> QuerySet[Tag]:
     """Return selectable tags with their active aliases in display order."""
 
@@ -17,6 +19,7 @@ def active_tag_queryset(
         ~Q(status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED))
         | Q(id__in=include_ids)
     )
+    queryset = queryset.filter(actor_visibility_q(actor))
     if namespace is not None:
         queryset = queryset.filter(namespace=namespace)
     alias_queryset = TagAlias.objects.filter(is_active=True).order_by(
@@ -49,19 +52,23 @@ def active_tag_queryset(
     )
 
 
-def tag_detail_queryset() -> QuerySet[Tag]:
-    return Tag.objects.select_related(
-        "schema_release",
-        "history",
-        "submitted_by",
-        "curated_by",
-        "canonical_tag",
-    ).prefetch_related(
-        Prefetch(
-            "aliases",
-            queryset=TagAlias.objects.filter(is_active=True)
-            .select_related("added_by")
-            .order_by(Lower("alias"), "id"),
-            to_attr="display_aliases",
+def tag_detail_queryset(viewer=None) -> QuerySet[Tag]:
+    return (
+        Tag.objects.filter(actor_visibility_q(viewer))
+        .select_related(
+            "schema_release",
+            "history",
+            "submitted_by",
+            "curated_by",
+            "canonical_tag",
+        )
+        .prefetch_related(
+            Prefetch(
+                "aliases",
+                queryset=TagAlias.objects.filter(is_active=True)
+                .select_related("added_by")
+                .order_by(Lower("alias"), "id"),
+                to_attr="display_aliases",
+            )
         )
     )

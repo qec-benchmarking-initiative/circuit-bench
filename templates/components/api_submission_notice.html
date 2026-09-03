@@ -1,0 +1,4 @@
+<aside class="notice-bar api-submission-notice" aria-label="Agent-friendly API">
+  <strong>Agent-friendly API</strong>
+  <span>The same schemas and validation are available to scripts and agents. <a href="{% url 'pages:static-reference' slug='api' %}">API guide</a>{% if user.is_authenticated %} · <a href="{% url 'account-api-token-create' %}">Create API token</a>{% endif %}{% if batch_schema_url %} · <a href="{{ batch_schema_url }}">Batch schema</a>{% endif %}</span>
+</aside>

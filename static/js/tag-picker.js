@@ -231,6 +231,7 @@
       const eligible = Boolean(query) && !exactMatch;
       const description = picker.querySelector("[data-tag-create-description]");
       const aliases = picker.querySelector("[data-tag-create-aliases]");
+      const visibility = picker.querySelector("[data-tag-create-visibility]");
       const status = picker.querySelector("[data-tag-create-status]");
       const proposal = picker.querySelector("[data-tag-proposed-label]");
       const concept = picker.querySelector("[data-tag-concept]");
@@ -238,6 +239,7 @@
       createSection.setAttribute("aria-disabled", String(!eligible));
       description.disabled = !eligible;
       aliases.disabled = !eligible;
+      visibility.disabled = !eligible;
       proposal.textContent = proposedLabel || "—";
       concept.textContent = {
         algorithm: "algorithm",
@@ -730,6 +732,7 @@
       const proposedLabel = (search?.value || "").trim().replace(/\s+/g, " ");
       const description = picker.querySelector("[data-tag-create-description]");
       const aliases = picker.querySelector("[data-tag-create-aliases]");
+      const visibility = picker.querySelector("[data-tag-create-visibility]");
       const status = picker.querySelector("[data-tag-create-status]");
       const proposal = picker.querySelector("[data-tag-proposed-label]");
       const concept = picker.querySelector("[data-tag-concept]");
@@ -739,6 +742,7 @@
       createSection.setAttribute("aria-disabled", String(!eligible));
       description.disabled = !eligible;
       aliases.disabled = !eligible;
+      visibility.disabled = !eligible;
       proposal.textContent = proposedLabel || "—";
       concept.textContent = {
         algorithm: "algorithm",
@@ -782,6 +786,7 @@
       const payload = new URLSearchParams({
         namespace: namespace(),
         label: search.value.trim(),
+        visibility: picker.querySelector("[data-tag-create-visibility]").value,
         description: picker.querySelector("[data-tag-create-description]").value.trim(),
         aliases: picker.querySelector("[data-tag-create-aliases]").value,
       });
@@ -840,6 +845,7 @@
         search.value = "";
         picker.querySelector("[data-tag-create-description]").value = "";
         picker.querySelector("[data-tag-create-aliases]").value = "";
+        picker.querySelector("[data-tag-create-visibility]").value = "public";
         status.textContent = `Created and selected “${record.label}”.`;
         await fetchResults();
       } catch (error) {
@@ -1031,6 +1037,7 @@
     const payload = new URLSearchParams({
       namespace: currentTagNamespace(picker),
       label: picker.querySelector("[data-tag-search]").value.trim(),
+      visibility: picker.querySelector("[data-tag-create-visibility]").value,
       description: picker.querySelector("[data-tag-create-description]").value.trim(),
       aliases: picker.querySelector("[data-tag-create-aliases]").value,
     });
@@ -1061,6 +1068,7 @@
       picker.querySelector("[data-tag-search]").value = "";
       picker.querySelector("[data-tag-create-description]").value = "";
       picker.querySelector("[data-tag-create-aliases]").value = "";
+      picker.querySelector("[data-tag-create-visibility]").value = "public";
       picker.querySelectorAll(
         "[data-tag-create-section] [data-tag-parent-choice]:checked"
       ).forEach((checkbox) => { checkbox.checked = false; });
@@ -1147,6 +1155,9 @@
     );
     picker.querySelector("[data-tag-create-aliases]")?.addEventListener(
       "input", updateAfterCreateInput
+    );
+    picker.querySelector("[data-tag-create-visibility]")?.addEventListener(
+      "change", updateAfterCreateInput
     );
     picker.querySelector("[data-tag-namespace-select]")?.addEventListener(
       "change", updateAfterCreateInput

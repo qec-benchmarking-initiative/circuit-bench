@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Circuit Bench{% endblock %}</title>
     <script src="{% static 'js/theme-switcher.js' %}"></script>
-    <link rel="stylesheet" href="{% static 'css/site.css' %}?v=0.1.20260902p">
+    <link rel="stylesheet" href="{% static 'css/site.css' %}?v=0.1.20260903b">
     <link rel="stylesheet" href="{% static 'css/themes.css' %}">
     {% block extra_head %}{% endblock %}
   </head>
@@ -27,6 +27,7 @@
         <a href="/decoders/"{% if request.resolver_match.namespace == "decoders" %} class="active" aria-current="page"{% endif %}>Decoders</a>
         <a href="/benchmarks/"{% if request.resolver_match.namespace == "benchmarks" %} class="active" aria-current="page"{% endif %}>Benchmarks</a>
         <a class="nav-secondary{% if request.resolver_match.namespace == 'noise-models' %} active{% endif %}" href="/noise-models/"{% if request.resolver_match.namespace == "noise-models" %} aria-current="page"{% endif %}>Noise models</a>
+        <a class="nav-secondary{% if request.resolver_match.namespace == 'collections' %} active{% endif %}" href="/circuit-collections/"{% if request.resolver_match.namespace == "collections" %} aria-current="page"{% endif %}>Circuit collections</a>
         <a class="nav-secondary{% if request.resolver_match.namespace == 'results' %} active{% endif %}" href="/results/"{% if request.resolver_match.namespace == "results" %} aria-current="page"{% endif %}>All results</a>
         <a class="nav-secondary{% if request.resolver_match.namespace == 'pages' and request.resolver_match.url_name != 'home' and request.resolver_match.url_name != 'search' %} active{% endif %}" href="{% url 'pages:about' %}"{% if request.resolver_match.namespace == "pages" and request.resolver_match.url_name != "home" and request.resolver_match.url_name != "search" %} aria-current="page"{% endif %}>About</a>
       </nav>

@@ -11,6 +11,7 @@
     {% else %}
       <form method="post" class="form-bar-shell">
         {% csrf_token %}<input type="hidden" name="benchmark_revision" value="{{ selection_form.cleaned_data.benchmark_revision.id }}"><input type="hidden" name="decoder_version" value="{{ selection_form.cleaned_data.decoder_version.id }}">
+        <div class="form-bar-row"><div class="form-bar-label"><label for="attempt-visibility">Visibility</label></div><div class="form-bar-control"><select id="attempt-visibility" name="visibility"><option value="public"{% if selected_visibility == "public" %} selected{% endif %}>Public</option><option value="private"{% if selected_visibility == "private" %} selected{% endif %}>Private</option><small>Private attempts are visible to you and site administrators during review.</small></div></div>
         {% include "components/form_bar_list.html" with form=results_form only %}
         <div class="form-actions"><a class="button button-secondary" href="{% url 'benchmark-submissions:attempt-create' %}">Back</a><button type="submit">Submit for review</button></div>
       </form>

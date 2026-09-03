@@ -13,6 +13,7 @@ from django.urls import reverse
 
 from registry.models import (
     Artifact,
+    CircuitCollection,
     CircuitRevision,
     DecoderVersion,
     EvaluatorRelease,
@@ -73,6 +74,12 @@ def _published_circuits() -> QuerySet:
     return _published(CircuitRevision, "name", "created_at", "id")
 
 
+def _collection_circuits() -> QuerySet:
+    return CircuitRevision.objects.filter(
+        state__in=["published", "withdrawn"]
+    ).order_by("name", "created_at", "id")
+
+
 def _published_machines() -> QuerySet:
     return _published(Machine, "slug", "id")
 
@@ -89,6 +96,10 @@ def _published_results() -> QuerySet:
 
 def _artifacts() -> QuerySet:
     return Artifact.objects.order_by("original_filename", "sha256", "id")
+
+
+def _collections() -> QuerySet:
+    return CircuitCollection.objects.filter(state="published").order_by("name", "id")
 
 
 def _submission_noise_models() -> QuerySet:
@@ -178,6 +189,18 @@ def _serialize_artifact(record: Artifact) -> dict[str, Any]:
     }
 
 
+def _serialize_collection(record: CircuitCollection) -> dict[str, Any]:
+    return {
+        "identifier": str(record.id),
+        "label": record.name,
+        "secondary_label": record.slug,
+        "description": record.description or "Circuit collection",
+        "curation_status": record.visibility,
+        "curation_label": record.get_visibility_display(),
+        "detail_url": reverse("collections:detail", args=[record.slug]),
+    }
+
+
 def _serialize_submission_noise_model(record: NoiseModel) -> dict[str, Any]:
     serialized = _serialize_noise_model(record)
     serialized["identifier"] = str(record.id)
@@ -185,6 +208,36 @@ def _serialize_submission_noise_model(record: NoiseModel) -> dict[str, Any]:
 
 
 PICKER_SPECS = {
+    "circuit-collections": RecordPickerSpec(
+        key="circuit-collections",
+        singular_label="circuit collection",
+        plural_label="circuit collections",
+        parameter_name="child_collections",
+        identifier_field="id",
+        public_queryset=_collections,
+        search_fields=("name", "slug", "description"),
+        serialize_record=_serialize_collection,
+    ),
+    "collection-circuits": RecordPickerSpec(
+        key="collection-circuits",
+        singular_label="circuit revision",
+        plural_label="circuit revisions",
+        parameter_name="circuits",
+        identifier_field="id",
+        public_queryset=_collection_circuits,
+        search_fields=("name", "slug", "description"),
+        serialize_record=_serialize_circuit,
+    ),
+    "owned-collections": RecordPickerSpec(
+        key="owned-collections",
+        singular_label="circuit collection",
+        plural_label="circuit collections",
+        parameter_name="collections",
+        identifier_field="id",
+        public_queryset=_collections,
+        search_fields=("name", "slug", "description"),
+        serialize_record=_serialize_collection,
+    ),
     "noise-models": RecordPickerSpec(
         key="noise-models",
         singular_label="noise model",
@@ -297,15 +350,18 @@ def search_picker_records(
 def selected_picker_records(
     spec: RecordPickerSpec,
     identifiers: Sequence[str],
+    *,
+    records: QuerySet | None = None,
 ) -> list[dict[str, Any]]:
     """Resolve selected public records while preserving URL parameter order."""
 
     normalized = tuple(dict.fromkeys(value for value in identifiers if value))
+    queryset = records if records is not None else spec.public_queryset()
+    if records is None and hasattr(queryset.model, "visibility"):
+        queryset = queryset.filter(visibility="public")
     records = {
         str(getattr(record, spec.identifier_field)): record
-        for record in spec.public_queryset().filter(
-            **{f"{spec.identifier_field}__in": normalized}
-        )
+        for record in queryset.filter(**{f"{spec.identifier_field}__in": normalized})
     }
     return [
         serialize_picker_record(spec, records[value])
@@ -326,6 +382,7 @@ def record_picker_context(
     selected_identifiers: Sequence[str],
     *,
     input_name: str | None = None,
+    records: QuerySet | None = None,
 ) -> dict[str, Any]:
     spec = get_picker_spec(key)
     return {
@@ -334,5 +391,7 @@ def record_picker_context(
         "plural_label": spec.plural_label,
         "input_name": input_name or spec.parameter_name,
         "search_url": reverse("pickers:records", args=[spec.key]),
-        "selected_records": selected_picker_records(spec, selected_identifiers),
+        "selected_records": selected_picker_records(
+            spec, selected_identifiers, records=records
+        ),
     }

@@ -14,8 +14,8 @@ from registry.services.result_detail import public_result_detail
 
 
 def result_detail(request, result_id):
-    result = get_object_or_404(public_result_detail(), id=result_id)
     viewer = getattr(request, "user", None)
+    result = get_object_or_404(public_result_detail(viewer), id=result_id)
     can_review_author_status = bool(
         getattr(viewer, "is_authenticated", False)
         and is_exact_decoder_author(viewer, result)

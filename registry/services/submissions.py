@@ -29,6 +29,7 @@ from registry.models.common import (
     EDITABLE_CANDIDATE_STATES,
     REVIEW_QUEUE_STATES,
     LifecycleState,
+    RecordVisibility,
 )
 from registry.services.histories import (
     append_history_event,
@@ -88,6 +89,8 @@ def validate_submission_payload(
     """Apply the public JSON Schema, then the same semantic form as HTML entry."""
 
     kind = SubmissionKind(kind)
+    payload = dict(payload)
+    payload.setdefault("visibility", RecordVisibility.PUBLIC)
     validator = Draft202012Validator(
         get_submission_schema(kind), format_checker=FormatChecker()
     )
@@ -245,6 +248,7 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
     kind = SubmissionKind(kind)
     if kind is SubmissionKind.DECODER:
         return {
+            "visibility": record.visibility,
             "slug": record.slug,
             "name": record.name,
             "version": record.version,
@@ -267,6 +271,7 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
         }
     if kind is SubmissionKind.CIRCUIT:
         return {
+            "visibility": record.visibility,
             "slug": record.slug,
             "name": record.name,
             "previous_revision": _id_or_none(record.predecessor_id),
@@ -312,9 +317,19 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
                     "id", flat=True
                 )
             ],
+            "collections": [
+                str(item)
+                for item in record.collection_memberships.filter(
+                    removed_at__isnull=True,
+                    collection__submitted_by=record.submitted_by,
+                )
+                .order_by("collection__name", "collection_id")
+                .values_list("collection_id", flat=True)
+            ],
         }
     if kind is SubmissionKind.RESULT:
         return {
+            "visibility": record.visibility,
             "decoder_version": str(record.decoder_version_id),
             "circuit_revision": str(record.circuit_revision_id),
             "evaluator_version": str(record.evaluator_version_id),
@@ -354,6 +369,7 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
             ],
         }
     return {
+        "visibility": record.visibility,
         "slug": record.slug,
         "machine_class": record.machine_class,
         "description": record.description,
@@ -508,6 +524,11 @@ def withdraw_submission(
     record = _managed_record(kind, record_id, actor=actor)
     if record.state != "published":
         raise SubmissionStateError("Only a published record can be withdrawn.")
+    from registry.services.visibility import official_benchmark_lock_reason
+
+    lock_reason = official_benchmark_lock_reason(kind.value, record)
+    if lock_reason:
+        raise SubmissionStateError(f"This record cannot be withdrawn. {lock_reason}")
     event = append_history_event(
         kind=kind.value,
         record=record,
@@ -649,6 +670,7 @@ def _update_record(kind, record, cleaned):
         ):
             setattr(record, name, cleaned[name])
         record.predecessor = cleaned["previous_version"]
+        record.visibility = cleaned["visibility"]
         record.description = cleaned["description"] or None
         record.hyperparameter_definitions = (
             cleaned["hyperparameter_definitions"] or None
@@ -684,6 +706,7 @@ def _update_record(kind, record, cleaned):
         ):
             setattr(record, name, cleaned[name])
         record.predecessor = cleaned["previous_revision"]
+        record.visibility = cleaned["visibility"]
         record.description = cleaned["description"] or None
         record.dem_approximate_disjoint_errors = cleaned[
             "dem_approximate_disjoint_errors"
@@ -693,6 +716,13 @@ def _update_record(kind, record, cleaned):
         record.code_tags.set(cleaned["code_tags"])
         record.ecz_terms.set(cleaned["ecz_terms"])
         record.experiment_tags.set(cleaned["experiment_tags"])
+        from registry.services.collections import set_circuit_collections
+
+        set_circuit_collections(
+            record,
+            actor=record.submitted_by,
+            collection_ids=[item.id for item in cleaned["collections"]],
+        )
         return
     if kind is SubmissionKind.RESULT:
         for name in (
@@ -713,6 +743,7 @@ def _update_record(kind, record, cleaned):
         ):
             setattr(record, name, cleaned[name])
         record.predecessor = cleaned["supersedes_result"]
+        record.visibility = cleaned["visibility"]
         for name in (
             "description",
             "hyperparameter_values",
@@ -734,6 +765,7 @@ def _update_record(kind, record, cleaned):
     ):
         setattr(record, name, cleaned[name])
     record.predecessor = cleaned["supersedes_machine"]
+    record.visibility = cleaned["visibility"]
     record.full_clean()
     record.save()
 
@@ -762,6 +794,7 @@ def _create_decoder(cleaned, submitter, release, decision, published_at, history
         hyperparameter_definitions=cleaned["hyperparameter_definitions"] or None,
         hyperparameter_schema_artifact=cleaned["hyperparameter_schema_artifact"],
         submitted_by=submitter,
+        visibility=cleaned["visibility"],
         state=decision.initial_state,
         published_at=published_at,
     )
@@ -803,12 +836,20 @@ def _create_circuit(cleaned, submitter, release, decision, published_at, history
         detector_error_model_artifact=cleaned["detector_error_model_artifact"],
         manifest_artifact=cleaned["manifest_artifact"],
         submitted_by=submitter,
+        visibility=cleaned["visibility"],
         state=decision.initial_state,
         published_at=published_at,
     )
     record.code_tags.set(cleaned["code_tags"])
     record.ecz_terms.set(cleaned["ecz_terms"])
     record.experiment_tags.set(cleaned["experiment_tags"])
+    from registry.services.collections import set_circuit_collections
+
+    set_circuit_collections(
+        record,
+        actor=submitter,
+        collection_ids=[item.id for item in cleaned["collections"]],
+    )
     Credit.objects.create(circuit_revision=record, position=1, account=submitter)
     return record
 
@@ -845,6 +886,7 @@ def _create_result(cleaned, submitter, release, decision, published_at, history)
             else Result.ReproductionStatus.INDEPENDENT
         ),
         submitted_by=submitter,
+        visibility=cleaned["visibility"],
         state=decision.initial_state,
         published_at=published_at,
     )
@@ -884,6 +926,7 @@ def _create_machine(cleaned, submitter, release, decision, published_at, history
         status=cleaned["status"],
         predecessor=cleaned["supersedes_machine"],
         submitted_by=submitter,
+        visibility=cleaned["visibility"],
         state=decision.initial_state,
         published_at=published_at,
     )

@@ -190,7 +190,7 @@ def benchmark_list(request):
 
 
 def benchmark_detail(request, slug):
-    benchmark = get_object_or_404(public_benchmark_detail(), slug=slug)
+    benchmark = get_object_or_404(public_benchmark_detail(request.user), slug=slug)
     description_source = inherited_benchmark_description(benchmark)
     predecessor = public_benchmark_predecessor(benchmark)
     successor = public_benchmark_successor(benchmark)
@@ -207,7 +207,7 @@ def benchmark_detail(request, slug):
     filters["benchmark_slug"] = benchmark.slug
     comparison = result_comparison_context(
         request,
-        queryset=public_result_catalogue(**filters),
+        queryset=public_result_catalogue(viewer=request.user, **filters),
         columns=BENCHMARK_RESULT_COLUMNS,
         default_sort=(("decoder", "asc"), ("circuit", "asc")),
         plot_id="benchmark-results-scatter",

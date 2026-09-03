@@ -288,6 +288,7 @@ def attempt_create(request):
                     result_ids_by_circuit=results_form.result_ids_by_circuit(),
                     submitter=request.user,
                     description=results_form.cleaned_data["description"],
+                    visibility=request.POST.get("visibility", "public"),
                 )
             except BenchmarkSubmissionError as error:
                 results_form.add_error(None, str(error))
@@ -299,7 +300,11 @@ def attempt_create(request):
     return render(
         request,
         "benchmark_submissions/attempt.html",
-        {"selection_form": selection_form, "results_form": results_form},
+        {
+            "selection_form": selection_form,
+            "results_form": results_form,
+            "selected_visibility": request.POST.get("visibility", "public"),
+        },
     )
 
 
@@ -330,6 +335,7 @@ def _display_items(payload):
 def _example_json():
     return json.dumps(
         {
+            "visibility": "public",
             "slug": "example-benchmark-0-1",
             "name": "Example benchmark",
             "version": "0.1",

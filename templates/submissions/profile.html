@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Profile: {{ user.display_name }} · Circuit Bench{% endblock %}
 
@@ -13,9 +14,18 @@
 
     {% include "components/submission_collection_controls.html" with reset_url=request.path controls=controls kind_choices=kind_choices pending_state_choices=pending_state_choices sort_choices=sort_choices only %}
 
+    <section class="table-section" id="collections">
+      <h2>My circuit collections</h2>
+      {% if my_collections %}{% include "components/bulk_action_bar.html" with form_id="bulk-collections" return_url=request.get_full_path csrf_token=csrf_token only %}{% endif %}
+      <div class="table-scroll"><table class="data-table submission-table"><thead><tr>{% if my_collections %}<th class="bulk-select-column"><input type="checkbox" data-bulk-select-all="bulk-collections" aria-label="Select every collection"></th>{% endif %}<th>Collection</th><th>Visibility</th><th>Actions</th></tr></thead><tbody>
+        {% for collection in my_collections %}<tr><td class="bulk-select-column"><input type="checkbox" name="target" value="collection:{{ collection.id }}" form="bulk-collections" data-bulk-target aria-label="Select {{ collection.name }}"></td><td><a href="{% url 'collections:detail' collection.slug %}">{{ collection.name }}</a></td><td><span class="status-badge status-{{ collection.visibility }}">{{ collection.get_visibility_display }}</span></td><td><a class="table-action" href="{% url 'collections:edit' collection.slug %}">Edit</a> · <a class="table-action" href="{% url 'collections:members' collection.slug %}">Edit contents</a></td></tr>{% empty %}<tr><td class="table-empty" colspan="3">You have no circuit collections.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
     <section class="table-section" id="pending">
       <h2>Pending items</h2>
-      {% include "components/submission_table.html" with rows=pending.page.object_list show_kind=True show_review_note=True show_actions=True table_label="Your pending submissions" empty_message="No pending items match these controls." csrf_token=csrf_token sort_links=sort_links only %}
+      {% if pending.bulk_form_id %}{% include "components/bulk_action_bar.html" with form_id=pending.bulk_form_id return_url=request.get_full_path mode="visibility" csrf_token=csrf_token only %}{% endif %}
+      {% include "components/submission_table.html" with rows=pending.page.object_list show_kind=True show_review_note=True show_actions=True table_label="Your pending submissions" empty_message="No pending items match these controls." csrf_token=csrf_token sort_links=sort_links bulk_form_id=pending.bulk_form_id only %}
       {% include "components/pagination.html" with page=pending.page page_prefix=pending.page_prefix page_parameter=pending.page_parameter label="Pending items" only %}
     </section>
 
@@ -28,15 +38,19 @@
     {% for section in published_sections %}
       <section class="table-section" id="published-{{ section.kind }}">
         <h2>Published {{ section.spec.plural_label }}</h2>
-        {% include "components/submission_table.html" with rows=section.page.object_list show_approver=True show_actions=True table_label=section.spec.plural_label empty_message="No published records in this category match these controls." csrf_token=csrf_token sort_links=sort_links only %}
+        {% if section.bulk_form_id %}{% include "components/bulk_action_bar.html" with form_id=section.bulk_form_id return_url=request.get_full_path csrf_token=csrf_token only %}{% endif %}
+        {% include "components/submission_table.html" with rows=section.page.object_list show_approver=True show_actions=True table_label=section.spec.plural_label empty_message="No published records in this category match these controls." csrf_token=csrf_token sort_links=sort_links bulk_form_id=section.bulk_form_id only %}
         {% include "components/pagination.html" with page=section.page page_prefix=section.page_prefix page_parameter=section.page_parameter label=section.spec.plural_label only %}
       </section>
     {% endfor %}
 
     <section class="table-section" id="withdrawn">
       <h2>Withdrawn history</h2>
-      {% include "components/submission_table.html" with rows=withdrawn.page.object_list show_kind=True show_approver=True show_withdrawn=True show_actions=True table_label="Your withdrawn records" empty_message="No withdrawn records match these controls." csrf_token=csrf_token sort_links=sort_links only %}
+      {% if withdrawn.bulk_form_id %}{% include "components/bulk_action_bar.html" with form_id=withdrawn.bulk_form_id return_url=request.get_full_path mode="visibility" csrf_token=csrf_token only %}{% endif %}
+      {% include "components/submission_table.html" with rows=withdrawn.page.object_list show_kind=True show_approver=True show_withdrawn=True show_actions=True table_label="Your withdrawn records" empty_message="No withdrawn records match these controls." csrf_token=csrf_token sort_links=sort_links bulk_form_id=withdrawn.bulk_form_id only %}
       {% include "components/pagination.html" with page=withdrawn.page page_prefix=withdrawn.page_prefix page_parameter=withdrawn.page_parameter label="Withdrawn history" only %}
     </section>
   </div>
 {% endblock %}
+
+{% block extra_scripts %}{{ block.super }}<script src="{% static 'js/bulk-actions.js' %}" defer></script>{% endblock %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Submission review · Circuit Bench{% endblock %}
 
@@ -52,7 +53,8 @@
 
     <section class="table-section" id="pending">
       <h2>Waiting for review</h2>
-      {% include "components/submission_table.html" with rows=pending.page.object_list show_kind=True show_submitter=True show_review_note=True allow_review=True table_label="Pending submissions" empty_message="There are no submissions waiting for review." csrf_token=csrf_token sort_links=sort_links only %}
+      {% if pending.bulk_form_id %}{% include "components/bulk_action_bar.html" with form_id=pending.bulk_form_id return_url=request.get_full_path mode="review" csrf_token=csrf_token only %}{% endif %}
+      {% include "components/submission_table.html" with rows=pending.page.object_list show_kind=True show_submitter=True show_review_note=True allow_review=True table_label="Pending submissions" empty_message="There are no submissions waiting for review." csrf_token=csrf_token sort_links=sort_links bulk_form_id=pending.bulk_form_id only %}
       {% include "components/pagination.html" with page=pending.page page_prefix=pending.page_prefix page_parameter=pending.page_parameter label="Waiting for review" only %}
     </section>
 
@@ -63,3 +65,5 @@
     </section>
   </div>
 {% endblock %}
+
+{% block extra_scripts %}{{ block.super }}<script src="{% static 'js/bulk-actions.js' %}" defer></script>{% endblock %}

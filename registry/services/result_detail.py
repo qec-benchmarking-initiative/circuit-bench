@@ -3,11 +3,12 @@
 from django.db.models import Prefetch, Q, QuerySet
 
 from registry.models import ArtifactAttachment, ExternalLink, Result, ResultScore
+from registry.services.visibility import actor_visibility_q
 
 PUBLIC_DETAIL_STATES = ("published", "withdrawn")
 
 
-def public_result_detail() -> QuerySet[Result]:
+def public_result_detail(viewer=None) -> QuerySet[Result]:
     """Return the complete, immutable graph used by the public result page.
 
     Catalogue pages expose published rows only.  An exact URL may continue to
@@ -38,7 +39,18 @@ def public_result_detail() -> QuerySet[Result]:
             circuit_revision__state__in=PUBLIC_DETAIL_STATES,
             evaluator_version__state__in=PUBLIC_DETAIL_STATES,
         )
-        .filter(Q(machine__isnull=True) | Q(machine__state__in=PUBLIC_DETAIL_STATES))
+        .filter(actor_visibility_q(viewer))
+        .filter(actor_visibility_q(viewer, "decoder_version__"))
+        .filter(actor_visibility_q(viewer, "circuit_revision__"))
+        .filter(actor_visibility_q(viewer, "circuit_revision__noise_model__"))
+        .filter(actor_visibility_q(viewer, "evaluator_version__"))
+        .filter(
+            Q(machine__isnull=True)
+            | Q(
+                machine__state__in=PUBLIC_DETAIL_STATES,
+            )
+        )
+        .filter(Q(machine__isnull=True) | actor_visibility_q(viewer, "machine__"))
         .select_related(
             "schema_release",
             "decoder_version",

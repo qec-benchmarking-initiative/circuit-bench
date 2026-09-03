@@ -77,6 +77,19 @@ def test_checked_in_lifecycle_enums_match_the_declared_workflows():
             assert _resolve_pointer(document, pointer)["enum"] == list(expected)
 
 
+def test_checked_in_contracts_require_public_or_private_visibility():
+    project_root = Path(__file__).resolve().parents[2]
+
+    for record_type in REQUIRED_CONTRACTS:
+        schema_path = project_root / "schemas" / record_type / "0.1.schema.json"
+        document = json.loads(schema_path.read_text(encoding="utf-8"))
+        assert document["properties"]["visibility"]["enum"] == [
+            "public",
+            "private",
+        ]
+        assert "visibility" in document["required"]
+
+
 @pytest.mark.parametrize(
     ("record_type", "pointer", "unsupported_state"),
     (

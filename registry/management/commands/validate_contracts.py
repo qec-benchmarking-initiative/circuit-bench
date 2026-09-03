@@ -48,6 +48,7 @@ BENCHMARK_ATTEMPT_LIFECYCLE_STATES_0_1 = (
     "published",
     "withdrawn",
 )
+VISIBILITY_VALUES_0_1 = ("public", "private")
 
 # These are the lifecycle states reachable through each frozen 0.1 workflow,
 # not every value accepted by the shared database model. In particular, the
@@ -213,6 +214,23 @@ def _validate_schema_document(
 
     errors.extend(_validate_schema_node(document, document, relative, "#"))
     errors.extend(_validate_lifecycle_enums(document, record_type, version, relative))
+    errors.extend(_validate_visibility(document, relative))
+    return errors
+
+
+def _validate_visibility(document: dict[str, Any], relative: Path) -> list[str]:
+    properties = document.get("properties")
+    visibility = properties.get("visibility") if isinstance(properties, dict) else None
+    actual = visibility.get("enum") if isinstance(visibility, dict) else None
+    errors = []
+    if actual != list(VISIBILITY_VALUES_0_1):
+        errors.append(
+            f"{relative} #/properties/visibility: visibility enum must be "
+            f"{list(VISIBILITY_VALUES_0_1)!r}; found {actual!r}"
+        )
+    required = document.get("required")
+    if not isinstance(required, list) or "visibility" not in required:
+        errors.append(f"{relative}: visibility must be a required property")
     return errors
 
 

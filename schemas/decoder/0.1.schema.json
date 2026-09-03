@@ -9,6 +9,10 @@
     "schema": {
       "const": "decoder/0.1"
     },
+    "visibility": {
+      "enum": ["public", "private"],
+      "x-definition": "../../definitions/decoder/0.1.md#record-visibility"
+    },
     "id": {
       "type": "string",
       "format": "uuid",
@@ -195,6 +199,7 @@
   },
   "required": [
     "schema",
+    "visibility",
     "id",
     "slug",
     "name",

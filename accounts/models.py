@@ -88,3 +88,50 @@ class ExternalIdentity(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_provider_display()}: {self.public_identifier}"
+
+
+class PersonalApiToken(models.Model):
+    """Revocable personal bearer credential; the secret is never retained."""
+
+    class Scope(models.TextChoices):
+        CIRCUITS_SUBMIT = "circuits:submit", "Submit circuits"
+        COLLECTIONS_WRITE = "collections:write", "Manage circuit collections"
+        TAGS_WRITE = "tags:write", "Manage community tags"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.CASCADE,
+        related_name="personal_api_tokens",
+    )
+    public_id = models.CharField(max_length=24, unique=True)
+    secret_digest = models.CharField(max_length=64)
+    display_prefix = models.CharField(max_length=40)
+    name = models.CharField(max_length=120)
+    scopes = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "personal_api_token"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(secret_digest__regex=r"^[0-9a-f]{64}$"),
+                name="personal_api_token_digest_valid",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(name__regex=r"^\s*$"),
+                name="personal_api_token_name_nonblank",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["account", "-created_at"],
+                name="idx_api_token_account_created",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.display_prefix}…)"

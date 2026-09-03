@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ title }} · Circuit Bench{% endblock %}
 
@@ -17,32 +18,14 @@
         {% include "components/pickers/tag.html" with picker_id="standalone-tag-creator" label="Create custom tag" input_name="unused" tags=picker_tags selected_keys=selected_keys mode="create" namespace_choices=namespace_choices parent_tags=picker_tags create_url=tag_create_url created_redirect=True only %}
       </section>
     {% else %}
-      <section class="submission-entry-panel">
-        <form method="post" novalidate>
-          {% csrf_token %}
-          {% if form.non_field_errors %}<div class="submission-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-          <div class="submission-form-sections">
-            <section class="submission-form-section">
-              <header><h3>Noise-model revision</h3></header>
-              <div class="submission-field-group submission-field-group-stack">
-                {% for field in form %}
-                  <div class="submission-field">
-                    {{ field.label_tag }}
-                    {{ field }}
-                    {% if field.help_text %}<p class="helptext">{{ field.help_text }}</p>{% endif %}
-                    {% if field.errors %}<div class="submission-errors" role="alert">{{ field.errors }}</div>{% endif %}
-                  </div>
-                {% endfor %}
-              </div>
-            </section>
-          </div>
+      <form class="stacked-record-form" method="post" novalidate>
+          {% csrf_token %}{{ form.non_field_errors }}
+          {% for field in form %}{% if field.name != "predecessor" %}<div class="form-row"><div class="form-row-label">{{ field.label_tag }}</div><div class="form-row-control">{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div></div>{% endif %}{% endfor %}
+          <div class="form-row"><div class="form-row-label"><label>Previous noise-model revision</label></div><div class="form-row-control record-picker-control">{% include "components/pickers/related_record.html" with cell=predecessor_picker only %}{{ form.predecessor.errors }}</div></div>
           <div class="form-actions"><button type="submit">Preview</button></div>
-        </form>
-      </section>
+      </form>
     {% endif %}
   </div>
 {% endblock %}
 
-{% block extra_scripts %}
-  {% if kind == "tag" %}{% load static %}<script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902c" defer></script>{% endif %}
-{% endblock %}
+{% block extra_scripts %}{% if kind == "tag" %}<script src="{% static 'js/tag-picker.js' %}?v=0.1.20260903b" defer></script>{% else %}<script src="{% static 'js/related-record-picker.js' %}" defer></script>{% endif %}{% endblock %}

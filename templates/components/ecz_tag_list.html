@@ -1,0 +1,7 @@
+{% if terms %}
+  <ul class="tag-list" aria-label="Error Correction Zoo classifications">
+    {% for term in terms %}
+      <li><a class="tag tag-source-ecz" href="{{ term.get_absolute_url }}">{{ term.display_name }}</a></li>
+    {% endfor %}
+  </ul>
+{% endif %}

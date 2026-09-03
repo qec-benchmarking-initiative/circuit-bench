@@ -163,7 +163,9 @@ def noise_model_list(request):
 
 
 def noise_model_detail(request, slug):
-    noise_model = get_object_or_404(noise_model_detail_queryset(), slug=slug)
+    noise_model = get_object_or_404(
+        noise_model_detail_queryset(request.user), slug=slug
+    )
     return render(
         request,
         "noise_models/detail.html",

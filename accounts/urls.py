@@ -10,6 +10,12 @@ urlpatterns = [
         name="account-development-login",
     ),
     path("", views.identity_list, name="account-identity-list"),
+    path("api-tokens/new/", views.api_token_create, name="account-api-token-create"),
+    path(
+        "api-tokens/<uuid:token_id>/revoke/",
+        views.api_token_revoke,
+        name="account-api-token-revoke",
+    ),
     path(
         "identities/<uuid:identity_id>/unlink/",
         views.identity_unlink,

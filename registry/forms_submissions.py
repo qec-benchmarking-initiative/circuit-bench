@@ -10,6 +10,7 @@ from django.http import QueryDict
 
 from registry.models import (
     Artifact,
+    CircuitCollection,
     CircuitRevision,
     DecoderVersion,
     EczTerm,
@@ -20,6 +21,7 @@ from registry.models import (
     ScoreDefinition,
     Tag,
 )
+from registry.models.common import RecordVisibility
 from registry.services.artifact_access import readable_artifacts_for
 from registry.services.tags import active_tag_queryset
 from registry.submission_policy import SubmissionKind
@@ -46,6 +48,16 @@ class WithdrawalForm(forms.Form):
 class BaseSubmissionForm(forms.Form):
     kind: SubmissionKind
 
+    visibility = forms.ChoiceField(
+        choices=RecordVisibility.choices,
+        initial=RecordVisibility.PUBLIC,
+        required=False,
+        help_text=(
+            "Private records are visible to you and site administrators. "
+            "Administrators can still review them."
+        ),
+    )
+
     def __init__(
         self,
         *args,
@@ -59,9 +71,21 @@ class BaseSubmissionForm(forms.Form):
         self.actor = actor
         super().__init__(*args, **kwargs)
 
+    def clean_visibility(self):
+        return self.cleaned_data.get("visibility") or RecordVisibility.PUBLIC
+
     @property
     def readable_artifacts(self):
         return readable_artifacts_for(self.actor).order_by("original_filename", "id")
+
+    def records_visible_to_actor(self, queryset):
+        if getattr(self.actor, "is_admin", False):
+            return queryset
+        if getattr(self.actor, "is_authenticated", False):
+            return queryset.filter(
+                Q(visibility=RecordVisibility.PUBLIC) | Q(submitted_by=self.actor)
+            )
+        return queryset.filter(visibility=RecordVisibility.PUBLIC)
 
     @property
     def lineage_states(self):
@@ -122,7 +146,9 @@ class DecoderSubmissionForm(BaseSubmissionForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         previous_versions = (
-            DecoderVersion.objects.filter(state__in=self.lineage_states)
+            self.records_visible_to_actor(
+                DecoderVersion.objects.filter(state__in=self.lineage_states)
+            )
             .select_related("hyperparameter_schema_artifact")
             .order_by("name", "version")
         )
@@ -137,7 +163,7 @@ class DecoderSubmissionForm(BaseSubmissionForm):
             if version.hyperparameter_schema_artifact_id
         }
         self.fields["algorithm_tags"].queryset = active_tag_queryset(
-            Tag.Namespace.ALGORITHM
+            Tag.Namespace.ALGORITHM, actor=self.actor
         )
 
     def clean_slug(self):
@@ -219,14 +245,20 @@ class CircuitSubmissionForm(BaseSubmissionForm):
         label="Error Correction Zoo codes",
     )
     experiment_tags = forms.ModelMultipleChoiceField(queryset=Tag.objects.none())
+    collections = forms.ModelMultipleChoiceField(
+        queryset=CircuitCollection.objects.none(),
+        required=False,
+        label="Circuit collections",
+        help_text="Add this revision to collections that you curate.",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["previous_revision"].queryset = CircuitRevision.objects.filter(
-            state__in=self.lineage_states
+        self.fields["previous_revision"].queryset = self.records_visible_to_actor(
+            CircuitRevision.objects.filter(state__in=self.lineage_states)
         ).order_by("name", "created_at")
         self.fields["noise_model"].queryset = (
-            NoiseModel.objects.filter(state="published")
+            self.records_visible_to_actor(NoiseModel.objects.filter(state="published"))
             .exclude(curation_status=NoiseModel.CurationStatus.DEPRECATED)
             .order_by("name")
         )
@@ -237,7 +269,9 @@ class CircuitSubmissionForm(BaseSubmissionForm):
             "manifest_artifact",
         ):
             self.fields[name].queryset = artifacts
-        self.fields["code_tags"].queryset = active_tag_queryset(Tag.Namespace.CODE)
+        self.fields["code_tags"].queryset = active_tag_queryset(
+            Tag.Namespace.CODE, actor=self.actor
+        )
         current_ecz_ids = (
             self.record.ecz_terms.values_list("id", flat=True)
             if self.record is not None
@@ -247,8 +281,12 @@ class CircuitSubmissionForm(BaseSubmissionForm):
             Q(status=EczTerm.Status.CURRENT) | Q(id__in=current_ecz_ids)
         ).order_by("display_name", "ecz_code_id")
         self.fields["experiment_tags"].queryset = active_tag_queryset(
-            Tag.Namespace.EXPERIMENT
+            Tag.Namespace.EXPERIMENT, actor=self.actor
         )
+        self.fields["collections"].queryset = CircuitCollection.objects.filter(
+            submitted_by=self.actor,
+            state="published",
+        ).order_by("name", "id")
 
     def clean_slug(self):
         slug = self.cleaned_data["slug"]
@@ -344,21 +382,21 @@ class ResultSubmissionForm(BaseSubmissionForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["decoder_version"].queryset = DecoderVersion.objects.filter(
-            state="published"
+        self.fields["decoder_version"].queryset = self.records_visible_to_actor(
+            DecoderVersion.objects.filter(state="published")
         ).order_by("name", "version")
-        self.fields["circuit_revision"].queryset = CircuitRevision.objects.filter(
-            state="published"
+        self.fields["circuit_revision"].queryset = self.records_visible_to_actor(
+            CircuitRevision.objects.filter(state="published")
         ).order_by("name", "created_at")
-        self.fields["evaluator_version"].queryset = EvaluatorRelease.objects.filter(
-            state="published"
+        self.fields["evaluator_version"].queryset = self.records_visible_to_actor(
+            EvaluatorRelease.objects.filter(state="published")
         ).order_by("version")
-        self.fields["machine"].queryset = Machine.objects.filter(
-            state="published"
+        self.fields["machine"].queryset = self.records_visible_to_actor(
+            Machine.objects.filter(state="published")
         ).order_by("slug")
         self.fields["hyperparameter_values_artifact"].queryset = self.readable_artifacts
-        self.fields["supersedes_result"].queryset = Result.objects.filter(
-            state__in=self.lineage_states
+        self.fields["supersedes_result"].queryset = self.records_visible_to_actor(
+            Result.objects.filter(state__in=self.lineage_states)
         ).order_by("-created_at", "id")
 
     def clean_scores_json(self):
@@ -439,8 +477,8 @@ class MachineSubmissionForm(BaseSubmissionForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["supersedes_machine"].queryset = Machine.objects.filter(
-            state__in=self.lineage_states
+        self.fields["supersedes_machine"].queryset = self.records_visible_to_actor(
+            Machine.objects.filter(state__in=self.lineage_states)
         ).order_by("slug")
 
     def clean_slug(self):

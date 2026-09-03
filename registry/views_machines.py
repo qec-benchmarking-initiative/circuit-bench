@@ -17,6 +17,7 @@ from registry.result_tables import (
 from registry.services.decoders import catalogue_algorithm_tags
 from registry.services.filter_options import public_circuit_filter_options
 from registry.services.results import public_result_catalogue
+from registry.services.visibility import actor_visibility_q
 from registry.table_controls import (
     ColumnSpec,
     cells_for_visible_columns,
@@ -39,7 +40,9 @@ MACHINE_RESULT_COLUMNS = (
 
 def machine_detail(request, slug):
     machine = get_object_or_404(
-        Machine.objects.select_related("schema_release", "submitted_by"),
+        Machine.objects.select_related("schema_release", "submitted_by").filter(
+            actor_visibility_q(request.user)
+        ),
         slug=slug,
         state__in=["published", "withdrawn"],
     )
@@ -53,7 +56,9 @@ def machine_detail(request, slug):
     )
     comparison = result_comparison_context(
         request,
-        queryset=public_result_catalogue(machine=machine, **filters),
+        queryset=public_result_catalogue(
+            machine=machine, viewer=request.user, **filters
+        ),
         columns=MACHINE_RESULT_COLUMNS,
         default_sort=(("published", "desc"),),
         plot_id="machine-results-scatter",

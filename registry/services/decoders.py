@@ -23,6 +23,7 @@ from registry.models import (
 )
 from registry.services.tag_hierarchy import descendant_slug_groups
 from registry.services.tags import active_tag_queryset
+from registry.services.visibility import actor_visibility_q
 
 PUBLIC_DETAIL_STATES = ("published", "withdrawn")
 
@@ -42,11 +43,11 @@ def public_decoder_catalogue(
     """Return published decoder versions matching the simple catalogue filters."""
 
     decoders = (
-        DecoderVersion.objects.filter(state="published")
+        DecoderVersion.objects.filter(state="published", visibility="public")
         .annotate(
             published_result_count=Count(
                 "results",
-                filter=Q(results__state="published"),
+                filter=Q(results__state="published", results__visibility="public"),
                 distinct=True,
             )
         )
@@ -54,7 +55,7 @@ def public_decoder_catalogue(
         .prefetch_related(
             Prefetch(
                 "algorithm_tags",
-                queryset=_ordered_algorithm_tags(),
+                queryset=_ordered_algorithm_tags().filter(visibility="public"),
                 to_attr="display_algorithm_tags",
             )
         )
@@ -121,7 +122,7 @@ def catalogue_algorithm_tags() -> QuerySet[Tag]:
     )
 
 
-def public_decoder_detail() -> QuerySet[DecoderVersion]:
+def public_decoder_detail(viewer=None) -> QuerySet[DecoderVersion]:
     """Return the complete, bounded data graph needed by a decoder detail page."""
 
     visible_credits = (
@@ -138,7 +139,14 @@ def public_decoder_detail() -> QuerySet[DecoderVersion]:
         .order_by("position")
     )
     published_results = (
-        Result.objects.filter(state="published")
+        Result.objects.filter(
+            state="published",
+            visibility="public",
+            circuit_revision__visibility="public",
+            circuit_revision__noise_model__visibility="public",
+            evaluator_version__visibility="public",
+        )
+        .filter(Q(machine__isnull=True) | Q(machine__visibility="public"))
         .select_related("circuit_revision", "evaluator_version", "machine")
         .prefetch_related("scores__score_definition")
         .order_by("-published_at", "id")
@@ -146,6 +154,7 @@ def public_decoder_detail() -> QuerySet[DecoderVersion]:
 
     return (
         DecoderVersion.objects.filter(state__in=PUBLIC_DETAIL_STATES)
+        .filter(actor_visibility_q(viewer))
         .select_related(
             "schema_release",
             "hyperparameter_schema_artifact",
@@ -156,7 +165,7 @@ def public_decoder_detail() -> QuerySet[DecoderVersion]:
         .prefetch_related(
             Prefetch(
                 "algorithm_tags",
-                queryset=_ordered_algorithm_tags(),
+                queryset=_ordered_algorithm_tags().filter(actor_visibility_q(viewer)),
                 to_attr="display_algorithm_tags",
             ),
             Prefetch("credits", queryset=visible_credits, to_attr="visible_credits"),
