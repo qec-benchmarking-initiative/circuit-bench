@@ -205,6 +205,10 @@
     "schema": {
       "const": "result/0.1"
     },
+    "visibility": {
+      "enum": ["public", "private"],
+      "x-definition": "../../definitions/result/0.1.md#record-visibility"
+    },
     "id": {
       "type": "string",
       "format": "uuid"
@@ -354,6 +358,7 @@
   },
   "required": [
     "schema",
+    "visibility",
     "id",
     "decoder_version_id",
     "circuit_revision_id",

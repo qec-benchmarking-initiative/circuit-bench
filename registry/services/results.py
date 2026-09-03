@@ -18,6 +18,7 @@ from registry.services.tag_hierarchy import (
     descendant_slug_groups,
     inclusive_code_descendant_identities,
 )
+from registry.services.visibility import actor_visibility_q
 
 
 def public_result_catalogue(
@@ -30,6 +31,9 @@ def public_result_catalogue(
     decoder_slug: str = "",
     machine_slug: str = "",
     benchmark_slug: str = "",
+    collection_slug: str = "",
+    include_collection_descendants: bool = True,
+    viewer=None,
     algorithm_tag_slugs: Sequence[str] = (),
     algorithm_tag_match: str = "all",
     skeleton_preparation: str = "",
@@ -56,6 +60,12 @@ def public_result_catalogue(
 
     results = (
         Result.objects.filter(state="published")
+        .filter(actor_visibility_q(viewer))
+        .filter(actor_visibility_q(viewer, "decoder_version__"))
+        .filter(actor_visibility_q(viewer, "circuit_revision__"))
+        .filter(actor_visibility_q(viewer, "circuit_revision__noise_model__"))
+        .filter(actor_visibility_q(viewer, "evaluator_version__"))
+        .filter(Q(machine__isnull=True) | actor_visibility_q(viewer, "machine__"))
         .select_related(
             "decoder_version",
             "circuit_revision",
@@ -66,12 +76,12 @@ def public_result_catalogue(
         .prefetch_related(
             Prefetch(
                 "decoder_version__algorithm_tags",
-                queryset=_display_tags(Tag.Namespace.ALGORITHM),
+                queryset=_display_tags(Tag.Namespace.ALGORITHM, viewer),
                 to_attr="display_algorithm_tags",
             ),
             Prefetch(
                 "circuit_revision__code_tags",
-                queryset=_display_tags(Tag.Namespace.CODE),
+                queryset=_display_tags(Tag.Namespace.CODE, viewer),
                 to_attr="display_code_tags",
             ),
             Prefetch(
@@ -81,7 +91,7 @@ def public_result_catalogue(
             ),
             Prefetch(
                 "circuit_revision__experiment_tags",
-                queryset=_display_tags(Tag.Namespace.EXPERIMENT),
+                queryset=_display_tags(Tag.Namespace.EXPERIMENT, viewer),
                 to_attr="display_experiment_tags",
             ),
             "scores__score_definition",
@@ -105,6 +115,24 @@ def public_result_catalogue(
                 benchmark_slug
             ),
             benchmark_attempt_memberships__benchmark_attempt__state="published",
+        )
+    if collection_slug:
+        from registry.services.collections import (
+            collection_circuit_ids,
+            collection_queryset_for,
+        )
+
+        collection = (
+            collection_queryset_for(viewer).filter(slug=collection_slug).first()
+        )
+        if collection is None:
+            return results.none()
+        results = results.filter(
+            circuit_revision_id__in=collection_circuit_ids(
+                collection,
+                include_descendants=include_collection_descendants,
+                viewer=viewer,
+            )
         )
     if query:
         results = results.filter(
@@ -185,9 +213,10 @@ def public_result_catalogue(
     return results.distinct()
 
 
-def _display_tags(namespace: str) -> QuerySet[Tag]:
+def _display_tags(namespace: str, viewer=None) -> QuerySet[Tag]:
     queryset = (
         Tag.objects.filter(namespace=namespace)
+        .filter(actor_visibility_q(viewer))
         .annotate(
             official_order=Case(
                 When(status=Tag.Status.OFFICIAL, then=Value(0)),

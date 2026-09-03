@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm bulk action · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
+      <p class="eyebrow">Bulk action</p>
+      <h1>{{ action_label }}</h1>
+    </header>
+    <section class="submission-form-section">
+      <header><h2>{{ targets|length }} record{{ targets|length|pluralize }}</h2></header>
+      <div class="table-scroll"><table class="data-table"><thead><tr><th>Kind</th><th>Record</th><th>State</th><th>Visibility</th></tr></thead><tbody>
+        {% for target in targets %}<tr><td>{{ target.kind_label }}</td><td>{{ target.label }}</td><td>{{ target.state_label }}</td><td>{{ target.visibility_label }}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    {% if cascade %}
+      <section class="submission-form-section collection-cascade-summary">
+        <header><h2>Not changed</h2></header>
+        <div class="metadata-grid">
+          <div><strong>Already in this state</strong><span>{{ cascade.skipped_unchanged_count }}</span></div>
+          <div><strong>Contributed by other people</strong><span>{{ cascade.skipped_other_owner_count }}</span></div>
+          <div><strong>Official benchmark restrictions</strong><span>{{ cascade.skipped_locked|length }}</span></div>
+        </div>
+        {% if cascade.skipped_locked %}<ul class="compact-list">{% for label, reason in cascade.skipped_locked %}<li><strong>{{ label }}</strong>: {{ reason }}</li>{% endfor %}</ul>{% endif %}
+      </section>
+    {% endif %}
+    <form method="post" action="{% url 'bulk:commit' %}" class="stacked-form">
+      {% csrf_token %}
+      <input type="hidden" name="return_url" value="{{ return_url }}">
+      <input type="hidden" name="action" value="{{ form.cleaned_data.action }}">
+      {% for target in targets %}<input type="hidden" name="target" value="{{ target.key }}">{% endfor %}
+      {% if form.cleaned_data.action == "withdraw" or form.cleaned_data.action == "reject" %}<div class="submission-field"><label for="bulk-note">Note</label><textarea id="bulk-note" name="note" rows="4">{{ form.cleaned_data.note }}</textarea><p class="field-help">{% if form.cleaned_data.action == "reject" %}Required for rejection.{% else %}Optional for withdrawal.{% endif %}</p></div>{% endif %}
+      <div class="form-actions"><a class="button button-secondary" href="{{ return_url }}">Cancel</a><button class="button" type="submit">Confirm {{ action_label|lower }}</button></div>
+    </form>
+  </div>
+{% endblock %}

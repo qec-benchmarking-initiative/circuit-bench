@@ -11,6 +11,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from registry.filter_grids import related_records_cell
 from registry.forms_taxonomy import (
     CurationNoteForm,
     CustomTagForm,
@@ -19,6 +20,7 @@ from registry.forms_taxonomy import (
     TagPromotionForm,
 )
 from registry.models import EczTerm, NoiseModel, Tag
+from registry.record_pickers import record_picker_context
 from registry.services.tags import active_tag_queryset
 from registry.services.taxonomy import (
     TaxonomyError,
@@ -55,7 +57,7 @@ NOISE_MODEL_POLICY = {
 @require_http_methods(["GET", "POST"])
 def custom_tag_create(request):
     initial = _restored_initial(request, "tag")
-    form = CustomTagForm(request.POST or None, initial=initial)
+    form = CustomTagForm(request.POST or None, initial=initial, actor=request.user)
     if request.method == "POST" and form.is_valid():
         token = _store_preview(request, "tag", form.payload())
         return redirect("taxonomy:tag-preview", preview_id=token)
@@ -67,7 +69,7 @@ def custom_tag_create(request):
             "kind": "tag",
             "title": "Create custom tag",
             "policy": TAG_POLICY,
-            "picker_tags": list(active_tag_queryset()),
+            "picker_tags": list(active_tag_queryset(actor=request.user)),
             "namespace_choices": Tag.Namespace.choices,
         },
     )
@@ -77,7 +79,9 @@ def custom_tag_create(request):
 @require_http_methods(["GET", "POST"])
 def noise_model_submit(request):
     initial = _restored_initial(request, "noise_model")
-    form = NoiseModelSubmissionForm(request.POST or None, initial=initial)
+    form = NoiseModelSubmissionForm(
+        request.POST or None, initial=initial, actor=request.user
+    )
     if request.method == "POST" and form.is_valid():
         token = _store_preview(request, "noise_model", form.payload())
         return redirect("taxonomy:noise-model-preview", preview_id=token)
@@ -89,8 +93,38 @@ def noise_model_submit(request):
             "kind": "noise_model",
             "title": "Submit noise model",
             "policy": NOISE_MODEL_POLICY,
+            "predecessor_picker": _noise_model_predecessor_picker(form),
         },
     )
+
+
+def _noise_model_predecessor_picker(form):
+    bound = form["predecessor"]
+    value = bound.value()
+    selected = () if value in (None, "") else (str(value),)
+    picker = record_picker_context(
+        "submission-noise-models",
+        selected,
+        input_name=bound.html_name,
+        records=bound.field.queryset,
+    )
+    cell = related_records_cell(
+        key="noise-model-predecessor",
+        label=bound.label,
+        picker_id="noise-model-predecessor-picker",
+        picker=picker,
+    )
+    cell.update(
+        empty_label="No previous revision",
+        maximum_selections=1,
+        required=False,
+        disabled=False,
+        hide_label=True,
+    )
+    if not cell["selected_records"]:
+        cell["display_value"] = cell["empty_label"]
+        cell["selection_label"] = cell["empty_label"]
+    return cell
 
 
 @login_required
@@ -147,6 +181,7 @@ def custom_tag_preview(request, preview_id):
             "kind": "tag",
             "preview_id": preview_id,
             "rows": (
+                ("Visibility", payload["visibility"].title()),
                 ("Namespace", payload["namespace"]),
                 ("Slug", payload["slug"]),
                 ("Label", payload["label"]),
@@ -198,6 +233,7 @@ def noise_model_preview(request, preview_id):
                 paper_url=payload["paper_url"],
                 randomises_priors=payload["randomises_priors"],
                 predecessor=predecessor,
+                visibility=payload["visibility"],
             )
         except TaxonomyPermissionError as exception:
             raise PermissionDenied(str(exception)) from exception
@@ -222,6 +258,7 @@ def noise_model_preview(request, preview_id):
             "kind": "noise_model",
             "preview_id": preview_id,
             "rows": (
+                ("Visibility", payload["visibility"].title()),
                 ("Slug", payload["slug"]),
                 ("Name", payload["name"]),
                 ("Short description", payload["short_description"]),

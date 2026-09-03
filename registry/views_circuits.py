@@ -242,7 +242,7 @@ def circuit_list(request):
                         "status": tag.status,
                         "display_color": tag.display_color,
                     }
-                    for tag in circuit.experiment_tags.all()
+                    for tag in circuit.display_experiment_tags
                 ],
             },
             "noise_model": {
@@ -340,7 +340,7 @@ def circuit_list(request):
 
 
 def circuit_detail(request, slug):
-    circuit = get_object_or_404(circuit_detail_queryset(), slug=slug)
+    circuit = get_object_or_404(circuit_detail_queryset(request.user), slug=slug)
     detail_url = reverse("circuits:detail", args=[circuit.slug])
     selected_tags = tuple(
         dict.fromkeys(tag.strip() for tag in request.GET.getlist("tag") if tag.strip())
@@ -359,6 +359,7 @@ def circuit_detail(request, slug):
         request,
         queryset=circuit_result_leaderboard(
             circuit=circuit,
+            viewer=request.user,
             tag_slugs=selected_tags,
             tag_match=tag_match,
             skeleton_preparation=skeleton_preparation,
@@ -446,7 +447,7 @@ def circuit_detail(request, slug):
                             "display_color": tag.display_color,
                             "url": tag.get_absolute_url(),
                         }
-                        for tag in circuit.experiment_tags.all()
+                        for tag in circuit.display_experiment_tags
                     ],
                 ],
             },

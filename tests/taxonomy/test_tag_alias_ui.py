@@ -111,6 +111,7 @@ def test_inline_creation_api_and_alias_aware_picker(accounts, client):
         {
             "namespace": "algorithm",
             "label": "Peeling decoder",
+            "visibility": "private",
             "description": "Iteratively removes degree-one checks.",
             "aliases": "leaf removal\npeeling",
             "parents": [str(parent.id)],
@@ -122,10 +123,12 @@ def test_inline_creation_api_and_alias_aware_picker(accounts, client):
     assert payload["aliases"] == ["leaf removal", "peeling"]
     assert payload["parents"][0]["id"] == str(parent.id)
     assert payload["url"] == "/tags/algorithm/peeling-decoder/"
+    assert Tag.objects.get(id=payload["id"]).visibility == "private"
 
     form_page = client.get(reverse("submissions:create", args=["decoder"]))
     content = form_page.content.decode()
     assert "Please check carefully if there is an existing tag" in content
+    assert "data-tag-create-visibility" in content
     assert reverse("taxonomy:tag-create-json") in content
     search = client.get(
         reverse("pickers:taxonomy-terms"),

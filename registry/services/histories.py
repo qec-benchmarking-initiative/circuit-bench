@@ -22,6 +22,7 @@ SUBJECT_FIELD_BY_KIND = {
     "benchmark": "benchmark_revision",
     "benchmark_attempt": "benchmark_attempt",
     "evaluator": "evaluator_release",
+    "collection": "circuit_collection",
 }
 
 SNAPSHOT_ACTIONS = (
@@ -334,6 +335,8 @@ def _record_url(kind: str, record) -> str | None:
                 "taxonomy:tag-detail",
                 kwargs={"namespace": record.namespace, "slug": record.slug},
             )
+        if kind == "collection":
+            return reverse("collections:detail", args=[record.slug])
     except NoReverseMatch:
         return None
     return None

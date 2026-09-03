@@ -13,6 +13,11 @@ class LifecycleState(models.TextChoices):
     WITHDRAWN = "withdrawn", "Withdrawn"
 
 
+class RecordVisibility(models.TextChoices):
+    PUBLIC = "public", "Public"
+    PRIVATE = "private", "Private"
+
+
 REVIEW_QUEUE_STATES = (
     LifecycleState.PENDING_REVIEW,
     LifecycleState.PENDING_REAPPROVAL,
@@ -30,6 +35,11 @@ class PublishedLifecycleModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     published_at = models.DateTimeField(null=True, blank=True)
     withdrawn_at = models.DateTimeField(null=True, blank=True)
+    visibility = models.CharField(
+        max_length=10,
+        choices=RecordVisibility,
+        default=RecordVisibility.PUBLIC,
+    )
 
     class Meta:
         abstract = True
@@ -59,7 +69,11 @@ class PublishedLifecycleModel(models.Model):
                     )
                 ),
                 name="%(app_label)s_%(class)s_lifecycle_timestamps",
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(visibility__in=RecordVisibility.values),
+                name="%(app_label)s_%(class)s_visibility_valid",
+            ),
         ]
 
 

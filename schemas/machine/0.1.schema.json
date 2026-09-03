@@ -19,6 +19,10 @@
     "schema": {
       "const": "machine/0.1"
     },
+    "visibility": {
+      "enum": ["public", "private"],
+      "x-definition": "../../definitions/machine/0.1.md#record-visibility"
+    },
     "id": {
       "type": "string",
       "format": "uuid"
@@ -71,6 +75,7 @@
   },
   "required": [
     "schema",
+    "visibility",
     "id",
     "slug",
     "class",

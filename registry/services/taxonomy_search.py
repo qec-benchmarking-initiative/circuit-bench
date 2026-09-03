@@ -21,6 +21,7 @@ from registry.services.ecz_taxonomy import (
     display_native_tag,
     parse_taxonomy_key,
 )
+from registry.services.visibility import actor_visibility_q
 
 DEFAULT_PAGE_SIZE = 12
 MAX_PAGE_SIZE = 50
@@ -76,6 +77,7 @@ def search_taxonomy_terms(
     parent_cb_offset: int = 0,
     parent_ecz_offset: int = 0,
     page_size: int = DEFAULT_PAGE_SIZE,
+    viewer=None,
 ) -> TaxonomySearchResult:
     if namespace not in Tag.Namespace.values:
         raise ValueError("Unknown tag namespace.")
@@ -93,6 +95,7 @@ def search_taxonomy_terms(
     native_terms = _native_displays(
         namespace,
         selected_ids=selected_native_ids,
+        viewer=viewer,
     )
     ecz_terms = (
         _ecz_displays(selected_code_ids=selected_ecz_ids)
@@ -126,7 +129,9 @@ def search_taxonomy_terms(
     parent_native_ids, parent_ecz_ids = _direct_parent_ids(visible_keys, namespace)
     parent_native = [
         item
-        for item in _native_displays(namespace, include_ids=parent_native_ids)
+        for item in _native_displays(
+            namespace, include_ids=parent_native_ids, viewer=viewer
+        )
         if item.key not in visible_keys
         and uuid.UUID(item.database_id) in parent_native_ids
         and uuid.UUID(item.database_id) not in excluded_native_ids
@@ -182,6 +187,7 @@ def _native_displays(
     *,
     selected_ids=(),
     include_ids=(),
+    viewer=None,
 ) -> list[TaxonomyTermDisplay]:
     alias_queryset = TagAlias.objects.filter(is_active=True).order_by(
         Lower("alias"), "id"
@@ -189,6 +195,7 @@ def _native_displays(
     visible_ids = set(selected_ids) | set(include_ids)
     queryset = (
         Tag.objects.filter(namespace=namespace)
+        .filter(actor_visibility_q(viewer))
         .filter(
             Q(status__in=(Tag.Status.CUSTOM, Tag.Status.OFFICIAL))
             | Q(id__in=visible_ids)

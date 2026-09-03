@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ collection.name }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell record-detail-layout collection-detail">
+    <header class="record-heading">
+      <p class="eyebrow">Circuit collection</p>
+      <h1>{{ collection.name }}</h1>
+      <p>Curated by {{ collection.submitted_by.display_name }} · Collection page visibility: {{ collection.get_visibility_display }}</p>
+      {% if collection.description %}<p>{{ collection.description }}</p>{% endif %}
+      {% if can_curate %}<p class="page-action-bar"><a class="button" href="{% url 'collections:members' collection.slug %}">Edit contents</a> <a class="button button-secondary" href="{% url 'collections:edit' collection.slug %}">Edit collection</a></p>{% endif %}
+    </header>
+    <section class="record-section collection-visibility-panel">
+      <h2>Collection and circuit visibility</h2>
+      <p><strong>Collection page: {{ collection.get_visibility_display }}</strong> · Circuits visible to you across this collection and its subcollections: {{ circuit_visibility_summary.public }} public · {{ circuit_visibility_summary.private }} private{% if circuit_visibility_summary.withdrawn %} · {{ circuit_visibility_summary.withdrawn }} withdrawn{% endif %}.</p>
+      <p>Changing the collection page visibility does not change any circuit.</p>
+      {% if can_curate %}
+        <div class="collection-visibility-forms">
+          <form method="post" action="{% url 'bulk:preview' %}">
+            {% csrf_token %}<input type="hidden" name="return_url" value="{{ request.get_full_path }}"><input type="hidden" name="action" value="make_public"><input type="hidden" name="target" value="collection:{{ collection.id }}"><input type="hidden" name="collection_scope" value="{{ collection.id }}"><input type="hidden" name="collection_visibility_cascade" value="1"><button class="button button-secondary" type="submit">Make collection and my circuits public…</button>
+          </form>
+          <form method="post" action="{% url 'bulk:preview' %}">
+            {% csrf_token %}<input type="hidden" name="return_url" value="{{ request.get_full_path }}"><input type="hidden" name="action" value="make_private"><input type="hidden" name="target" value="collection:{{ collection.id }}"><input type="hidden" name="collection_scope" value="{{ collection.id }}"><input type="hidden" name="collection_visibility_cascade" value="1"><button class="button button-secondary" type="submit">Make collection and my circuits private…</button>
+          </form>
+        </div>
+        <p class="field-help">The preview includes the collection page and circuit revisions you contributed in this collection tree. Circuits contributed by other people are skipped. Official benchmark dependencies remain public.</p>
+      {% endif %}
+    </section>
+    <section class="record-section"><h2>Classification</h2><dl class="metadata-list collection-classification"><div><dt>Code classification</dt><dd>{% if collection.display_code_tags %}{% include "components/tag_list.html" with tags=collection.display_code_tags only %}{% endif %}{% include "components/ecz_tag_list.html" with terms=collection.ecz_terms.all only %}{% if not collection.display_code_tags and not collection.ecz_terms.all %}<span class="null-value">No tags</span>{% endif %}</dd></div><div><dt>Experiment tags</dt><dd>{% if collection.display_experiment_tags %}{% include "components/tag_list.html" with tags=collection.display_experiment_tags only %}{% else %}<span class="null-value">No tags</span>{% endif %}</dd></div></dl></section>
+    {% if direct_children %}<section class="table-section"><h2>Subcollections</h2><div class="table-scroll"><table class="data-table"><thead><tr><th>Collection</th><th>Curator</th><th>Visibility</th></tr></thead><tbody>{% for child in direct_children %}<tr><td><a href="{% url 'collections:detail' child.slug %}">{{ child.name }}</a></td><td>{{ child.submitted_by.display_name }}</td><td>{{ child.get_visibility_display }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+    <section class="table-section"><h2>Direct circuits</h2>{% if can_bulk_administer %}{% include "components/bulk_action_bar.html" with form_id="bulk-collection-members" return_url=request.get_full_path csrf_token=csrf_token only %}{% endif %}<div class="table-scroll"><table class="data-table"><thead><tr>{% if can_bulk_administer %}<th class="bulk-select-column"><input type="checkbox" data-bulk-select-all="bulk-collection-members" aria-label="Select every direct circuit that you can manage"></th>{% endif %}<th>Circuit</th><th>Noise model</th><th>Visibility</th></tr></thead><tbody>{% for membership in direct_memberships %}<tr>{% if can_bulk_administer %}<td class="bulk-select-column">{% if request.user.is_admin or membership.circuit_revision.submitted_by_id == request.user.id %}<input type="checkbox" name="target" value="circuit:{{ membership.circuit_revision_id }}" form="bulk-collection-members" data-bulk-target aria-label="Select {{ membership.circuit_revision.name }}">{% else %}<span class="null-value">—</span>{% endif %}</td>{% endif %}<td><a href="{% url 'circuits:detail' membership.circuit_revision.slug %}">{{ membership.circuit_revision.name }}</a></td><td>{{ membership.circuit_revision.noise_model.name }}</td><td>{{ membership.circuit_revision.get_visibility_display }}</td></tr>{% empty %}<tr><td class="table-empty" colspan="4">No direct circuit members.</td></tr>{% endfor %}</tbody></table></div>{% if can_curate %}<details class="record-disclosure"><summary><span>Act on all of your circuits in this collection and its subcollections</span></summary>{% include "components/bulk_action_bar.html" with form_id="bulk-whole-collection" return_url=request.get_full_path collection_scope=collection.id csrf_token=csrf_token only %}<p>Only circuit revisions that you contributed are changed. Curating a collection does not grant authority over another contributor’s circuits.</p></details>{% endif %}</section>
+    <section class="table-section collection-results"><header class="section-heading-with-control"><div><h2>Results</h2><p>{{ result_count }} matching result{{ result_count|pluralize }}{% if include_descendants %} across this collection and {{ descendant_count }} descendant collection{{ descendant_count|pluralize }}{% else %} from direct members{% endif %}.</p></div></header>
+      <form class="explorer-form" method="get">
+        {% for name, value in plot_control_parameters %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+        <section class="explorer-query" aria-label="Search collection results">
+          <div class="explorer-search-line"><label class="visually-hidden" for="collection-result-search">Search results</label><input id="collection-result-search" type="search" name="q" value="{{ query }}" placeholder="Search decoder, circuit, noise model, machine, or evaluator"><button class="button-compact" type="submit">Search</button></div>
+          {% include "components/result_query.html" with query_id="collection-result-query" scripted_query_text=scripted_query_text last_valid_scripted_query=last_valid_scripted_query only %}
+        </section>
+        <section class="explorer-filters" aria-label="Result filters">
+          {% include "components/filters/grid.html" with grid=algorithm_filter_grid only %}
+          {% include "components/filters/grid.html" with grid=circuit_filter_grid only %}
+          {% include "components/filters/grid.html" with grid=machine_filter_grid only %}
+          <div class="filter-actions"><input type="hidden" name="include_descendants" value="0"><label><input type="checkbox" name="include_descendants" value="1"{% if include_descendants %} checked{% endif %}> Include subcollections</label>{% include "components/filters/query_actions.html" with show_reset=filters_active reset_url=request.path only %}</div>
+        </section>
+        <p class="explorer-query-status query-status-{{ scripted_query_status.kind }}" role="status">{{ scripted_query_status.message }}</p>
+      </form>
+      <nav class="result-format-links">Same population: <a href="{{ json_url }}">JSON</a> · <a href="{{ csv_url }}">CSV</a></nav>
+      {% include "components/result_comparison.html" with result_plot=result_plot only %}
+      {% include "components/table_toolbar.html" with table_id="collection-results" %}
+      {% include "components/data_table.html" with columns=table_columns rows=result_rows empty_message="No published results use circuits in this collection." only %}
+    </section>
+    {% include "components/record_history.html" with history=history only %}
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/control-grid.js' %}?v=0.1.20260903b" defer></script><script src="{% static 'js/related-record-picker.js' %}" defer></script><script src="{% static 'js/filter-query.js' %}?v=0.1.20260903b" defer></script><script src="{% static 'js/tag-picker.js' %}?v=0.1.20260903b" defer></script><script src="{% static 'js/table-controls.js' %}" defer></script><script src="{% static 'js/plot-settings.js' %}" defer></script><script src="{% static 'js/result-plot.js' %}" defer></script><script src="{% static 'js/bulk-actions.js' %}" defer></script>
+{% endblock %}

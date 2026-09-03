@@ -54,6 +54,8 @@
       <p>Please check carefully if there is an existing tag that describes this <span data-tag-concept>concept</span> well, to help with searching.</p>
       <p class="tag-create-proposal">New tag: <strong data-tag-proposed-label>—</strong></p>
       <div class="tag-create-fields">
+        <label for="{{ picker_id }}-visibility">Visibility</label>
+        <select id="{{ picker_id }}-visibility" data-tag-create-visibility disabled><option value="public">Public</option><option value="private">Private</option></select>
         <label for="{{ picker_id }}-description">Brief description - include references</label>
         <textarea id="{{ picker_id }}-description" rows="3" data-tag-create-description disabled></textarea>
         <label for="{{ picker_id }}-aliases">Aliases <span class="muted">(optional; one per line or separated by commas)</span></label>

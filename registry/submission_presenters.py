@@ -30,6 +30,9 @@ def submission_rows(kind: SubmissionKind | str, records, *, admin=False, actor=N
             ),
             "state": record.state,
             "state_label": record.get_state_display(),
+            "visibility": record.visibility,
+            "visibility_label": record.get_visibility_display(),
+            "bulk_target": f"{kind.value}:{record.id}",
             "submitted_by": record.submitted_by.display_name,
             "created_at": record.created_at,
             "withdrawn_at": record.withdrawn_at,
@@ -254,7 +257,32 @@ def preview_sections(
             }
         ]
 
-    sections = []
+    visibility_field = form.fields["visibility"]
+    sections = [
+        {
+            "title": "Visibility",
+            "description": (
+                "Private records can be seen by the contributor and site "
+                "administrators."
+            ),
+            "groups": [
+                {
+                    "layout": "inline",
+                    "fields": [
+                        {
+                            "name": "visibility",
+                            "label": visibility_field.label,
+                            "value": dict(visibility_field.choices).get(
+                                form.cleaned_data["visibility"],
+                                form.cleaned_data["visibility"],
+                            ),
+                            "preformatted": False,
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
     for title, description, groups in LAYOUTS[kind]:
         rendered_groups = []
         for layout, names in groups:

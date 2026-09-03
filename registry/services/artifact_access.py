@@ -89,17 +89,22 @@ def _with_public_reference_flags(artifacts):
         Q(json_schema_artifact_id=OuterRef("pk"))
         | Q(definitions_artifact_id=OuterRef("pk"))
     )
-    decoder = DecoderVersion.objects.filter(state__in=PUBLIC_RECORD_STATES).filter(
+    decoder = DecoderVersion.objects.filter(
+        state__in=PUBLIC_RECORD_STATES, visibility="public"
+    ).filter(
         Q(hyperparameter_schema_artifact_id=OuterRef("pk"))
         | Q(artifact_attachments__artifact_id=OuterRef("pk"))
     )
     noise_model = NoiseModel.objects.filter(
         state__in=PUBLIC_RECORD_STATES,
+        visibility="public",
         artifact_attachments__artifact_id=OuterRef("pk"),
     )
     circuit = CircuitRevision.objects.filter(
         state__in=PUBLIC_RECORD_STATES,
+        visibility="public",
         noise_model__state__in=PUBLIC_RECORD_STATES,
+        noise_model__visibility="public",
     ).filter(
         Q(sampling_circuit_artifact_id=OuterRef("pk"))
         | Q(detector_error_model_artifact_id=OuterRef("pk"))
@@ -108,6 +113,7 @@ def _with_public_reference_flags(artifacts):
     )
     evaluator = EvaluatorRelease.objects.filter(
         state__in=PUBLIC_RECORD_STATES,
+        visibility="public",
     ).filter(
         Q(source_bundle_artifact_id=OuterRef("pk"))
         | Q(artifact_attachments__artifact_id=OuterRef("pk"))
@@ -115,11 +121,19 @@ def _with_public_reference_flags(artifacts):
     result = (
         Result.objects.filter(
             state__in=PUBLIC_RECORD_STATES,
+            visibility="public",
             decoder_version__state__in=PUBLIC_RECORD_STATES,
+            decoder_version__visibility="public",
             circuit_revision__state__in=PUBLIC_RECORD_STATES,
+            circuit_revision__visibility="public",
+            circuit_revision__noise_model__visibility="public",
             evaluator_version__state__in=PUBLIC_RECORD_STATES,
+            evaluator_version__visibility="public",
         )
-        .filter(Q(machine__isnull=True) | Q(machine__state__in=PUBLIC_RECORD_STATES))
+        .filter(
+            Q(machine__isnull=True)
+            | Q(machine__state__in=PUBLIC_RECORD_STATES, machine__visibility="public")
+        )
         .filter(
             Q(hyperparameter_values_artifact_id=OuterRef("pk"))
             | Q(artifact_attachments__artifact_id=OuterRef("pk"))
@@ -127,6 +141,7 @@ def _with_public_reference_flags(artifacts):
     )
     benchmark = BenchmarkRevision.objects.filter(
         state__in=PUBLIC_RECORD_STATES,
+        visibility="public",
     ).filter(
         Q(manifest_artifact_id=OuterRef("pk"))
         | Q(artifact_attachments__artifact_id=OuterRef("pk"))

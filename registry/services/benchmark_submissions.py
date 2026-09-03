@@ -70,6 +70,9 @@ def canonical_benchmark_payload(payload: dict) -> dict:
     revision_description = str(payload.get("revision_description", "")).strip()
     previous_id = _nullable_uuid(payload.get("previous_revision"), "previous revision")
     items = _manifest_items(payload.get("items"))
+    visibility = str(payload.get("visibility", "public"))
+    if visibility not in {"public", "private"}:
+        raise BenchmarkValidationError("Visibility must be public or private.")
 
     if not slug:
         raise BenchmarkValidationError("Provide a permanent benchmark slug.")
@@ -89,6 +92,7 @@ def canonical_benchmark_payload(payload: dict) -> dict:
         )
 
     return {
+        "visibility": visibility,
         "slug": slug,
         "name": name,
         "version": version,
@@ -162,6 +166,7 @@ def create_benchmark_submission(
         manifest_artifact=manifest,
         submitted_by=submitter,
         state=state,
+        visibility=payload["visibility"],
     )
     BenchmarkRevisionItem.objects.bulk_create(
         [
@@ -288,6 +293,12 @@ def promote_benchmark_official(
         raise BenchmarkStateError(
             "Only an administrator-approved benchmark can become official."
         )
+    privacy_issues = _official_privacy_issues(benchmark)
+    if privacy_issues:
+        raise BenchmarkValidationError(
+            "An official benchmark and its existing dependency closure must be "
+            f"public. {privacy_issues[0]}"
+        )
     previous_status = benchmark.recognition_status
     benchmark.recognition_status = BenchmarkRevision.RecognitionStatus.OFFICIAL
     benchmark.save(update_fields=["recognition_status"])
@@ -310,17 +321,27 @@ def create_benchmark_attempt(
     result_ids_by_circuit: dict[str, str | None],
     submitter: Account,
     description: str = "",
+    visibility: str = "public",
 ) -> BenchmarkAttempt:
     """Create an immutable grouping for administrator review."""
 
     if not submitter.is_active:
         raise BenchmarkPermissionError("Inactive accounts cannot submit attempts.")
+    if visibility not in {"public", "private"}:
+        raise BenchmarkValidationError("Visibility must be public or private.")
     benchmark = BenchmarkRevision.objects.select_for_update().get(id=benchmark.id)
     decoder = DecoderVersion.objects.select_for_update().get(id=decoder.id)
     if benchmark.state != "published":
         raise BenchmarkStateError("The benchmark revision must be published.")
     if decoder.state != "published":
         raise BenchmarkStateError("The decoder version must be published.")
+    if (
+        benchmark.recognition_status == BenchmarkRevision.RecognitionStatus.OFFICIAL
+        and (visibility != "public" or decoder.visibility != "public")
+    ):
+        raise BenchmarkValidationError(
+            "Attempts and decoders used by an official benchmark must be public."
+        )
     items = list(
         benchmark.items.select_for_update()
         .select_related("circuit_revision")
@@ -368,6 +389,20 @@ def create_benchmark_attempt(
             raise BenchmarkValidationError(
                 "The same result cannot fill more than one manifest position."
             )
+        if (
+            benchmark.recognition_status == BenchmarkRevision.RecognitionStatus.OFFICIAL
+            and (
+                result.visibility != "public"
+                or result.circuit_revision.visibility != "public"
+                or result.circuit_revision.noise_model.visibility != "public"
+                or result.decoder_version.visibility != "public"
+                or result.evaluator_version.visibility != "public"
+                or (result.machine_id and result.machine.visibility != "public")
+            )
+        ):
+            raise BenchmarkValidationError(
+                f"Result {result.id} has a private official-benchmark dependency."
+            )
         if result.decoder_version_id != decoder.id:
             raise BenchmarkValidationError(
                 f"Manifest position {item.position} uses a different decoder."
@@ -387,6 +422,7 @@ def create_benchmark_attempt(
         submitted_by=submitter,
         description=_nullable_text(description),
         state="pending_review",
+        visibility=visibility,
         published_at=None,
     )
     BenchmarkAttemptResult.objects.bulk_create(
@@ -416,6 +452,7 @@ def create_benchmark_attempt(
                 "benchmark_revision": str(benchmark.id),
                 "decoder_version": str(decoder.id),
                 "description": attempt.description,
+                "visibility": visibility,
                 "results": [
                     {
                         "circuit_revision": str(circuit.id),
@@ -427,6 +464,40 @@ def create_benchmark_attempt(
         ),
     )
     return attempt
+
+
+def _official_privacy_issues(benchmark):
+    issues = []
+    if benchmark.visibility != "public":
+        issues.append("The benchmark revision is private.")
+    for item in benchmark.items.select_related("circuit_revision__noise_model"):
+        if item.circuit_revision.visibility != "public":
+            issues.append(f"Circuit {item.circuit_revision.name} is private.")
+        elif item.circuit_revision.noise_model.visibility != "public":
+            issues.append(
+                f"Noise model {item.circuit_revision.noise_model.name} is private."
+            )
+    for attempt in benchmark.attempts.filter(state="published").select_related(
+        "decoder_version"
+    ):
+        if attempt.visibility != "public":
+            issues.append(f"Attempt {attempt.id} is private.")
+        elif attempt.decoder_version.visibility != "public":
+            issues.append(f"Decoder {attempt.decoder_version} is private.")
+        for membership in attempt.result_memberships.select_related(
+            "result__circuit_revision__noise_model",
+            "result__decoder_version",
+            "result__evaluator_version",
+            "result__machine",
+        ):
+            result = membership.result
+            if result.visibility != "public":
+                issues.append(f"Result {result.id} is private.")
+            elif result.evaluator_version.visibility != "public":
+                issues.append(f"Evaluator {result.evaluator_version_id} is private.")
+            elif result.machine_id and result.machine.visibility != "public":
+                issues.append(f"Machine {result.machine.slug} is private.")
+    return tuple(issues)
 
 
 @transaction.atomic

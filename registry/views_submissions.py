@@ -25,6 +25,7 @@ from registry.forms_submissions import (
     submission_initial,
 )
 from registry.models import (
+    CircuitCollection,
     CircuitRevision,
     DecoderVersion,
     EvaluatorRelease,
@@ -438,7 +439,31 @@ def profile(request):
             {
                 "kind": kind.value,
                 "spec": get_submission_spec(kind),
+                "bulk_form_id": f"bulk-published-{kind.value}" if rows else "",
                 **_page_context(request, rows, f"published_{kind.value}_page"),
+            }
+        )
+    for kind, plural_label in (
+        ("noise_model", "noise models"),
+        ("benchmark", "benchmark revisions"),
+        ("benchmark_attempt", "benchmark attempts"),
+    ):
+        if controls["kind"] and controls["kind"] != kind:
+            continue
+        rows = collect_specialized_submission_rows(
+            states=["published"],
+            actor=request.user,
+            owner=request.user,
+            query=controls["query"],
+            kind_filter=kind,
+            sort=controls["sort"],
+        )
+        published_sections.append(
+            {
+                "kind": kind,
+                "spec": {"plural_label": plural_label},
+                "bulk_form_id": f"bulk-published-{kind}" if rows else "",
+                **_page_context(request, rows, f"published_{kind}_page"),
             }
         )
     withdrawn = collect_submission_rows(
@@ -471,6 +496,15 @@ def profile(request):
         kind_filter=controls["kind"],
         sort=controls["sort"],
     )
+    my_collections = (
+        CircuitCollection.objects.filter(submitted_by=request.user)
+        .prefetch_related("code_tags", "ecz_terms", "experiment_tags")
+        .order_by("name", "id")
+    )
+    pending_page = _page_context(request, pending, "pending_page")
+    pending_page["bulk_form_id"] = "bulk-pending" if pending else ""
+    withdrawn_page = _page_context(request, withdrawn, "withdrawn_page")
+    withdrawn_page["bulk_form_id"] = "bulk-withdrawn" if withdrawn else ""
     return render(
         request,
         "submissions/profile.html",
@@ -480,10 +514,11 @@ def profile(request):
             "sort_links": _sort_links(request, controls["sort"]),
             "kind_choices": _kind_choices(),
             "pending_state_choices": _pending_state_choices(PROFILE_PENDING_STATES),
-            "pending": _page_context(request, pending, "pending_page"),
+            "pending": pending_page,
             "published_sections": published_sections,
-            "withdrawn": _page_context(request, withdrawn, "withdrawn_page"),
+            "withdrawn": withdrawn_page,
             "rejected": _page_context(request, rejected, "rejected_page"),
+            "my_collections": my_collections,
         },
     )
 
@@ -581,6 +616,8 @@ def review_dashboard(request):
     quote_offset = DailyQuoteSchedule.current_day_offset()
     quote_window = quote_window_for_date(quote_day, quote_offset)
     current_quote = next(item for item in quote_window if item.is_current)
+    pending_page = _page_context(request, pending, "pending_page")
+    pending_page["bulk_form_id"] = "bulk-review" if pending else ""
     return render(
         request,
         "submissions/review.html",
@@ -590,7 +627,7 @@ def review_dashboard(request):
             "sort_links": _sort_links(request, controls["sort"]),
             "kind_choices": _kind_choices(),
             "pending_state_choices": _pending_state_choices(REVIEW_QUEUE_STATES),
-            "pending": _page_context(request, pending, "pending_page"),
+            "pending": pending_page,
             "recently_withdrawn": _page_context(
                 request, recently_withdrawn, "withdrawn_page"
             ),
@@ -933,6 +970,7 @@ def _example_payload(kind: SubmissionKind) -> dict:
             Tag.objects.filter(namespace="algorithm").values_list("id", flat=True)[:1]
         )
         return {
+            "visibility": "public",
             "slug": "example-decoder-0-1",
             "name": "Example decoder",
             "version": "0.1",
@@ -948,6 +986,7 @@ def _example_payload(kind: SubmissionKind) -> dict:
         }
     if kind is SubmissionKind.MACHINE:
         return {
+            "visibility": "public",
             "slug": "example-cpu",
             "machine_class": "cpu",
             "description": "Describe the hardware and execution environment.",
@@ -982,6 +1021,7 @@ def _example_payload(kind: SubmissionKind) -> dict:
         dem_artifact = example.detector_error_model_artifact_id if example else None
         manifest_artifact = example.manifest_artifact_id if example else None
         return {
+            "visibility": "public",
             "slug": "example-circuit-0-1",
             "name": "Example circuit",
             "previous_revision": None,
@@ -1018,6 +1058,7 @@ def _example_payload(kind: SubmissionKind) -> dict:
             "code_tags": [str(code)] if code else [],
             "ecz_terms": [str(ecz_code)] if ecz_code else [],
             "experiment_tags": [str(experiment)] if experiment else [],
+            "collections": [],
         }
     decoder = DecoderVersion.objects.filter(state="published").first()
     circuit = CircuitRevision.objects.filter(state="published").first()
@@ -1030,6 +1071,7 @@ def _example_payload(kind: SubmissionKind) -> dict:
     )
     missing = "00000000-0000-0000-0000-000000000000"
     return {
+        "visibility": "public",
         "decoder_version": str(decoder.id) if decoder else missing,
         "circuit_revision": str(circuit.id) if circuit else missing,
         "evaluator_version": str(evaluator.id) if evaluator else missing,

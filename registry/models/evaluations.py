@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from .artifacts import Artifact, SchemaRelease
-from .common import PublishedLifecycleModel, UUIDModel
+from .common import PublishedLifecycleModel, RecordVisibility, UUIDModel
 
 
 class Machine(UUIDModel, PublishedLifecycleModel):
@@ -111,6 +111,11 @@ class EvaluatorRelease(UUIDModel):
     created_at = models.DateTimeField(auto_now_add=True)
     published_at = models.DateTimeField(null=True, blank=True)
     withdrawn_at = models.DateTimeField(null=True, blank=True)
+    visibility = models.CharField(
+        max_length=10,
+        choices=RecordVisibility,
+        default=RecordVisibility.PUBLIC,
+    )
 
     class Meta:
         db_table = "evaluator_release"
@@ -134,7 +139,11 @@ class EvaluatorRelease(UUIDModel):
                     )
                 ),
                 name="evaluator_release_lifecycle_timestamps",
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(visibility__in=RecordVisibility.values),
+                name="evaluator_release_visibility_valid",
+            ),
         ]
 
     def __str__(self) -> str:

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Circuit batch preview · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><p class="eyebrow">Batch preview</p><h1>{{ manifest.circuits|length }} circuit{{ manifest.circuits|length|pluralize }}</h1></header>
+    <aside class="policy-bar"><strong>Nothing has been submitted yet</strong><span>The listed tags and collections will be created first. Circuit files, generated detector error models, and ingest manifests are immutable. All circuits then enter the normal review queue.</span></aside>
+
+    {% if manifest.new_tags %}<section class="table-section"><h2>New tags to create</h2><div class="table-scroll"><table class="data-table"><thead><tr><th>Reference</th><th>Kind</th><th>Name</th><th>Description</th></tr></thead><tbody>{% for item in manifest.new_tags %}<tr><td><code>new:{{ item.client_id }}</code></td><td>{{ item.namespace|title }}</td><td>{{ item.label }}</td><td>{{ item.description }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+    {% if manifest.new_collections %}<section class="table-section"><h2>New collections to create</h2><div class="table-scroll"><table class="data-table"><thead><tr><th>Reference</th><th>Collection</th><th>Visibility</th><th>Subcollections</th></tr></thead><tbody>{% for item in manifest.new_collections %}<tr><td><code>new:{{ item.client_id }}</code></td><td>{{ item.name }}</td><td>{{ item.visibility|title }}</td><td>{{ item.children|length }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+    <section class="table-section"><h2>Validated circuits</h2><div class="table-scroll"><table class="data-table"><thead><tr><th>File</th><th>Record</th><th>Detectors</th><th>Errors</th><th>Observables</th><th>Stim</th><th>Visibility</th></tr></thead><tbody>{% for item in manifest.circuits %}<tr><td><code>{{ item.file_name }}</code></td><td>{{ item.name }}<br><code>{{ item.slug }}</code></td><td>{{ item.derived.num_detectors }}</td><td>{{ item.derived.num_errors }}</td><td>{{ item.derived.num_observables }}</td><td>{{ item.derived.stim_version }}</td><td>{{ item.visibility|title }}</td></tr>{% endfor %}</tbody></table></div></section>
+    <details class="record-disclosure"><summary><span>Normalized manifest</span></summary><pre><code>{{ manifest_json }}</code></pre></details>
+    <div class="page-action-bar"><a class="button button-secondary" href="{% url 'collections:batch-create' %}">Back</a><form method="post" action="{% url 'collections:batch-commit' batch.id %}">{% csrf_token %}<button class="button" type="submit">Create tags and collections, then submit circuits</button></form></div>
+  </div>
+{% endblock %}

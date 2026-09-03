@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Circuit collections · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell explorer-layout">
+    <header class="page-heading compact-page-heading">
+      <h1>Circuit collections</h1>
+      {% if user.is_authenticated %}<p class="page-action-bar"><a class="button" href="{% url 'collections:create' %}">Create collection</a></p>{% endif %}
+    </header>
+    <form class="explorer-query collection-search" method="get">
+      <div class="explorer-search-line"><label class="visually-hidden" for="collection-query">Search collections</label><input id="collection-query" type="search" name="q" value="{{ query }}" placeholder="Search collections or curators"><button class="button-compact" type="submit">Search</button></div>
+    </form>
+    <section class="table-region">
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead><tr><th>Collection</th><th>Code classification</th><th>Experiment tags</th><th>Curator</th><th>Circuits</th><th>Subcollections</th><th>Visibility</th></tr></thead>
+          <tbody>
+            {% for collection in collections %}
+              <tr><td><a href="{% url 'collections:detail' collection.slug %}">{{ collection.name }}</a></td><td>{% if collection.display_code_tags %}{% include "components/tag_list.html" with tags=collection.display_code_tags only %}{% endif %}{% include "components/ecz_tag_list.html" with terms=collection.ecz_terms.all only %}{% if not collection.display_code_tags and not collection.ecz_terms.all %}<span class="muted">No tags</span>{% endif %}</td><td>{% include "components/tag_list.html" with tags=collection.display_experiment_tags only %}</td><td>{{ collection.submitted_by.display_name }}</td><td>{{ collection.direct_circuit_count }}</td><td>{{ collection.direct_child_count }}</td><td>{{ collection.get_visibility_display }}</td></tr>
+            {% empty %}<tr><td class="table-empty" colspan="7">No circuit collections match.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+{% endblock %}

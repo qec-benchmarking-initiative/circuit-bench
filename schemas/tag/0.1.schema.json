@@ -19,6 +19,10 @@
     "schema": {
       "const": "tag/0.1"
     },
+    "visibility": {
+      "enum": ["public", "private"],
+      "x-definition": "../../definitions/tag/0.1.md#record-visibility"
+    },
     "id": {
       "type": "string",
       "format": "uuid"
@@ -95,6 +99,7 @@
   },
   "required": [
     "schema",
+    "visibility",
     "id",
     "namespace",
     "slug",

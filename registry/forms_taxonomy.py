@@ -5,6 +5,8 @@ from django.core.validators import RegexValidator
 from django.db.models import Q
 
 from registry.models import EczTerm, NoiseModel, Tag, TagEczMapping
+from registry.models.common import RecordVisibility
+from registry.services.visibility import actor_visibility_q
 
 LOWERCASE_SLUG_VALIDATOR = RegexValidator(
     regex=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
@@ -17,6 +19,11 @@ HEX_COLOUR_VALIDATOR = RegexValidator(
 
 
 class CustomTagForm(forms.Form):
+    visibility = forms.ChoiceField(
+        choices=RecordVisibility.choices,
+        initial=RecordVisibility.PUBLIC,
+        required=False,
+    )
     namespace = forms.ChoiceField(choices=Tag.Namespace)
     slug = forms.CharField(
         max_length=200,
@@ -41,11 +48,13 @@ class CustomTagForm(forms.Form):
         label="Error Correction Zoo parents",
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, actor=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["parents"].queryset = Tag.objects.exclude(
-            status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED)
-        ).order_by("namespace", "label", "id")
+        self.fields["parents"].queryset = (
+            Tag.objects.exclude(status__in=(Tag.Status.DEPRECATED, Tag.Status.RETIRED))
+            .filter(actor_visibility_q(actor))
+            .order_by("namespace", "label", "id")
+        )
         self.fields["ecz_parents"].queryset = EczTerm.objects.filter(
             status=EczTerm.Status.CURRENT
         ).order_by("display_name", "ecz_code_id")
@@ -54,6 +63,8 @@ class CustomTagForm(forms.Form):
         if not self.is_valid():
             raise ValueError("Cannot extract an invalid custom-tag form.")
         return {
+            "visibility": self.cleaned_data.get("visibility")
+            or RecordVisibility.PUBLIC,
             "namespace": self.cleaned_data["namespace"],
             "slug": self.cleaned_data["slug"],
             "label": self.cleaned_data["label"],
@@ -83,11 +94,12 @@ class TagEditForm(forms.Form):
         label="Error Correction Zoo parents",
     )
 
-    def __init__(self, *args, tag: Tag, **kwargs):
+    def __init__(self, *args, tag: Tag, actor=None, **kwargs):
         super().__init__(*args, **kwargs)
         current_parent_ids = tag.parents.values_list("id", flat=True)
         self.fields["parents"].queryset = (
             Tag.objects.filter(namespace=tag.namespace)
+            .filter(actor_visibility_q(actor))
             .exclude(id=tag.id)
             .filter(
                 Q(status__in=(Tag.Status.CUSTOM, Tag.Status.OFFICIAL))
@@ -104,10 +116,15 @@ class TagEditForm(forms.Form):
 
 
 class NoiseModelSubmissionForm(forms.Form):
+    visibility = forms.ChoiceField(
+        choices=RecordVisibility.choices,
+        initial=RecordVisibility.PUBLIC,
+        required=False,
+    )
     slug = forms.CharField(
         max_length=200,
         validators=[LOWERCASE_SLUG_VALIDATOR],
-        help_text="Permanent URL name for this revision.",
+        help_text="This becomes the permanent URL name for this revision.",
     )
     name = forms.CharField(max_length=200)
     short_description = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}))
@@ -121,17 +138,21 @@ class NoiseModelSubmissionForm(forms.Form):
         label="Previous noise-model revision",
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, actor=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["predecessor"].queryset = NoiseModel.objects.filter(
-            state__in=("published", "withdrawn")
-        ).order_by("name", "created_at", "id")
+        self.fields["predecessor"].queryset = (
+            NoiseModel.objects.filter(state__in=("published", "withdrawn"))
+            .filter(actor_visibility_q(actor))
+            .order_by("name", "created_at", "id")
+        )
 
     def payload(self) -> dict:
         if not self.is_valid():
             raise ValueError("Cannot extract an invalid noise-model form.")
         predecessor = self.cleaned_data["predecessor"]
         return {
+            "visibility": self.cleaned_data.get("visibility")
+            or RecordVisibility.PUBLIC,
             "slug": self.cleaned_data["slug"],
             "name": self.cleaned_data["name"],
             "short_description": self.cleaned_data["short_description"],

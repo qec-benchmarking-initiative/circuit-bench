@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if operation == "edit" %}Edit{% else %}Create{% endif %} circuit collection · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><p class="eyebrow"><a href="{% url 'collections:list' %}">Circuit collections</a></p><h1>{% if operation == "edit" %}Edit {{ collection.name }}{% else %}Create circuit collection{% endif %}</h1></header>
+    <form class="stacked-record-form" method="post">
+      {% csrf_token %}{{ form.non_field_errors }}
+      {% for field in form %}{% if field.name != "code_tags" and field.name != "ecz_terms" and field.name != "experiment_tags" %}<div class="form-row"><div class="form-row-label">{{ field.label_tag }}</div><div class="form-row-control">{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div></div>{% endif %}{% endfor %}
+      <div class="form-row"><div class="form-row-label"><label>Code classification</label></div><div class="form-row-control">{% url 'taxonomy:tag-create-json' as tag_create_url %}{% include "components/pickers/tag.html" with picker_id=code_tag_picker.picker_id label="Code classification" input_name=code_tag_picker.input_name tags=code_tag_picker.tags selected_keys=code_tag_picker.selected_keys selected_ecz_terms=code_tag_picker.selected_ecz_terms ecz_input_name=code_tag_picker.ecz_input_name mode="submission" open_label="Choose tags…" allow_create=True tag_namespace=code_tag_picker.tag_namespace create_url=tag_create_url only %}{% if code_tag_picker.errors %}<div class="field-errors">{{ code_tag_picker.errors }}</div>{% endif %}</div></div>
+      <div class="form-row"><div class="form-row-label"><label>Experiment tags</label></div><div class="form-row-control">{% include "components/pickers/tag.html" with picker_id=experiment_tag_picker.picker_id label="Experiment tags" input_name=experiment_tag_picker.input_name tags=experiment_tag_picker.tags selected_keys=experiment_tag_picker.selected_keys mode="submission" open_label="Choose tags…" allow_create=True tag_namespace=experiment_tag_picker.tag_namespace create_url=tag_create_url only %}{% if experiment_tag_picker.errors %}<div class="field-errors">{{ experiment_tag_picker.errors }}</div>{% endif %}</div></div>
+      <div class="form-actions"><button class="button" type="submit">{% if operation == "edit" %}Save collection{% else %}Create collection{% endif %}</button>{% if collection %}<a class="button button-secondary" href="{% url 'collections:members' collection.slug %}">Edit contents</a>{% endif %}<a class="button button-secondary" href="{% if collection %}{% url 'collections:detail' collection.slug %}{% else %}{% url 'collections:list' %}{% endif %}">Cancel</a></div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}<script src="{% static 'js/tag-picker.js' %}?v=0.1.20260903b" defer></script>{% endblock %}

@@ -5,6 +5,7 @@ import json
 from django import forms
 
 from registry.models import BenchmarkRevision, DecoderVersion, Result
+from registry.models.common import RecordVisibility
 from registry.services.benchmark_submissions import (
     BenchmarkValidationError,
     canonical_benchmark_payload,
@@ -12,6 +13,11 @@ from registry.services.benchmark_submissions import (
 
 
 class BenchmarkRevisionSubmissionForm(forms.Form):
+    visibility = forms.ChoiceField(
+        choices=RecordVisibility.choices,
+        initial=RecordVisibility.PUBLIC,
+        required=False,
+    )
     slug = forms.SlugField(max_length=200)
     name = forms.CharField(max_length=200)
     version = forms.CharField(max_length=100)
@@ -53,6 +59,7 @@ class BenchmarkRevisionSubmissionForm(forms.Form):
         if self.errors:
             return cleaned
         payload = {
+            "visibility": cleaned.get("visibility") or RecordVisibility.PUBLIC,
             "slug": cleaned.get("slug"),
             "name": cleaned.get("name"),
             "version": cleaned.get("version"),

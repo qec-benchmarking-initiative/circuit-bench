@@ -68,6 +68,13 @@ def result_filter_state(parameters: QueryDict) -> ResultFilterState:
             "decoder_slug": parameters.get("scope_decoder", "").strip(),
             "machine_slug": parameters.get("scope_machine", "").strip(),
             "benchmark_slug": parameters.get("scope_benchmark", "").strip(),
+            "collection_slug": parameters.get("scope_collection", "").strip(),
+            "include_collection_descendants": parameters.get(
+                "include_descendants", "true"
+            )
+            .strip()
+            .lower()
+            not in {"0", "false", "no"},
         },
         raw_ranges=raw_ranges,
         parsed_ranges=parsed_ranges,

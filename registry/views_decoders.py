@@ -244,7 +244,7 @@ class DecoderDetailView(DetailView):
     template_name = "decoders/detail.html"
 
     def get_queryset(self):
-        return public_decoder_detail()
+        return public_decoder_detail(self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -384,6 +384,7 @@ class DecoderDetailView(DetailView):
             request,
             queryset=public_result_catalogue(
                 decoder=decoder,
+                viewer=request.user,
                 code_tag_slugs=code_tags,
                 code_tag_match=code_tag_match,
                 experiment_tag_slugs=experiment_tags,

@@ -58,6 +58,7 @@ def create_tag_json(request):
             submitter=request.user,
             namespace=request.POST.get("namespace", ""),
             label=request.POST.get("label", ""),
+            visibility=request.POST.get("visibility", "public"),
             description=request.POST.get("description", ""),
             aliases=request.POST.get("aliases", ""),
             parents=request.POST.getlist("parents"),
@@ -101,7 +102,7 @@ def create_tag_json(request):
 @require_GET
 def tag_detail(request, namespace, slug):
     tag = get_object_or_404(
-        tag_detail_queryset(),
+        tag_detail_queryset(request.user),
         namespace=namespace,
         slug=slug,
     )
@@ -145,7 +146,7 @@ def tag_detail(request, namespace, slug):
 @require_http_methods(["GET", "POST"])
 def tag_edit(request, namespace, slug):
     tag = get_object_or_404(
-        tag_detail_queryset(),
+        tag_detail_queryset(request.user),
         namespace=namespace,
         slug=slug,
     )
@@ -158,7 +159,9 @@ def tag_edit(request, namespace, slug):
         "parents": list(tag.parents.values_list("id", flat=True)),
         "ecz_parents": list(tag.ecz_parents.values_list("id", flat=True)),
     }
-    form = TagEditForm(request.POST or None, tag=tag, initial=initial)
+    form = TagEditForm(
+        request.POST or None, tag=tag, actor=request.user, initial=initial
+    )
     if request.method == "POST" and form.is_valid():
         try:
             update_tag(tag.id, actor=request.user, **form.cleaned_data)
@@ -170,7 +173,9 @@ def tag_edit(request, namespace, slug):
             messages.success(request, "The tag was updated.")
             return redirect(tag.get_absolute_url())
     current_parent_ids = list(tag.parents.values_list("id", flat=True))
-    parent_tags = list(active_tag_queryset(include_ids=current_parent_ids))
+    parent_tags = list(
+        active_tag_queryset(include_ids=current_parent_ids, actor=request.user)
+    )
     for parent in parent_tags:
         parent.picker_key = str(parent.id)
     selected_parent_ids = {
@@ -200,7 +205,7 @@ def tag_edit(request, namespace, slug):
 @require_http_methods(["GET", "POST"])
 def tag_delete(request, namespace, slug):
     tag = get_object_or_404(
-        tag_detail_queryset(),
+        tag_detail_queryset(request.user),
         namespace=namespace,
         slug=slug,
     )

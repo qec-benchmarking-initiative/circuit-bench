@@ -16,6 +16,7 @@ CONTENT_ROOT = Path(settings.BASE_DIR) / "content"
 DEFINITION_ROOT = Path(settings.BASE_DIR) / "definitions"
 PAGE_FILES = {
     "about": "about.md",
+    "api": "api.md",
     "tags": "tags.md",
     "query-syntax": "query-syntax.md",
     "submission-policy": "submission-policy.md",

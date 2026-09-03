@@ -50,6 +50,10 @@ NULLABLE_POSITIVE = {"type": ["integer", "null"], "minimum": 1}
 
 
 def _base_schema(kind: SubmissionKind, properties, required) -> dict[str, Any]:
+    properties = {
+        "visibility": {"enum": ["public", "private"]},
+        **properties,
+    }
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": f"urn:circuit-bench:submission:{kind.value}:0.1",
@@ -139,6 +143,11 @@ SUBMISSION_SCHEMAS: dict[SubmissionKind, dict[str, Any]] = {
                 "minItems": 1,
                 "uniqueItems": True,
             },
+            "collections": {
+                "type": "array",
+                "items": UUID,
+                "uniqueItems": True,
+            },
         },
         [
             "slug",
@@ -168,6 +177,7 @@ SUBMISSION_SCHEMAS: dict[SubmissionKind, dict[str, Any]] = {
             "manifest_artifact",
             "code_tags",
             "experiment_tags",
+            "collections",
         ],
     ),
     SubmissionKind.RESULT: _base_schema(

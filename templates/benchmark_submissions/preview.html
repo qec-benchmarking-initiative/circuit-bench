@@ -8,6 +8,7 @@
     <aside class="policy-bar"><strong>Approval Process v0.1:</strong> Submitting creates an unpublished benchmark revision for administrator review.</aside>
     <section class="submission-preview-section">
       <dl class="stacked-metadata">
+        <div><dt>Visibility</dt><dd>{{ payload.visibility|title }}</dd></div>
         <div><dt>Slug</dt><dd><code>{{ payload.slug }}</code></dd></div>
         <div><dt>Previous revision</dt><dd>{{ payload.previous_revision|default:"None" }}</dd></div>
         <div><dt>Description</dt><dd>{{ payload.description|default:"—" }}</dd></div>

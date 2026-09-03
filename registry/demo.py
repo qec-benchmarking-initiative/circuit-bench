@@ -14,6 +14,7 @@ from registry.models import (
     BenchmarkAttemptResult,
     BenchmarkRevision,
     BenchmarkRevisionItem,
+    CircuitCollection,
     CircuitRevision,
     CircuitRevisionCodeTag,
     CircuitRevisionEczTerm,
@@ -589,6 +590,7 @@ def seed_demo_data() -> dict[str, int]:
     from registry.demo_algorithm_taxonomy import reconcile_demo_algorithm_taxonomy
 
     reconcile_demo_algorithm_taxonomy()
+    _ensure_demo_collections(uploader)
 
     return demo_counts()
 
@@ -701,6 +703,75 @@ def _refresh_demo_presentation() -> None:
         from registry.demo_algorithm_taxonomy import reconcile_demo_algorithm_taxonomy
 
         reconcile_demo_algorithm_taxonomy()
+        _ensure_demo_collections(uploader)
+
+
+def _ensure_demo_collections(uploader: Account) -> None:
+    """Keep a small nested collection family available for UI testing."""
+
+    from registry.services.collections import create_collection, set_collection_members
+
+    memory = Tag.objects.filter(
+        id=demo_id("tag/experiment/memory"), status=Tag.Status.OFFICIAL
+    ).first()
+    rotated = EczTerm.objects.filter(
+        ecz_code_id="rotated_surface", status=EczTerm.Status.CURRENT
+    ).first()
+
+    def ensure(
+        slug, name, description, visibility, *, experiment_tags=(), ecz_terms=()
+    ):
+        collection = CircuitCollection.objects.filter(slug=slug).first()
+        if collection is None:
+            collection = create_collection(
+                actor=uploader,
+                slug=slug,
+                name=name,
+                description=description,
+                visibility=visibility,
+                experiment_tags=experiment_tags,
+                ecz_terms=ecz_terms,
+            )
+        return collection
+
+    root = ensure(
+        "demo-memory-experiments",
+        "Memory experiments",
+        "Demonstration collection of memory-circuit families.",
+        "public",
+        experiment_tags=(memory,) if memory else (),
+    )
+    child = ensure(
+        "demo-rotated-surface-memories",
+        "Rotated surface-code memories",
+        "A nested demonstration collection for one circuit family.",
+        "public",
+        experiment_tags=(memory,) if memory else (),
+        ecz_terms=(rotated,) if rotated else (),
+    )
+    ensure(
+        "demo-private-paper-circuits",
+        "Unpublished paper circuits",
+        "A private collection used to exercise contributor and admin visibility.",
+        "private",
+    )
+    circuit_ids = list(
+        CircuitRevision.objects.filter(
+            id=demo_id("circuit/rotated-memory-d5")
+        ).values_list("id", flat=True)
+    )
+    set_collection_members(
+        child,
+        actor=uploader,
+        circuit_ids=circuit_ids,
+        child_ids=(),
+    )
+    set_collection_members(
+        root,
+        actor=uploader,
+        circuit_ids=(),
+        child_ids=(child.id,),
+    )
 
 
 def _ensure_demo_tag_aliases(uploader: Account) -> None:

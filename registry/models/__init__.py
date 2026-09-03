@@ -13,6 +13,16 @@ from .benchmarks import (
     BenchmarkRevisionItem,
 )
 from .circuits import CircuitRevision, NoiseModel
+from .collections import (
+    CircuitBatch,
+    CircuitBatchItem,
+    CircuitCollection,
+    CircuitCollectionChild,
+    CircuitCollectionCodeTag,
+    CircuitCollectionEczTerm,
+    CircuitCollectionExperimentTag,
+    CircuitCollectionMember,
+)
 from .decoders import DecoderVersion
 from .ecz import (
     CircuitRevisionEczTerm,
@@ -49,6 +59,14 @@ __all__ = [
     "BenchmarkRevision",
     "BenchmarkRevisionItem",
     "CircuitRevision",
+    "CircuitBatch",
+    "CircuitBatchItem",
+    "CircuitCollection",
+    "CircuitCollectionChild",
+    "CircuitCollectionCodeTag",
+    "CircuitCollectionEczTerm",
+    "CircuitCollectionExperimentTag",
+    "CircuitCollectionMember",
     "CircuitRevisionCodeTag",
     "CircuitRevisionExperimentTag",
     "CircuitRevisionEczTerm",

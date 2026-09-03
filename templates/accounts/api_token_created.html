@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}API token created · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><h1>API token created</h1></header>
+    <section class="record-section">
+      <p>Copy this token now. Circuit Bench cannot show it again.</p>
+      <label for="created-api-token">Bearer token</label>
+      <textarea id="created-api-token" class="submission-json" rows="3" readonly>{{ issued.secret }}</textarea>
+      <p><strong>{{ issued.record.name }}</strong> · expires {{ issued.record.expires_at|date:"Y-m-d H:i" }} UTC</p>
+      <p><a class="button" href="{% url 'pages:static-reference' slug='api' %}">Open API guide</a> <a class="button button-secondary" href="{% url 'account-identity-list' %}">Return to settings</a></p>
+    </section>
+  </div>
+{% endblock %}

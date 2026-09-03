@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit contents · {{ collection.name }} · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading"><p class="eyebrow"><a href="{% url 'collections:detail' collection.slug %}">{{ collection.name }}</a></p><h1>Edit collection contents</h1></header>
+    <form class="stacked-record-form" method="post">
+      {% csrf_token %}{{ form.non_field_errors }}
+      <div class="form-row"><div class="form-row-label"><label>Circuits</label></div><div class="form-row-control record-picker-control">{% include "components/pickers/related_record.html" with cell=circuit_picker only %}<small>{{ form.circuits.help_text }}</small>{{ form.circuits.errors }}</div></div>
+      <div class="form-row"><div class="form-row-label"><label>Subcollections</label></div><div class="form-row-control record-picker-control">{% include "components/pickers/related_record.html" with cell=collection_picker only %}{{ form.child_collections.errors }}</div></div>
+      <div class="form-actions"><button class="button" type="submit">Save contents</button><a class="button button-secondary" href="{% url 'collections:detail' collection.slug %}">Cancel</a></div>
+    </form>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}<script src="{% static 'js/related-record-picker.js' %}" defer></script>{% endblock %}

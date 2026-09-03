@@ -132,6 +132,10 @@
     "schema": {
       "const": "evaluator/0.1"
     },
+    "visibility": {
+      "enum": ["public", "private"],
+      "x-definition": "../../definitions/evaluator/0.1.md#record-visibility"
+    },
     "id": {
       "type": "string",
       "format": "uuid"
@@ -197,6 +201,7 @@
   },
   "required": [
     "schema",
+    "visibility",
     "id",
     "version",
     "source_url",

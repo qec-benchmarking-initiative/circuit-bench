@@ -20,6 +20,7 @@ REFERENCE_PICKERS = {
     "machine": "machines",
     "supersedes_result": "results",
     "supersedes_machine": "machines",
+    "collections": "owned-collections",
 }
 
 TAG_FIELDS = {"algorithm_tags", "code_tags", "experiment_tags"}
@@ -116,6 +117,11 @@ LAYOUTS = {
             "Code and experiment classification",
             "Use the shared coloured tag vocabulary.",
             (("stack", ("code_tags", "ecz_terms", "experiment_tags")),),
+        ),
+        (
+            "Collections",
+            "Add this revision to collections that you curate.",
+            (("stack", ("collections",)),),
         ),
         (
             "Circuit quantities",
@@ -266,7 +272,21 @@ LAYOUTS = {
 
 def submission_form_sections(form, kind: SubmissionKind | str):
     kind = SubmissionKind(kind)
-    sections = []
+    sections = [
+        {
+            "title": "Visibility",
+            "description": (
+                "Private records can be seen by you and site administrators, "
+                "including during review."
+            ),
+            "groups": [
+                {
+                    "layout": "inline",
+                    "fields": [_field_context(form, "visibility", kind, -1)],
+                }
+            ],
+        }
+    ]
     for section_index, (title, description, groups) in enumerate(LAYOUTS[kind]):
         rendered_groups = []
         for layout, names in groups:
@@ -362,7 +382,7 @@ def _field_context(form, name, kind, section_index):
         cell.update(
             {
                 "empty_label": "Choose…" if bound.field.required else "None",
-                "maximum_selections": 1,
+                "maximum_selections": 0 if name == "collections" else 1,
                 "required": bound.field.required,
                 "disabled": bound.field.disabled,
             }

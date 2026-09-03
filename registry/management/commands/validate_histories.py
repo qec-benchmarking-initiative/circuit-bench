@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from registry.models import (
     BenchmarkAttempt,
     BenchmarkRevision,
+    CircuitCollection,
     CircuitRevision,
     DecoderVersion,
     EvaluatorRelease,
@@ -25,6 +26,7 @@ MODEL_BY_KIND = {
     "benchmark": BenchmarkRevision,
     "benchmark_attempt": BenchmarkAttempt,
     "evaluator": EvaluatorRelease,
+    "collection": CircuitCollection,
 }
 
 PREDECESSOR_BY_KIND = {
@@ -435,13 +437,17 @@ class BaseHistoryValidator:
                 expected_state = "published"
                 withdrawn_event = None
             elif event.action == RecordEvent.Action.EDITED:
-                if published_seen:
+                if published_seen and history.record_kind != "collection":
                     self._error(
                         history, f"published record {record.id} was edited in place"
                     )
                 elif (
                     expected_state
                     not in {"pending_review", "pending_reapproval", "changes_requested"}
+                    and not (
+                        history.record_kind == "collection"
+                        and expected_state in {"published", "withdrawn"}
+                    )
                     and not migration_inferred
                 ):
                     self._error(

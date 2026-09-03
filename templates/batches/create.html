@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Upload circuit batch · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
+      <p class="eyebrow"><a href="{% url 'submissions:create' kind='circuit' %}">Submit a circuit</a></p>
+      <h1>Upload a circuit batch</h1>
+    </header>
+    {% include "components/api_submission_notice.html" %}
+    <aside class="policy-bar"><strong>Review and privacy</strong><span>Every circuit is reviewed separately. Private records are visible to site administrators during review and remain hidden from the public after approval.</span></aside>
+    <form class="stacked-record-form" method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="form-row"><div class="form-row-label">{{ form.manifest_file.label_tag }}</div><div class="form-row-control">{{ form.manifest_file }}<small>{{ form.manifest_file.help_text }} <a href="{% url 'collections:batch-schema' %}">JSON Schema</a></small>{{ form.manifest_file.errors }}</div></div>
+      <div class="form-row"><div class="form-row-label">{{ form.manifest_json.label_tag }}</div><div class="form-row-control">{{ form.manifest_json }}{{ form.manifest_json.errors }}</div></div>
+      <div class="form-row"><div class="form-row-label">{{ form.circuit_files.label_tag }}</div><div class="form-row-control">{{ form.circuit_files }}<small>{{ form.circuit_files.help_text }} Filenames are matched exactly to manifest keys.</small>{{ form.circuit_files.errors }}</div></div>
+      <div class="form-row"><div class="form-row-label">{{ form.idempotency_key.label_tag }}</div><div class="form-row-control">{{ form.idempotency_key }}<small>{{ form.idempotency_key.help_text }}</small>{{ form.idempotency_key.errors }}</div></div>
+      <div class="form-actions"><button class="button" type="submit">Validate and preview</button><a class="button button-secondary" href="{% url 'submissions:create' kind='circuit' %}">Single circuit form</a></div>
+    </form>
+  </div>
+{% endblock %}

@@ -10,6 +10,8 @@
       <h1>{% if operation == "edit" %}Edit pending {{ spec.label }}{% elif operation == "successor" %}{% if record.state == "withdrawn" %}Revise and resubmit{% else %}Create successor revision{% endif %}{% else %}Submit {{ spec.label }}{% endif %}</h1>
       {% if record_label %}<p>Based on {{ record_label }}.</p>{% endif %}
     </header>
+    {% if kind == "circuit" %}<div class="submission-top-actions"><a class="button" href="{% url 'collections:batch-create' %}">Upload a batch of circuits</a></div>{% endif %}
+    {% include "components/api_submission_notice.html" %}
     {% include "components/approval_policy_bar.html" with policy=policy_statement only %}
 
     <div class="submission-entry-grid">
@@ -44,6 +46,6 @@
 
 {% block extra_scripts %}
   <script src="{% static 'js/related-record-picker.js' %}" defer></script>
-  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260902c" defer></script>
+  <script src="{% static 'js/tag-picker.js' %}?v=0.1.20260903b" defer></script>
   <script src="{% static 'js/submission-schema-reuse.js' %}" defer></script>
 {% endblock %}

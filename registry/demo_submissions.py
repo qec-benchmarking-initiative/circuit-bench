@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import Account
+from pages.models import DailyQuoteSchedule
 from registry.demo import DEMO_ACCOUNT_ID, _demo_history, demo_id, seed_demo_data
 from registry.models import (
     BenchmarkAttempt,
@@ -35,6 +36,7 @@ from registry.services.taxonomy import submit_noise_model
 @transaction.atomic
 def seed_submission_demo_data() -> dict[str, int]:
     seed_demo_data()
+    DailyQuoteSchedule.objects.get_or_create(pk=1)
     admin = Account.objects.get(id=DEMO_ACCOUNT_ID)
     contributor = Account.objects.get(id=demo_id("account/contributor"))
     releases = {

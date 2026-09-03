@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Create API token · Circuit Bench{% endblock %}
+
+{% block content %}
+  <div class="page-shell compact-page">
+    <header class="page-heading compact-page-heading">
+      <p class="eyebrow"><a href="{% url 'account-identity-list' %}">Settings</a></p>
+      <h1>Create API token</h1>
+    </header>
+    <form class="stacked-record-form" method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        <div class="form-row"><div class="form-row-label">{{ field.label_tag }}</div><div class="form-row-control">{{ field }}{{ field.errors }}</div></div>
+      {% endfor %}
+      <div class="form-actions"><button class="button" type="submit">Create token</button><a class="button button-secondary" href="{% url 'account-identity-list' %}">Cancel</a></div>
+    </form>
+  </div>
+{% endblock %}

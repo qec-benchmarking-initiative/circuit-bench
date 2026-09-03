@@ -13,6 +13,7 @@ RECORD_EVENT_SUBJECT_FIELDS = (
     "benchmark_revision",
     "benchmark_attempt",
     "evaluator_release",
+    "circuit_collection",
 )
 
 
@@ -27,6 +28,7 @@ class RecordHistory(UUIDModel):
         BENCHMARK = "benchmark", "Benchmark revision"
         BENCHMARK_ATTEMPT = "benchmark_attempt", "Benchmark attempt"
         EVALUATOR = "evaluator", "Evaluator release"
+        COLLECTION = "collection", "Circuit collection"
 
     record_kind = models.CharField(max_length=30, choices=RecordKind)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -46,6 +48,7 @@ class RecordHistory(UUIDModel):
                         "benchmark",
                         "benchmark_attempt",
                         "evaluator",
+                        "collection",
                     ]
                 ),
                 name="record_history_kind_valid",
@@ -78,6 +81,12 @@ class RecordEvent(UUIDModel):
             "admin_credit_claim_override",
             "Admin credit claim override",
         )
+        MADE_PUBLIC = "made_public", "Made public"
+        MADE_PRIVATE = "made_private", "Made private"
+        MEMBER_ADDED = "member_added", "Circuit added"
+        MEMBER_REMOVED = "member_removed", "Circuit removed"
+        CHILD_ADDED = "child_added", "Subcollection added"
+        CHILD_REMOVED = "child_removed", "Subcollection removed"
 
     class ActorType(models.TextChoices):
         ACCOUNT = "account", "Account"
@@ -166,6 +175,13 @@ class RecordEvent(UUIDModel):
         on_delete=models.PROTECT,
         related_name="record_events",
     )
+    circuit_collection = models.ForeignKey(
+        "registry.CircuitCollection",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="record_events",
+    )
     action = models.CharField(max_length=40, choices=Action)
     note = models.TextField()
     details = models.JSONField(default=dict)
@@ -208,6 +224,12 @@ class RecordEvent(UUIDModel):
                         "added_alias",
                         "removed_alias",
                         "admin_credit_claim_override",
+                        "made_public",
+                        "made_private",
+                        "member_added",
+                        "member_removed",
+                        "child_added",
+                        "child_removed",
                     ]
                 ),
                 name="record_event_action_valid",
