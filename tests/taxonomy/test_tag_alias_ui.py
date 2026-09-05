@@ -409,5 +409,13 @@ def test_taxonomy_validator_detects_out_of_band_cycle(accounts):
     TagParent.objects.create(child=first, parent=second)
     TagParent.objects.create(child=second, parent=first)
 
-    with pytest.raises(CommandError, match="cycle"):
+    repeated = min((first, second), key=lambda tag: str(tag.id))
+    with pytest.raises(CommandError) as error:
         call_command("validate_tag_taxonomy")
+
+    message = str(error.value)
+    assert "cycle" in message
+    assert "returned to tag" in message
+    assert repeated.label in message
+    assert f"{repeated.namespace}:{repeated.slug}" in message
+    assert str(repeated.id) in message
