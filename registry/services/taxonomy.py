@@ -1041,17 +1041,30 @@ def _assert_tag_taxonomy_acyclic(edges: set[tuple]) -> None:
 
     def visit(node) -> None:
         if state.get(node) == "active":
+            tag = (
+                Tag.objects.filter(id=node)
+                .values("label", "namespace", "slug")
+                .first()
+            )
+            if tag is None:
+                tag_hint = f"id {node}"
+            else:
+                tag_hint = (
+                    f"{tag['label']!r} ({tag['namespace']}:{tag['slug']}; "
+                    f"id {node})"
+                )
             raise TaxonomyValidationError(
-                "That parent selection would create a cycle in the tag taxonomy."
+                "The tag taxonomy contains a cycle: traversal returned to tag "
+                f"{tag_hint}."
             )
         if state.get(node) == "complete":
             return
         state[node] = "active"
-        for parent_id in adjacency.get(node, ()):
+        for parent_id in sorted(adjacency.get(node, ()), key=str):
             visit(parent_id)
         state[node] = "complete"
 
-    for node in nodes:
+    for node in sorted(nodes, key=str):
         visit(node)
 
 
