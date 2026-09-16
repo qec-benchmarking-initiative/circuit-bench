@@ -152,6 +152,12 @@ class Command(BaseCommand):
             if schema_path.is_symlink() or not schema_path.is_file():
                 raise CommandError(f"Schema is not a regular file: {schema_path}")
 
+            self._validate_json_schema(schema_path)
+            if "x-definitions" in json.loads(schema_path.read_text()):
+                # YAML releases are frozen by install_schema_contracts, not this
+                # legacy draft loader.
+                continue
+
             definitions_path = definitions_root / record_type / f"{version}.md"
             if definitions_path.is_symlink() or not definitions_path.is_file():
                 raise CommandError(

@@ -4,6 +4,7 @@ from django import forms
 from django.core.validators import RegexValidator
 from django.db.models import Q
 
+from registry.forms_common import SubmissionForm
 from registry.models import EczTerm, NoiseModel, Tag, TagEczMapping
 from registry.models.common import RecordVisibility
 from registry.services.visibility import actor_visibility_q
@@ -18,8 +19,9 @@ HEX_COLOUR_VALIDATOR = RegexValidator(
 )
 
 
-class CustomTagForm(forms.Form):
+class CustomTagForm(SubmissionForm):
     visibility = forms.ChoiceField(
+        widget=forms.RadioSelect(attrs={"class": "visibility-options"}),
         choices=RecordVisibility.choices,
         initial=RecordVisibility.PUBLIC,
         required=False,
@@ -75,7 +77,7 @@ class CustomTagForm(forms.Form):
         }
 
 
-class TagEditForm(forms.Form):
+class TagEditForm(SubmissionForm):
     label = forms.CharField(max_length=200)
     description = forms.CharField(widget=forms.Textarea(attrs={"rows": 5}))
     aliases = forms.CharField(
@@ -115,8 +117,9 @@ class TagEditForm(forms.Form):
             self.fields["ecz_parents"].disabled = True
 
 
-class NoiseModelSubmissionForm(forms.Form):
+class NoiseModelSubmissionForm(SubmissionForm):
     visibility = forms.ChoiceField(
+        widget=forms.RadioSelect(attrs={"class": "visibility-options"}),
         choices=RecordVisibility.choices,
         initial=RecordVisibility.PUBLIC,
         required=False,
@@ -127,7 +130,14 @@ class NoiseModelSubmissionForm(forms.Form):
         help_text="This becomes the permanent URL name for this revision.",
     )
     name = forms.CharField(max_length=200)
-    short_description = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}))
+    short_description = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 4}),
+        help_text=(
+            "Describe the noise construction. If it takes a noise parameter, "
+            "define its meaning, units, and allowed range; otherwise state "
+            "that no parameter is used."
+        ),
+    )
     paper_url = forms.URLField(
         max_length=1000, label="Paper URL", assume_scheme="https"
     )
@@ -162,7 +172,7 @@ class NoiseModelSubmissionForm(forms.Form):
         }
 
 
-class TagPromotionForm(forms.Form):
+class TagPromotionForm(SubmissionForm):
     display_color = forms.CharField(
         max_length=7,
         label="Official colour",
@@ -173,7 +183,7 @@ class TagPromotionForm(forms.Form):
     )
 
 
-class TagDeprecationForm(forms.Form):
+class TagDeprecationForm(SubmissionForm):
     canonical_tag = forms.ModelChoiceField(queryset=Tag.objects.none())
 
     def __init__(self, *args, tag: Tag, **kwargs):
@@ -187,14 +197,14 @@ class TagDeprecationForm(forms.Form):
         )
 
 
-class CurationNoteForm(forms.Form):
+class CurationNoteForm(SubmissionForm):
     note = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 3}),
         help_text="This reason is retained in the permanent history.",
     )
 
 
-class EczMappingForm(forms.Form):
+class EczMappingForm(SubmissionForm):
     tag = forms.ModelChoiceField(queryset=Tag.objects.none())
     ecz_term = forms.ModelChoiceField(
         queryset=EczTerm.objects.none(),
@@ -221,7 +231,7 @@ class EczMappingForm(forms.Form):
         ).order_by("display_name", "ecz_code_id")
 
 
-class EczMappingRevocationForm(forms.Form):
+class EczMappingRevocationForm(SubmissionForm):
     note = forms.CharField(
         label="Demerge rationale",
         widget=forms.Textarea(attrs={"rows": 4}),

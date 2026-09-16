@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:circuit-bench:schema:machine:0.2",
+  "title": "Machine record 0.2",
+  "description": "A reusable Circuit Bench execution-environment record.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "nullableUuid": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "nullableDateTime": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "machine/0.2"
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "private"
+      ],
+      "x-definition": "../../definitions/machine/0.2.yaml#record-visibility"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 200
+    },
+    "class": {
+      "enum": [
+        "cpu",
+        "gpu",
+        "fpga",
+        "asic",
+        "hybrid"
+      ],
+      "x-definition": "../../definitions/machine/0.2.yaml#machine-class"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "x-definition": "../../definitions/machine/0.2.yaml#execution-environment-description"
+    },
+    "status": {
+      "enum": [
+        "physical",
+        "simulated",
+        "estimated"
+      ],
+      "x-definition": "../../definitions/machine/0.2.yaml#evidence-status"
+    },
+    "supersedes_machine_id": {
+      "$ref": "#/$defs/nullableUuid"
+    },
+    "state": {
+      "enum": [
+        "pending_reapproval",
+        "changes_requested",
+        "rejected",
+        "published",
+        "withdrawn"
+      ]
+    },
+    "submitted_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    },
+    "withdrawn_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    }
+  },
+  "required": [
+    "schema",
+    "visibility",
+    "id",
+    "slug",
+    "class",
+    "description",
+    "status",
+    "supersedes_machine_id",
+    "state",
+    "submitted_by",
+    "created_at",
+    "published_at",
+    "withdrawn_at"
+  ],
+  "x-definitions": {
+    "path": "../../definitions/machine/0.2.yaml",
+    "version": "0.2",
+    "sha256": "3e4f76d485e68e1b6e2d430f2e556323cb75077b9278a4fabb7094026e320c45"
+  },
+  "x-form-definitions": {
+    "visibility": "visibility",
+    "slug": "slug",
+    "machine_class": "machine-class",
+    "description": "description",
+    "status": "status",
+    "supersedes_machine": "supersedes-machine"
+  },
+  "x-submission-schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "urn:circuit-bench:submission:machine:0.2",
+    "title": "Circuit Bench machine submission 0.1",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "visibility": {
+        "enum": [
+          "public",
+          "private"
+        ],
+        "x-definition": "../../definitions/machine/0.2.yaml#visibility"
+      },
+      "slug": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        "x-definition": "../../definitions/machine/0.2.yaml#slug"
+      },
+      "machine_class": {
+        "enum": [
+          "cpu",
+          "gpu",
+          "fpga",
+          "asic",
+          "hybrid"
+        ],
+        "x-definition": "../../definitions/machine/0.2.yaml#machine-class"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1,
+        "x-definition": "../../definitions/machine/0.2.yaml#description"
+      },
+      "status": {
+        "enum": [
+          "physical",
+          "simulated",
+          "estimated"
+        ],
+        "x-definition": "../../definitions/machine/0.2.yaml#status"
+      },
+      "supersedes_machine": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uuid",
+        "x-definition": "../../definitions/machine/0.2.yaml#supersedes-machine"
+      },
+      "schema_version": {
+        "const": "0.2"
+      }
+    },
+    "required": [
+      "slug",
+      "machine_class",
+      "description",
+      "status",
+      "supersedes_machine",
+      "schema_version"
+    ]
+  }
+}

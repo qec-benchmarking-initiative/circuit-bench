@@ -1,0 +1,3 @@
+{% if status %}<span class="schema-status{% if status.outdated %} schema-status-outdated{% endif %}">
+  <a href="{{ status.url }}">{{ status.submitted }}</a>{% if status.outdated %} — older schema; current: {{ status.current }}. Still eligible for approval.{% endif %}
+</span>{% endif %}

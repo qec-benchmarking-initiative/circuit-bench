@@ -21,6 +21,7 @@ from registry.table_controls import (
 CIRCUIT_USAGE_COLUMNS = (
     ColumnSpec("name", "Circuit"),
     ColumnSpec("noise_model", "Noise model"),
+    ColumnSpec("noise_parameter", "Noise parameter", numeric=True),
     ColumnSpec("priors", "Randomised priors"),
     ColumnSpec("css", "CSS"),
     ColumnSpec("code_distance", "Code d ≤", numeric=True),
@@ -34,6 +35,7 @@ CIRCUIT_USAGE_COLUMNS = (
 CIRCUIT_USAGE_SORT_FIELDS = {
     "name": "name",
     "noise_model": "noise_model__name",
+    "noise_parameter": "noise_parameter",
     "priors": "noise_model__randomises_priors",
     "css": "is_css",
     "code_distance": "code_distance_upper_bound",
@@ -160,7 +162,13 @@ def _circuit_rows(records, visible_column_keys):
                 "key": "priors",
                 "value": "Yes" if circuit.noise_model.randomises_priors else "No",
             },
-            "css": {"key": "css", "value": "Yes" if circuit.is_css else "No"},
+            "noise_parameter": {
+                "key": "noise_parameter",
+                "value": circuit.noise_parameter,
+                "numeric": True,
+                "number_profile": "default",
+            },
+            "css": {"key": "css", "value": circuit.css_display},
             "code_distance": {
                 "key": "code_distance",
                 "value": circuit.code_distance_upper_bound,

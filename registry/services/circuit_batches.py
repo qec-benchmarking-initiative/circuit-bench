@@ -27,6 +27,7 @@ from registry.models import (
     Tag,
 )
 from registry.models.common import LifecycleState
+from registry.schema_contracts import ContractError, assert_current, current_version
 from registry.services.artifacts import store_artifact_chunks
 from registry.services.collections import (
     collection_queryset_for,
@@ -68,6 +69,7 @@ def batch_schema() -> dict:
         "description": {"type": ["string", "null"]},
         "revision_description": {"type": "string", "minLength": 1},
         "noise_model": reference,
+        "noise_parameter": {"type": ["number", "null"], "minimum": 0},
         "is_css": {"type": "boolean"},
         "code_distance_upper_bound": {"type": ["integer", "null"], "minimum": 1},
         "circuit_distance_upper_bound": {
@@ -103,9 +105,11 @@ def batch_schema() -> dict:
         "title": "Circuit Bench circuit batch manifest 0.1",
         "type": "object",
         "additionalProperties": False,
-        "required": ["schema", "circuits"],
+        "required": ["schema", "circuits"]
+        + (["schema_version"] if current_version("circuit") != "0.1" else []),
         "properties": {
             "schema": {"const": "circuit-batch/0.1"},
+            "schema_version": {"const": current_version("circuit")},
             "defaults": {
                 "type": "object",
                 "additionalProperties": False,
@@ -168,8 +172,8 @@ def batch_schema() -> dict:
     }
 
 
-def extract_uploaded_files(files) -> dict[str, bytes]:
-    """Return safe, flat Stim names from uploads and optional zip archives."""
+def extract_uploaded_files(files, *, suffix=".stim") -> dict[str, bytes]:
+    """Return bounded files of one type from uploads and optional zip archives."""
 
     extracted = {}
     expanded = 0
@@ -186,7 +190,7 @@ def extract_uploaded_files(files) -> dict[str, bytes]:
                     f"{name} is not a readable zip file."
                 ) from error
             for member in archive.infolist():
-                if member.is_dir() or not member.filename.lower().endswith(".stim"):
+                if member.is_dir() or not member.filename.lower().endswith(suffix):
                     continue
                 path = PurePosixPath(member.filename)
                 if path.is_absolute() or ".." in path.parts:
@@ -198,21 +202,26 @@ def extract_uploaded_files(files) -> dict[str, bytes]:
                     )
                 if expanded + member.file_size > MAX_EXPANDED_BYTES:
                     raise CircuitBatchError("Expanded batch files exceed 32 MiB.")
-                data = archive.read(member)
+                try:
+                    data = archive.read(member)
+                except (zipfile.BadZipFile, RuntimeError, NotImplementedError) as error:
+                    raise CircuitBatchError(
+                        f"Cannot read {file_name} from the zip archive."
+                    ) from error
                 expanded += len(data)
-                _add_stim_file(extracted, file_name, data)
+                _add_batch_file(extracted, file_name, data, suffix=suffix)
         else:
             expanded += len(raw)
-            _add_stim_file(extracted, name, raw)
+            _add_batch_file(extracted, name, raw, suffix=suffix)
         if expanded > MAX_EXPANDED_BYTES:
             raise CircuitBatchError("Expanded batch files exceed 32 MiB.")
     if not extracted:
         raise CircuitBatchError(
-            "Upload at least one .stim file or a zip containing one."
+            f"Upload at least one {suffix} file or a zip containing one."
         )
     if len(extracted) > MAX_BATCH_FILES:
         raise CircuitBatchError(
-            f"A batch may contain at most {MAX_BATCH_FILES} circuits."
+            f"A batch may contain at most {MAX_BATCH_FILES} files."
         )
     return extracted
 
@@ -228,7 +237,14 @@ def parse_manifest(raw) -> dict:
         raise CircuitBatchError("The manifest must be one JSON object.")
     if manifest.get("schema") != "circuit-batch/0.1":
         raise CircuitBatchError("Manifest schema must be circuit-batch/0.1.")
-    allowed = {"schema", "defaults", "circuits", "new_tags", "new_collections"}
+    allowed = {
+        "schema",
+        "schema_version",
+        "defaults",
+        "circuits",
+        "new_tags",
+        "new_collections",
+    }
     unexpected = sorted(set(manifest) - allowed)
     if unexpected:
         raise CircuitBatchError(f"Unknown manifest field: {unexpected[0]}.")
@@ -256,6 +272,10 @@ def validate_batch(
 ) -> BatchValidation:
     if not actor.is_active:
         raise PermissionDenied("Inactive accounts cannot submit batches.")
+    try:
+        assert_current("circuit", manifest.get("schema_version"))
+    except ContractError as error:
+        raise CircuitBatchError(str(error)) from error
     _validate_manifest_schema(manifest)
     idempotency_key = (idempotency_key or "").strip() or None
     normalized = _normalize_manifest(manifest, file_bytes=file_bytes, actor=actor)
@@ -341,6 +361,10 @@ def commit_batch(batch_id, *, actor: Account) -> tuple[CircuitRevision, ...]:
         raise CircuitBatchError("This batch is not ready to commit.")
 
     normalized = batch.normalized_manifest
+    try:
+        assert_current("circuit", normalized.get("schema_version"))
+    except ContractError as error:
+        raise CircuitBatchError(str(error)) from error
     tag_ids = _create_declared_tags(normalized["new_tags"], actor=actor)
     collections = _create_declared_collections(
         normalized["new_collections"], tag_ids=tag_ids, actor=actor
@@ -474,6 +498,7 @@ def _normalize_manifest(manifest, *, file_bytes, actor):
         normalized_circuits.append(spec)
     return {
         "schema": "circuit-batch/0.1",
+        "schema_version": manifest.get("schema_version", "0.1"),
         "new_tags": new_tags,
         "new_collections": new_collections,
         "circuits": normalized_circuits,
@@ -552,6 +577,11 @@ def _materialize_circuit_payload(spec, *, sampling_artifact, tag_ids, actor):
     args = derived["dem_arguments"]
     payload = {
         "visibility": spec.get("visibility", "public"),
+        **(
+            {"schema_version": current_version("circuit")}
+            if current_version("circuit") != "0.1"
+            else {}
+        ),
         "slug": spec["slug"],
         "name": spec.get("name") or PurePosixPath(spec["file_name"]).stem,
         "previous_revision": None,
@@ -560,6 +590,7 @@ def _materialize_circuit_payload(spec, *, sampling_artifact, tag_ids, actor):
             "revision_description", "First submitted revision."
         ),
         "noise_model": str(spec["noise_model"]),
+        "noise_parameter": spec.get("noise_parameter"),
         "is_css": bool(spec.get("is_css", False)),
         "code_distance_upper_bound": spec.get("code_distance_upper_bound"),
         "circuit_distance_upper_bound": spec.get("circuit_distance_upper_bound"),
@@ -973,11 +1004,13 @@ def _resolve_tag_ref(value, tag_ids):
     return str(tag_ids.get(value, value))
 
 
-def _add_stim_file(output, name, data):
-    if not name.lower().endswith(".stim"):
-        raise CircuitBatchError(f"Only .stim files are accepted ({name}).")
+def _add_batch_file(output, name, data, *, suffix=".stim"):
+    if not name.lower().endswith(suffix):
+        raise CircuitBatchError(f"Only {suffix} files are accepted ({name}).")
     if name in output:
         raise CircuitBatchError(f"Duplicate filename in batch: {name}.")
+    if len(output) >= MAX_BATCH_FILES:
+        raise CircuitBatchError(f"A batch may contain at most {MAX_BATCH_FILES} files.")
     if len(data) > MAX_STIM_BYTES:
         raise CircuitBatchError(f"{name} exceeds the 1 MiB circuit limit.")
     output[name] = data

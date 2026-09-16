@@ -21,7 +21,7 @@
         <tr>
           {% if bulk_form_id %}<td class="bulk-select-column"><input type="checkbox" name="target" value="{{ row.bulk_target }}" form="{{ bulk_form_id }}" data-bulk-target aria-label="Select {{ row.label }}"></td>{% endif %}
           {% if show_kind %}<td>{{ row.kind_label }}</td>{% endif %}
-          <td>{% if row.url %}<a href="{{ row.url }}">{% endif %}{{ row.label }}{% if row.url %}</a>{% endif %}</td>
+          <td>{% if row.url %}<a href="{{ row.url }}">{% endif %}{{ row.label }}{% if row.url %}</a>{% endif %}{% if row.schema_status.outdated %}<br>{% include "components/schema_status.html" with status=row.schema_status only %}{% endif %}</td>
           <td><span class="status-badge status-{{ row.state }}">{{ row.state_label }}</span></td>
           <td><span class="status-badge status-{{ row.visibility }}">{{ row.visibility_label }}</span></td>
           {% if show_submitter %}<td>{{ row.submitted_by }}</td>{% endif %}

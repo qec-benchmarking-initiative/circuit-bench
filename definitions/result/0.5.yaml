@@ -1,0 +1,501 @@
+record_type: result
+version: '0.5'
+status: Provisional 0.x definitions for development and review.
+definitions:
+  unit-represented-by-a-result:
+    is_guidance: false
+    summary: Unit represented by a result
+    expanded: 'One result is one self-contained statistical claim produced for exactly one:
+
+
+      - decoder version;
+
+      - circuit revision;
+
+      - evaluator release;
+
+      - hyperparameter configuration; and
+
+      - declared set of evaluated shots.
+
+
+      The references identify immutable versions, not decoder, circuit, or
+
+      evaluator families.
+
+
+      The site never pools, sums, or otherwise combines separate result records.
+
+      Repeated runs remain separate results even when all their referenced versions
+
+      and configurations match. A contributor who wants to report a combination of
+
+      several runs must calculate it outside the site and submit the combined output
+
+      as a new, self-contained result.'
+  frozen-identity-and-provenance-fields:
+    is_guidance: false
+    summary: Frozen identity and provenance fields
+    expanded: "The result record contains the following fields whose meanings are fixed for\n\
+      this draft:\n\n```text\nschema: \"result/0.1\"\nid: UUID\n\ndecoder_version_id: UUID\n\
+      circuit_revision_id: UUID\nevaluator_version_id: UUID\n\ncredits[]:\n  - name: string\n\
+      \  OR\n  - account_id: UUID\n\ndescription: optional string\n\nhyperparameter_values:\
+      \ optional string\nhyperparameter_values_artifact: optional frozen JSON file\n\nsupersedes_result_id:\
+      \ optional UUID\n\nreproduction_status:\n  independent_reproduction\n  | decoder_author_verified\n\
+      \nsubmitted_by: account UUID\nlifecycle_state: pending_review | pending_reapproval |\
+      \ changes_requested\n  | rejected | published | withdrawn\ncreated_at: server timestamp\n\
+      published_at: optional server timestamp\nwithdrawn_at: optional server timestamp\n```\n\
+      \n`id`, `schema`, `reproduction_status`, lifecycle fields, `submitted_by`, and\ntimestamps\
+      \ are server-managed. Foreign-key validity, lifecycle consistency,\nand the cross-record\
+      \ rules in this document are enforced by the application\nand database in addition to\
+      \ the eventual JSON Schema."
+  credits-and-uploader:
+    is_guidance: false
+    summary: Credits and uploader
+    expanded: 'Result credits use the same model as decoder credits. Each ordered credit is
+
+      either an unverified display-name string or a registered site account.
+
+      Identical name strings do not assert a shared identity. The uploader is always
+
+      the registered account identified by `submitted_by`, independently of the
+
+      credit list.'
+  hyperparameter-values:
+    is_guidance: true
+    summary: Record the hyperparameter settings used for this single result, including values
+      that differ from defaults.
+    expanded: Describe the single hyperparameter configuration used for this result. Free
+      text and a JSON values file may coexist, but must describe the same configuration; do
+      not combine measurements from different configurations.
+  independent-reproduction-and-decoder-author-verification:
+    is_guidance: false
+    summary: Independent reproduction and decoder-author verification
+    expanded: "`reproduction_status` is verified by the server rather than freely selected\
+      \ by\nthe contributor.\n\nIt is `decoder_author_verified` when either:\n\n1. `submitted_by`\
+      \ is an account credited on the referenced decoder\n   version; or\n2. an account credited\
+      \ on that decoder version explicitly approves the result.\n\nOtherwise it is `independent_reproduction`.\n\
+      \nA name-only decoder credit cannot authenticate submission or approval. The\nperson\
+      \ must first claim or link that credit to their registered account.\nApprovals are timestamped,\
+      \ audited workflow records identifying the result and\napproving account. They are trust\
+      \ metadata, not scientific measurements, and\nmay be added after publication without\
+      \ creating a replacement result.\n\nThe public labels are **Independent reproduction**\
+      \ and **Decoder-author\nsubmitted/approved**. The second label deliberately does not\
+      \ claim that a\ndecoder author personally executed the run."
+  record-visibility:
+    is_guidance: false
+    summary: Record visibility
+    expanded: '`public` makes the exact result available through public pages and APIs.
+
+      `private` restricts it to its contributor and site administrators, including
+
+      during review. The contributor may change visibility without replacing the
+
+      result unless an official benchmark requires it to remain public. Visibility
+
+      is access-control metadata and does not alter any measurement or score.'
+  publication-correction-and-supersession:
+    is_guidance: false
+    summary: Publication, correction, and supersession
+    expanded: 'A published result''s submitted scientific content is immutable. To correct
+      a
+
+      published result, the contributor submits a new result whose
+
+      `supersedes_result_id` points to the old result, then withdraws the old result.
+
+      Withdrawal does not delete the old record or its audit trail.
+
+
+      Results do not have names, contributor-supplied version strings, or revision
+
+      numbers. Their UUIDs, scientific references, and explicit supersession
+
+      links provide identity and history.'
+  local-evaluation-and-stored-summaries:
+    is_guidance: false
+    summary: Local evaluation and stored summaries
+    expanded: 'Raw per-shot data is not uploaded to or stored by the site. The reference
+
+      evaluator runs on the contributor''s machine, either in the browser or as a
+
+      downloadable command-line tool. It consumes the local shot data and produces a
+
+      small versioned summary.
+
+
+      Submission validates that summary and writes its aggregate counts and generic
+
+      score values directly into the result and result-score records. The site does
+
+      not retain the submitted summary as a separate file and does not claim to
+
+      reproduce its scores independently from raw shots. Contributors may provide an
+
+      external link to independently hosted raw data or a reproduction archive, but
+
+      this is optional.
+
+
+      The evaluator release permanently identifies the input rules, formulas,
+
+      confidence construction, tie handling, and summary contract used. Changing any
+
+      of those meanings creates a new evaluator release and score definitions.'
+  shot-population-and-outcomes:
+    is_guidance: false
+    summary: Shot population and outcomes
+    expanded: "`shots_total` is the complete declared population of attempted shots in this\n\
+      result. Every attempted shot belongs to exactly one of four mutually exclusive\noutcome\
+      \ categories:\n\n- `successful_shots`: the decoder returned a valid correction before\
+      \ the\n  declared timeout and that correction produced no logical failure;\n- `logical_failure_shots`:\
+      \ the decoder returned a valid correction before the\n  declared timeout and at least\
+      \ one reported logical observable was wrong;\n- `timeout_shots`: the decoder did not\
+      \ return a result before the timeout fixed\n  by the evaluator input; and\n- `decoder_error_shots`:\
+      \ the decoder crashed, failed to converge, or returned\n  output which was invalid under\
+      \ the evaluator input contract.\n\nConsequently, the four outcome counts must add exactly\
+      \ to `shots_total`.\nTimeout and decoder-error shots remain distinct raw facts. Each\
+      \ score definition\nstates explicitly how either category enters its population or denominator;\n\
+      the site never silently reclassifies them as logical successes or failures.\n\nA logical\
+      \ failure is the event used by the referenced evaluator release: one or\nmore reported\
+      \ logical outcomes are wrong after applying the returned\ncorrection. A circuit with\
+      \ several observables still contributes one shot to\n`logical_failure_shots`, not one\
+      \ count per wrong observable."
+  measurement-coverage-counts:
+    is_guidance: false
+    summary: Measurement-coverage counts
+    expanded: '`failure_probability_shots` counts valid-correction shots for which the decoder
+
+      also returned a valid claimed failure probability under the decoder
+
+      definition. It cannot exceed `successful_shots + logical_failure_shots`, and it
+
+      may be nonzero only when the referenced decoder version declares the
+
+      failure-probability capability.
+
+
+      `latency_shots` counts valid-correction shots for which a valid latency at the
+
+      evaluator''s standard timing boundary was recorded. It has the same upper bound
+
+      but need not equal `failure_probability_shots`. These are coverage counts, not
+
+      scores and not denominators chosen implicitly by the site.'
+  preparation-and-timing:
+    is_guidance: false
+    summary: Preparation and timing
+    expanded: '`preparation_duration_seconds` is the optional observed elapsed time from the
+
+      evaluator release''s preparation start boundary until the decoder is ready to
+
+      accept its first syndrome for this circuit skeleton and priors. It is a
+
+      reported run measurement, not the decoder-level preparation classification.
+
+      The decoder''s `not_required` claim retains its strict first-uncached-exposure
+
+      ten-second rule whether or not this duration is reported.
+
+
+      `t_1000_ns` is the optional positive elapsed time, in nanoseconds, between the
+
+      finite-burst timing boundaries fixed by the evaluator release and the return of
+
+      the 1,000th correction. It is not a per-shot latency and is absent when the
+
+      declared run does not provide 1,000 valid standard-boundary observations.
+
+      Throughput may be derived as `10^12 / t_1000_ns` corrections per second, but the
+
+      stored scientific fact is the measured duration.
+
+
+      A nonzero `latency_shots`, a `t_1000_ns` value, or any machine-dependent score
+
+      requires `machine_id`. Machine classes are not normalized into a universal
+
+      ranking. `software_environment` records relevant versions, builds, runtime,
+
+      and operating environment for this result. `training_workload_description`
+
+      records result-specific training or target-specific preparation detail which
+
+      does not belong to the reusable decoder capability declaration.'
+  stored-scores:
+    is_guidance: false
+    summary: Stored scores
+    expanded: 'Each item in `scores` names one immutable score definition owned by the
+
+      referenced evaluator release. `value` is the canonical comparable value chosen
+
+      by that definition''s `primary_value_kind`: its estimate, lower bound, or upper
+
+      bound. The public item repeats the definition key, URL, unit, direction, and
+
+      primary-value kind so a number cannot be detached from its meaning.
+
+
+      `point_estimate`, `lower_bound`, `upper_bound`, `confidence_level`,
+
+      `sample_count`, `event_count`, and `details` carry only the components permitted
+
+      and defined by that score definition. `details` is definition-validated
+
+      structured output, not an open channel for contributor-invented metrics.
+
+
+      An absent or inapplicable score has no item; it is never represented as zero.
+
+      The same key under a different evaluator release is not presumed to have the
+
+      same meaning. Scientific comparison requires the pinned definition as well as
+
+      any circuit, machine, population, and provenance conditions it declares.
+
+
+      The initial Brier-loss and conditional-LER definitions are explicitly
+
+      provisional infrastructure tests. Their formula, confidence construction,
+
+      acceptance selection, tie rule, and parameters belong to the evaluator
+
+      release and permanent definition URL.'
+  supporting-files-links-and-execution-evidence:
+    is_guidance: false
+    summary: Supporting files, links, and execution evidence
+    expanded: 'Optional attachments are small immutable content-addressed resources classified
+
+      as source archive, documentation, configuration, reproduction bundle, or
+
+      other. Their SHA-256 digest and byte count identify the stored bytes. External
+
+      links may point to papers, source, documentation, configurations, raw traces,
+
+      or other provenance; a link is not a frozen copy of its target.
+
+
+      Raw per-shot data is neither a required attachment nor stored by Circuit Bench.
+
+      A contributor may link to independently hosted raw data or a reproduction
+
+      archive. The existence of such a resource is provenance evidence, not a claim
+
+      that the site has rerun the evaluation.
+
+
+      `schema`, IDs, lifecycle state, submitter, and timestamps are identity and
+
+      infrastructure fields. `reproduction_status` is trust metadata derived by the
+
+      server as defined above; it is not a performance measurement.'
+  visibility:
+    is_guidance: true
+    summary: Private records remain visible to their contributor and site administrators.
+    expanded: '`public` makes the exact result available through public pages and APIs.
+
+      `private` restricts it to its contributor and site administrators, including
+
+      during review. The contributor may change visibility without replacing the
+
+      result unless an official benchmark requires it to remain public. Visibility
+
+      is access-control metadata and does not alter any measurement or score.'
+  decoder-version:
+    is_guidance: false
+    summary: Select the exact published decoder version used for this result.
+    expanded: This reference identifies one immutable decoder version, not a decoder family.
+      All measurements in this result must use that version.
+  circuit-revision:
+    is_guidance: false
+    summary: Select the exact published circuit revision used for this result.
+    expanded: This reference identifies one immutable circuit revision, including its frozen
+      circuit and detector error model. All measurements in this result must use that revision.
+  evaluator-version:
+    is_guidance: false
+    summary: Select the evaluator release that defines the measurements and scores.
+    expanded: The evaluator release fixes the input rules, score definitions, timing boundaries
+      and confidence constructions used for this result. Scores must belong to this release.
+  machine:
+    is_guidance: false
+    summary: Select the published machine used for this run.
+    expanded: Identify the execution environment used for this run. A nonzero latency coverage
+      count, a burst timing measurement or any machine-dependent score requires a machine
+      reference. Hardware classes are not converted into a universal performance ranking.
+  description:
+    is_guidance: true
+    summary: Describe this run and any relevant experimental context.
+    expanded: null
+  hyperparameter-values-artifact:
+    is_guidance: false
+    summary: Optionally upload the JSON hyperparameter values for this run.
+    expanded: Upload a UTF-8 JSON object containing the values used for this result. It must
+      satisfy the size, duplicate-key and decoder-supplied JSON Schema rules of the referenced
+      decoder version. It describes the same configuration as any free-text values.
+  shots-total:
+    is_guidance: false
+    summary: Total attempted shots; the four outcome counts must sum to this number.
+    expanded: "`shots_total` is the complete declared population of attempted shots in this\n\
+      result. Every attempted shot belongs to exactly one of four mutually exclusive\noutcome\
+      \ categories:\n\n- `successful_shots`: the decoder returned a valid correction before\
+      \ the\n  declared timeout and that correction produced no logical failure;\n- `logical_failure_shots`:\
+      \ the decoder returned a valid correction before the\n  declared timeout and at least\
+      \ one reported logical observable was wrong;\n- `timeout_shots`: the decoder did not\
+      \ return a result before the timeout fixed\n  by the evaluator input; and\n- `decoder_error_shots`:\
+      \ the decoder crashed, failed to converge, or returned\n  output which was invalid under\
+      \ the evaluator input contract.\n\nConsequently, the four outcome counts must add exactly\
+      \ to `shots_total`.\nTimeout and decoder-error shots remain distinct raw facts. Each\
+      \ score definition\nstates explicitly how either category enters its population or denominator;\n\
+      the site never silently reclassifies them as logical successes or failures.\n\nA logical\
+      \ failure is the event used by the referenced evaluator release: one or\nmore reported\
+      \ logical outcomes are wrong after applying the returned\ncorrection. A circuit with\
+      \ several observables still contributes one shot to\n`logical_failure_shots`, not one\
+      \ count per wrong observable."
+  successful-shots:
+    is_guidance: false
+    summary: Valid, on-time corrections with no logical failure.
+    expanded: Count shots where the decoder returned a valid correction before the declared
+      timeout and that correction produced no logical failure. Count each attempted shot in
+      exactly one of the four outcome categories.
+  logical-failure-shots:
+    is_guidance: false
+    summary: Valid, on-time corrections with at least one wrong logical observable.
+    expanded: Count shots where a valid correction arrived before the declared timeout but
+      at least one reported logical observable was wrong. A shot with several wrong observables
+      counts once, not once per observable.
+  timeout-shots:
+    is_guidance: false
+    summary: Shots for which the decoder did not return before the declared timeout.
+    expanded: Count attempted shots where the decoder did not return before the timeout fixed
+      by the evaluator input. Keep these separate from logical failures and decoder errors;
+      the evaluator specifies how each score treats them.
+  decoder-error-shots:
+    is_guidance: false
+    summary: Shots where the decoder failed or returned an invalid response.
+    expanded: Count attempted shots where the decoder crashed, rejected the input or returned
+      an invalid response, according to the evaluator input rules. Keep these separate from
+      timeouts and logical failures.
+  failure-probability-shots:
+    is_guidance: false
+    summary: Valid-correction shots with a reported failure probability in [0, 1].
+    expanded: '`failure_probability_shots` counts valid-correction shots for which the decoder
+
+      also returned a valid claimed failure probability under the decoder
+
+      definition. It cannot exceed `successful_shots + logical_failure_shots`, and it
+
+      may be nonzero only when the referenced decoder version declares the
+
+      failure-probability capability.'
+  latency-shots:
+    is_guidance: false
+    summary: Valid-correction shots with latency measured at the evaluator-defined boundary.
+    expanded: '`latency_shots` counts valid-correction shots for which a valid latency at
+      the
+
+      evaluator''s standard timing boundary was recorded. It has the same upper bound
+
+      but need not equal `failure_probability_shots`. These are coverage counts, not
+
+      scores and not denominators chosen implicitly by the site.'
+  preparation-duration-seconds:
+    is_guidance: false
+    summary: Elapsed preparation time until the decoder was ready for this circuit.
+    expanded: '`preparation_duration_seconds` is the optional observed elapsed time from the
+
+      evaluator release''s preparation start boundary until the decoder is ready to
+
+      accept its first syndrome for this circuit skeleton and priors. It is a
+
+      reported run measurement, not the decoder-level preparation classification.
+
+      The decoder''s `not_required` claim retains its strict first-uncached-exposure
+
+      ten-second rule whether or not this duration is reported.'
+  training-workload-description:
+    is_guidance: true
+    summary: Describe the training workload or circuit-specific preparation for this run.
+    expanded: Describe the result-specific training workload and any target-specific preparation
+      used for this run. This field records what was done for this result; it does not replace
+      the decoder-level preparation capability declarations.
+  software-environment:
+    is_guidance: true
+    summary: Record relevant software versions, builds, runtime and operating environment.
+    expanded: Record the software versions, builds, runtime and operating environment relevant
+      to this result. These are run-specific details, separate from the reusable hardware
+      description in the machine record.
+  t-1000-ns:
+    is_guidance: false
+    summary: Elapsed burst time to the 1,000th correction, in nanoseconds—not per-shot latency.
+    expanded: '`t_1000_ns` is the optional positive elapsed time, in nanoseconds, between
+      the
+
+      finite-burst timing boundaries fixed by the evaluator release and the return of
+
+      the 1,000th correction. It is not a per-shot latency and is absent when the
+
+      declared run does not provide 1,000 valid standard-boundary observations.
+
+      Throughput may be derived as `10^12 / t_1000_ns` corrections per second, but the
+
+      stored scientific fact is the measured duration.
+
+
+      This measurement requires a machine reference.'
+  supersedes-result:
+    is_guidance: false
+    summary: Select the earlier result that this corrected submission replaces.
+    expanded: 'A published result''s submitted scientific content is immutable. To correct
+      a
+
+      published result, the contributor submits a new result whose
+
+      `supersedes_result_id` points to the old result, then withdraws the old result.
+
+      Withdrawal does not delete the old record or its audit trail.
+
+
+      Results do not have names, contributor-supplied version strings, or revision
+
+      numbers. Their UUIDs, scientific references, and explicit supersession
+
+      links provide identity and history.'
+  scores-json:
+    is_guidance: false
+    summary: Provide evaluator-defined scores for this exact shot population.
+    expanded: 'Each item in `scores` names one immutable score definition owned by the
+
+      referenced evaluator release. `value` is the canonical comparable value chosen
+
+      by that definition''s `primary_value_kind`: its estimate, lower bound, or upper
+
+      bound. The public item repeats the definition key, URL, unit, direction, and
+
+      primary-value kind so a number cannot be detached from its meaning.
+
+
+      `point_estimate`, `lower_bound`, `upper_bound`, `confidence_level`,
+
+      `sample_count`, `event_count`, and `details` carry only the components permitted
+
+      and defined by that score definition. `details` is definition-validated
+
+      structured output, not an open channel for contributor-invented metrics.
+
+
+      An absent or inapplicable score has no item; it is never represented as zero.
+
+      The same key under a different evaluator release is not presumed to have the
+
+      same meaning. Scientific comparison requires the pinned definition as well as
+
+      any circuit, machine, population, and provenance conditions it declares.
+
+
+      The initial Brier-loss and conditional-LER definitions are explicitly
+
+      provisional infrastructure tests. Their formula, confidence construction,
+
+      acceptance selection, tie rule, and parameters belong to the evaluator
+
+      release and permanent definition URL.'

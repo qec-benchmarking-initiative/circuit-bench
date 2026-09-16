@@ -89,6 +89,7 @@ def seed_submission_demo_data() -> dict[str, int]:
             "description": "Synthetic pending circuit submission for workflow testing.",
             "revision_description": "First submitted revision.",
             "noise_model": base_circuit.noise_model,
+            "noise_parameter": base_circuit.noise_parameter,
             "is_css": True,
             "code_distance_upper_bound": 7,
             "circuit_distance_upper_bound": 7,

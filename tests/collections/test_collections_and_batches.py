@@ -194,6 +194,7 @@ def test_batch_derives_stim_fields_and_commits_collections(collection_data):
         "defaults": {
             "visibility": "private",
             "noise_model": str(noise_model.id),
+            "noise_parameter": 0.1,
             "is_css": True,
             "code_tags": [str(code_tag.id)],
             "experiment_tags": [str(experiment_tag.id)],
@@ -237,6 +238,7 @@ def test_batch_derives_stim_fields_and_commits_collections(collection_data):
     assert len(circuits) == 1
     assert circuits[0].state == "pending_review"
     assert circuits[0].visibility == "private"
+    assert circuits[0].noise_parameter == 0.1
     collection = CircuitCollection.objects.get(slug="batch-family")
     assert (
         collection.circuit_memberships.get(removed_at__isnull=True).circuit_revision

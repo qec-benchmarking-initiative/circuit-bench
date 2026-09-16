@@ -31,6 +31,12 @@ from registry.models.common import (
     LifecycleState,
     RecordVisibility,
 )
+from registry.schema_contracts import (
+    ContractError,
+    assert_current,
+    release_for,
+    validate_payload,
+)
 from registry.services.histories import (
     append_history_event,
     history_for_new_record,
@@ -91,6 +97,10 @@ def validate_submission_payload(
     kind = SubmissionKind(kind)
     payload = dict(payload)
     payload.setdefault("visibility", RecordVisibility.PUBLIC)
+    try:
+        assert_current(kind, payload.get("schema_version"))
+    except ContractError as error:
+        raise SubmissionValidationError(str(error)) from error
     validator = Draft202012Validator(
         get_submission_schema(kind), format_checker=FormatChecker()
     )
@@ -109,7 +119,10 @@ def validate_submission_payload(
         raise SubmissionValidationError(
             "The submission does not satisfy the registry rules.", form=form
         )
-    return form.canonical_payload()
+    canonical = form.canonical_payload()
+    if "schema_version" in payload:
+        canonical["schema_version"] = payload["schema_version"]
+    return canonical
 
 
 @transaction.atomic
@@ -159,7 +172,11 @@ def _create_submission(
     _assert_form_lineage_available(kind, form.cleaned_data)
 
     decision = approval_decision(kind, submitter, reapproval=reapproval)
-    release = _frozen_schema_release(kind)
+    release = release_for(kind, payload.get("schema_version"))
+    try:
+        assert_current(kind, release.version)
+    except ContractError as error:
+        raise SubmissionValidationError(str(error)) from error
     published_at = timezone.now() if not decision.requires_review else None
     predecessor = form.cleaned_data.get(LINEAGE_INPUT_FIELD_BY_KIND[kind])
     if predecessor != expected_predecessor:
@@ -243,6 +260,13 @@ def _create_submission(
 
 
 def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
+    payload = _submission_payload_for_record(kind, record)
+    if record.schema_release.version != "0.1":
+        payload["schema_version"] = record.schema_release.version
+    return payload
+
+
+def _submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
     """Return the canonical editable submission payload for an exact record."""
 
     kind = SubmissionKind(kind)
@@ -278,6 +302,7 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
             "description": record.description,
             "revision_description": record.revision_description,
             "noise_model": str(record.noise_model_id),
+            "noise_parameter": record.noise_parameter,
             "is_css": record.is_css,
             "code_distance_upper_bound": record.code_distance_upper_bound,
             "circuit_distance_upper_bound": record.circuit_distance_upper_bound,
@@ -356,7 +381,7 @@ def submission_payload_for_record(kind: SubmissionKind | str, record) -> dict:
             "scores": [
                 {
                     "score_definition": str(score.score_definition_id),
-                    "value": str(score.value),
+                    "value": _decimal_or_none(score.value),
                     "point_estimate": _decimal_or_none(score.point_estimate),
                     "lower_bound": _decimal_or_none(score.lower_bound),
                     "upper_bound": _decimal_or_none(score.upper_bound),
@@ -451,6 +476,7 @@ def update_pending_submission(
         raise SubmissionValidationError(
             "The edit became invalid before it was stored.", form=form
         )
+    record.schema_release = release_for(kind, payload.get("schema_version"))
     _update_record(kind, record, form.cleaned_data)
     append_history_event(
         kind=kind.value,
@@ -571,6 +597,12 @@ def approve_submission(
 
     previous_state = record.state
     _lock_publication_references(kind, record)
+    try:
+        validate_payload(
+            kind, submission_payload_for_record(kind, record), record.schema_release
+        )
+    except ContractError as error:
+        raise SubmissionValidationError(str(error)) from error
     _revalidate_record_for_publication(kind, record)
     details = {
         "policy_version": "0.1",
@@ -685,6 +717,7 @@ def _update_record(kind, record, cleaned):
             "name",
             "revision_description",
             "noise_model",
+            "noise_parameter",
             "is_css",
             "code_distance_upper_bound",
             "circuit_distance_upper_bound",
@@ -775,7 +808,9 @@ def _id_or_none(value):
 
 
 def _decimal_or_none(value):
-    return str(value) if value is not None else None
+    # Write schemas accept fixed-point decimal strings, not Decimal's 0E-9 form.
+    # Keep every digit: this is payload serialization, not display formatting.
+    return format(value, "f") if value is not None else None
 
 
 def _create_decoder(cleaned, submitter, release, decision, published_at, history):
@@ -813,6 +848,7 @@ def _create_circuit(cleaned, submitter, release, decision, published_at, history
         description=cleaned["description"] or None,
         revision_description=cleaned["revision_description"],
         noise_model=cleaned["noise_model"],
+        noise_parameter=cleaned.get("noise_parameter"),
         is_css=cleaned["is_css"],
         code_distance_upper_bound=cleaned["code_distance_upper_bound"],
         circuit_distance_upper_bound=cleaned["circuit_distance_upper_bound"],

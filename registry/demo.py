@@ -211,7 +211,11 @@ def seed_demo_data() -> dict[str, int]:
         history=_demo_history("noise/fixed-phenomenological", "noise_model"),
         slug="fixed-phenomenological",
         name="Fixed phenomenological noise",
-        short_description="A simple fixed-prior phenomenological noise model.",
+        short_description=(
+            "Synthetic fixed-prior model. The noise parameter p is the dimensionless "
+            "X_ERROR probability in [0, 1] in the demonstration circuit; "
+            "it is not a percentage."
+        ),
         paper_url="https://example.org/papers/fixed-noise",
         randomises_priors=False,
         curation_status="official",
@@ -226,7 +230,10 @@ def seed_demo_data() -> dict[str, int]:
         slug="randomised-phenomenological",
         name="Randomised phenomenological noise",
         short_description=(
-            "Draws realised priors before freezing each circuit instance."
+            "Synthetic randomised-prior placeholder. The noise parameter p is the "
+            "nominal physical error probability in [0, 1], not a percentage. "
+            "These demonstration files contain only X_ERROR(p); they do not "
+            "implement a randomised distribution."
         ),
         paper_url="https://example.org/papers/randomised-noise",
         randomises_priors=True,
@@ -313,6 +320,7 @@ def seed_demo_data() -> dict[str, int]:
         description="A small synthetic memory circuit for interface development.",
         revision_description="first revision",
         noise_model=fixed_noise,
+        noise_parameter=0.001,
         is_css=True,
         code_distance_upper_bound=5,
         circuit_distance_upper_bound=5,

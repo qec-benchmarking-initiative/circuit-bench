@@ -92,6 +92,14 @@ RESULT_FIELDS = (
     ResultField("circuit_name", "Circuit", "string", "circuit_revision__name"),
     ResultField("circuit_slug", "Circuit slug", "string", "circuit_revision__slug"),
     ResultField(
+        "noise_parameter",
+        "Noise parameter",
+        "decimal",
+        "circuit_revision__noise_parameter",
+        nullable=True,
+        definition="/definitions/circuit/0.1/#noise-model-and-realised-priors",
+    ),
+    ResultField(
         "noise_model",
         "Noise model",
         "string",

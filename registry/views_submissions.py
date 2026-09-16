@@ -103,7 +103,16 @@ def submission_hub(request):
                 "policy": approval_process(kind),
             }
         )
-    return render(request, "submissions/hub.html", {"submission_cards": cards})
+    return render(
+        request,
+        "submissions/hub.html",
+        {
+            "submission_cards": cards,
+            "benchmark_policy": approval_process("benchmark"),
+            "benchmark_attempt_policy": approval_process("benchmark_attempt"),
+            "noise_model_policy": approval_process("noise_model"),
+        },
+    )
 
 
 @login_required
@@ -137,6 +146,15 @@ def submission_successor(request, kind, record_id):
 
 
 def _submission_editor(request, kind, *, operation, record=None):
+    from registry.schema_contracts import ContractError, assert_current, current_version
+
+    schema_version = current_version(kind)
+    if request.method == "POST":
+        try:
+            assert_current(kind, request.POST.get("schema_version"))
+        except ContractError as error:
+            messages.error(request, str(error))
+            return redirect(request.path)
     spec = get_submission_spec(kind)
     restored = _restored_preview(
         request,
@@ -153,6 +171,8 @@ def _submission_editor(request, kind, *, operation, record=None):
     else:
         initial_payload = _example_payload(kind)
 
+    if schema_version != "0.1":
+        initial_payload["schema_version"] = schema_version
     validation_record = record if operation == "edit" else None
     allow_withdrawn_lineage = operation == "successor" and record.state == "withdrawn"
     structured_initial_payload = initial_payload.copy()
@@ -201,6 +221,8 @@ def _submission_editor(request, kind, *, operation, record=None):
                 structured_form.add_error(field_name, message)
             if form_valid and not upload_errors:
                 payload = structured_form.canonical_payload()
+                if schema_version != "0.1":
+                    payload["schema_version"] = schema_version
                 payload = _force_lineage(kind, record, operation, payload)
                 try:
                     payload = validate_submission_payload(
@@ -262,6 +284,7 @@ def _submission_editor(request, kind, *, operation, record=None):
         {
             "kind": kind.value,
             "spec": spec,
+            "schema_version": schema_version,
             "decision": approval_decision(
                 kind,
                 request.user,
@@ -526,6 +549,8 @@ def profile(request):
 @login_required
 @require_GET
 def submission_record(request, kind, record_id):
+    from registry.schema_contracts import schema_status
+
     kind = _kind_or_404(kind)
     model = MODEL_BY_KIND[kind]
     record = get_object_or_404(
@@ -542,6 +567,7 @@ def submission_record(request, kind, record_id):
             "spec": get_submission_spec(kind),
             "record": record,
             "record_label": record_label(kind, record),
+            "schema_status": schema_status(record),
             "record_rows": stored_record_rows(kind, record),
             "public_url": record_url(kind, record),
             "can_approve": (
@@ -678,7 +704,7 @@ def review_approve(request, kind, record_id):
     kind = _kind_or_404(kind)
     try:
         record = approve_submission(kind, record_id, reviewer=request.user)
-    except SubmissionStateError as error:
+    except (SubmissionStateError, SubmissionValidationError) as error:
         messages.error(request, f"Could not approve submission: {error}")
     else:
         messages.success(
@@ -1026,6 +1052,7 @@ def _example_payload(kind: SubmissionKind) -> dict:
             "name": "Example circuit",
             "previous_revision": None,
             "description": "Describe the frozen circuit.",
+            "noise_parameter": None,
             "revision_description": "First submitted revision.",
             "noise_model": str(noise)
             if noise

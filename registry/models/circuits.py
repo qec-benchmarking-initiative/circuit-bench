@@ -1,4 +1,7 @@
+from sys import float_info
+
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from .artifacts import Artifact, SchemaRelease
@@ -63,6 +66,13 @@ class NoiseModel(UUIDModel, PublishedLifecycleModel):
         return self.name
 
 
+class CircuitSlugAlias(models.Model):
+    """Preserve old circuit URLs when display slugs are corrected."""
+
+    slug = models.SlugField(max_length=200, unique=True)
+    circuit = models.ForeignKey("CircuitRevision", on_delete=models.CASCADE, related_name="slug_aliases")
+
+
 class CircuitRevision(UUIDModel, PublishedLifecycleModel):
     schema_release = models.ForeignKey(
         SchemaRelease,
@@ -89,6 +99,15 @@ class CircuitRevision(UUIDModel, PublishedLifecycleModel):
         NoiseModel,
         on_delete=models.PROTECT,
         related_name="circuit_revisions",
+    )
+    noise_parameter = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(float_info.max)],
+        help_text=(
+            "Optional physical noise parameter; its meaning is defined "
+            "by the noise model."
+        ),
     )
     is_css = models.BooleanField()
     code_distance_upper_bound = models.PositiveIntegerField(null=True, blank=True)
@@ -150,6 +169,11 @@ class CircuitRevision(UUIDModel, PublishedLifecycleModel):
         constraints = [
             *PublishedLifecycleModel.Meta.constraints,
             models.CheckConstraint(
+                condition=models.Q(noise_parameter__isnull=True)
+                | models.Q(noise_parameter__gte=0, noise_parameter__lte=float_info.max),
+                name="circuit_noise_parameter_finite_nonnegative",
+            ),
+            models.CheckConstraint(
                 condition=(
                     models.Q(predecessor__isnull=True)
                     | ~models.Q(predecessor=models.F("id"))
@@ -207,6 +231,16 @@ class CircuitRevision(UUIDModel, PublishedLifecycleModel):
                 name="circuit_dem_generation_method_fixed",
             ),
         ]
+
+    @property
+    def css_display(self) -> str:
+        if not self.is_css:
+            return "No"
+        if self.dem_x_detectors_only:
+            return "Yes (X only)"
+        if self.dem_z_detectors_only:
+            return "Yes (Z only)"
+        return "Yes"
 
     def __str__(self) -> str:
         return self.name

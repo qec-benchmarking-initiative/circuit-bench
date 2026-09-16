@@ -1,0 +1,420 @@
+record_type: circuit
+version: '0.3'
+status: Provisional 0.x definitions for development and review.
+definitions:
+  revision-identity-and-descriptions:
+    is_guidance: false
+    summary: Revision identity and descriptions
+    expanded: &id001 'There is no separate circuit-family record. A root revision has no predecessor;
+
+      its ID is the lineage identity. Each later revision names its direct predecessor
+
+      and histories are linear and acyclic. `id` always identifies one revision.
+
+
+      The root has a general `description`; a later revision may replace it or leave
+
+      it null. A lineage page walks back from the current leaf to the newest non-null
+
+      general description and shows it with the leaf''s mandatory
+
+      `revision_description`. The latter says what this revision introduced or
+
+      changed.
+
+
+      Changing the circuit, DEM, realised priors, DEM-generation parameters,
+
+      scientific tags, distance bounds, or noise model creates a new revision.'
+  noise-model-and-realised-priors:
+    is_guidance: false
+    summary: Noise model and realised priors
+    expanded: '`noise_model_id` names the compact registry entry describing the noise
+
+      construction. Whether that construction randomises priors is read from the
+
+      noise-model record and is not copied here.
+
+
+      `noise_parameter` is an optional, finite, nonnegative number specifying the
+
+      physical noise level for this circuit. The referenced noise model''s description
+
+      defines its meaning, units, and allowed range. It need not be a probability,
+
+      so there is no universal upper bound of one. Null means not supplied or not
+
+      applicable, never zero. Changing this value requires a new circuit revision.
+
+      Values should only be compared directly when their noise-model definitions agree.
+
+
+      The numerical probabilities or weights actually used by this revision are the
+
+      ones frozen in its sampling-circuit and DEM files. The noise-model entry is
+
+      not a substitute for those bytes.'
+  code-and-experiment-tags:
+    is_guidance: false
+    summary: Code and experiment tags
+    expanded: &id005 '`code_tags` classify the code construction represented by the revision
+      using
+
+      Circuit Bench''s native vocabulary. `ecz_code_ids` assign imported Error
+
+      Correction Zoo identities. At least one native code tag or ECZ code identity is
+
+      required. An ECZ identity is preserved if it later retires upstream.
+
+      `experiment_tags` classify the circuit''s scientific purpose or protocol. Both
+
+      native tag arrays contain stable slugs from their corresponding tag namespaces
+
+      and are non-exclusive. Tag and ECZ membership supports discovery; it does not
+
+      select a result metric. The Error Correction Zoo remains the source of truth
+
+      for the meaning of an ECZ code identity.'
+  css-and-detector-basis-classification:
+    is_guidance: false
+    summary: CSS and detector-basis classification
+    expanded: '`is_css` says whether the represented circuit uses a CSS construction.
+
+      `dem_x_detectors_only` says every detector represented in the DEM is classified
+
+      as X-type; `dem_z_detectors_only` says every detector is classified as Z-type.
+
+      Either detector-only claim implies `is_css`. For a non-empty detector set, both
+
+      detector-only booleans cannot be true.
+
+
+      These values classify the represented circuit/DEM. They are not inferred
+
+      from its name or code tag.'
+  distance-bounds-rounds-and-derived-counts:
+    is_guidance: false
+    summary: Distance bounds, rounds, and derived counts
+    expanded: &id002 '`code_distance_upper_bound` and `circuit_distance_upper_bound` are explicitly
+
+      upper bounds. They must not be presented or interpreted as true distances.
+
+      Null means no bound is declared. `rounds` is the declared round count where that
+
+      quantity is meaningful and is otherwise null.
+
+
+      `num_detectors`, `num_errors`, and `num_observables` are respectively the
+
+      detector count, the Stim DEM error-instruction count, and the logical-observable
+
+      count. They are derived and verified from the frozen files rather than
+
+      trusted as independent contributor claims.'
+  detector-error-model-generation:
+    is_guidance: false
+    summary: Detector-error-model generation
+    expanded: &id003 '`stim_version` is the Stim version used. The generation method is fixed
+
+      to `stim.Circuit.detector_error_model`. Every supported argument to that method
+
+      is stored explicitly, including when its default value was used:
+
+
+      - `dem_decompose_errors`;
+
+      - `dem_flatten_loops`;
+
+      - `dem_allow_gauge_detectors`;
+
+      - `dem_approximate_disjoint_errors`, a boolean;
+
+      - `dem_ignore_decomposition_failures`; and
+
+      - `dem_block_decomposition_from_introducing_remnant_edges`.
+
+
+      Together these fields identify how the uploaded DEM was made. A reader must not
+
+      assume the defaults of their currently installed Stim version.'
+  frozen-files-and-manifest:
+    is_guidance: false
+    summary: Frozen files and manifest
+    expanded: &id004 '`sampling_circuit_artifact` contains the Stim sampling circuit.
+
+      `detector_error_model_artifact` contains the generated DEM, including its
+
+      realised priors. `manifest_artifact` is the canonical manifest naming the
+
+      schema release, file hashes, noise-model ID, tags, generation parameters,
+
+      distance bounds, and derived counts.
+
+
+      Each file descriptor identifies immutable content-addressed bytes by
+
+      SHA-256, byte count, media type, and download URL. Stored bytes are never
+
+      overwritten in place. The manifest and server verification must agree with the
+
+      public record before publication.'
+  record-visibility:
+    is_guidance: false
+    summary: Record visibility
+    expanded: '`public` makes the exact record available through public pages and APIs.
+
+      `private` restricts it to its contributor and site administrators, including
+
+      during review. The contributor may change visibility without creating a new
+
+      scientific revision unless an official benchmark requires the record to remain
+
+      public. Visibility is access-control metadata and does not alter scientific
+
+      meaning.'
+  credits-links-and-infrastructure:
+    is_guidance: false
+    summary: Credits, links, and infrastructure
+    expanded: 'Credits are ordered and non-empty. A credit is either a display-name string
+      or
+
+      a registered account; equal strings on different records do not assert the
+
+      same person. The uploader is separate from the credits. Links are optional
+
+      classified provenance pointers and do not identify a frozen file.
+
+
+      `schema`, IDs, slug, lifecycle state, uploader, and timestamps are identity and
+
+      infrastructure fields. There is deliberately no license field in this
+
+      contract. Withdrawal preserves the immutable published revision and its audit
+
+      trail.'
+  visibility:
+    is_guidance: true
+    summary: Private records remain visible to their contributor and site administrators.
+    expanded: '`public` makes the exact record available through public pages and APIs.
+
+      `private` restricts it to its contributor and site administrators, including
+
+      during review. The contributor may change visibility without creating a new
+
+      scientific revision unless an official benchmark requires the record to remain
+
+      public. Visibility is access-control metadata and does not alter scientific
+
+      meaning.'
+  slug:
+    is_guidance: true
+    summary: Choose a unique, URL-safe name using lowercase letters, digits and hyphens.
+    expanded: null
+  name:
+    is_guidance: true
+    summary: Give this record a concise, recognisable display name.
+    expanded: null
+  previous-revision:
+    is_guidance: true
+    summary: Select the preceding revision when updating an existing circuit.
+    expanded: *id001
+  description:
+    is_guidance: true
+    summary: Describe the scientific method and cite its sources.
+    expanded: null
+  revision-description:
+    is_guidance: true
+    summary: Explain what this revision changes.
+    expanded: null
+  noise-model:
+    is_guidance: true
+    summary: Choose the definition of the noise construction used in the circuit.
+    expanded: '`noise_model_id` names the compact registry entry describing the noise
+
+      construction. Whether that construction randomises priors is read from the
+
+      noise-model record and is not copied here.
+
+
+      `noise_parameter` is an optional, finite, nonnegative number specifying the
+
+      physical noise level for this circuit. The referenced noise model''s description
+
+      defines its meaning, units, and allowed range. It need not be a probability,
+
+      so there is no universal upper bound of one. Null means not supplied or not
+
+      applicable, never zero. Changing this value requires a new circuit revision.
+
+      Values should only be compared directly when their noise-model definitions agree.
+
+
+      The numerical probabilities or weights actually used by this revision are the
+
+      ones frozen in its sampling-circuit and DEM files. The noise-model entry is
+
+      not a substitute for those bytes.'
+  noise-parameter:
+    is_guidance: false
+    summary: Give the physical noise parameter defined by the selected noise model.
+    expanded: '`noise_model_id` names the compact registry entry describing the noise
+
+      construction. Whether that construction randomises priors is read from the
+
+      noise-model record and is not copied here.
+
+
+      `noise_parameter` is an optional, finite, nonnegative number specifying the
+
+      physical noise level for this circuit. The referenced noise model''s description
+
+      defines its meaning, units, and allowed range. It need not be a probability,
+
+      so there is no universal upper bound of one. Null means not supplied or not
+
+      applicable, never zero. Changing this value requires a new circuit revision.
+
+      Values should only be compared directly when their noise-model definitions agree.
+
+
+      The numerical probabilities or weights actually used by this revision are the
+
+      ones frozen in its sampling-circuit and DEM files. The noise-model entry is
+
+      not a substitute for those bytes.'
+  is-css:
+    is_guidance: false
+    summary: Does this circuit use a CSS construction?
+    expanded: '`is_css` says whether the represented circuit uses a CSS construction.
+
+      `dem_x_detectors_only` says every detector represented in the DEM is classified
+
+      as X-type; `dem_z_detectors_only` says every detector is classified as Z-type.
+
+      Either detector-only claim implies `is_css`. For a non-empty detector set, both
+
+      detector-only booleans cannot be true.
+
+
+      These values classify the represented circuit/DEM. They are not inferred
+
+      from its name or code tag.'
+  code-distance-upper-bound:
+    is_guidance: true
+    summary: Report a known upper bound on the minimum weight of a nontrivial logical operator.
+    expanded: *id002
+  circuit-distance-upper-bound:
+    is_guidance: true
+    summary: Report a known upper bound on the number of circuit faults causing an undetected
+      logical failure.
+    expanded: *id002
+  rounds:
+    is_guidance: true
+    summary: Give the number of repeated error-correction rounds, where this is meaningful
+      for the circuit.
+    expanded: *id002
+  num-detectors:
+    is_guidance: true
+    summary: Give the number of detectors in the uploaded detector error model.
+    expanded: *id002
+  num-errors:
+    is_guidance: true
+    summary: Give the number of error instructions in the uploaded detector error model.
+    expanded: *id002
+  num-observables:
+    is_guidance: true
+    summary: Give the number of logical observables tracked by the uploaded detector error
+      model.
+    expanded: *id002
+  dem-x-detectors-only:
+    is_guidance: false
+    summary: Every detector in this DEM is X-type; this requires a CSS circuit.
+    expanded: '`is_css` says whether the represented circuit uses a CSS construction.
+
+      `dem_x_detectors_only` says every detector represented in the DEM is classified
+
+      as X-type; `dem_z_detectors_only` says every detector is classified as Z-type.
+
+      Either detector-only claim implies `is_css`. For a non-empty detector set, both
+
+      detector-only booleans cannot be true.
+
+
+      These values classify the represented circuit/DEM. They are not inferred
+
+      from its name or code tag.'
+  dem-z-detectors-only:
+    is_guidance: false
+    summary: Every detector in this DEM is Z-type; this requires a CSS circuit.
+    expanded: '`is_css` says whether the represented circuit uses a CSS construction.
+
+      `dem_x_detectors_only` says every detector represented in the DEM is classified
+
+      as X-type; `dem_z_detectors_only` says every detector is classified as Z-type.
+
+      Either detector-only claim implies `is_css`. For a non-empty detector set, both
+
+      detector-only booleans cannot be true.
+
+
+      These values classify the represented circuit/DEM. They are not inferred
+
+      from its name or code tag.'
+  stim-version:
+    is_guidance: true
+    summary: Record the Stim version used to generate the detector error model.
+    expanded: *id003
+  dem-decompose-errors:
+    is_guidance: true
+    summary: Was Stim asked to decompose error mechanisms into graphlike components?
+    expanded: *id003
+  dem-flatten-loops:
+    is_guidance: true
+    summary: Was Stim asked to flatten repeat blocks in the detector error model?
+    expanded: *id003
+  dem-allow-gauge-detectors:
+    is_guidance: true
+    summary: Was Stim allowed to remove nondeterministic gauge detectors during DEM construction?
+    expanded: *id003
+  dem-approximate-disjoint-errors:
+    is_guidance: true
+    summary: Was Stim allowed to approximate disjoint error components as independent?
+    expanded: *id003
+  dem-ignore-decomposition-failures:
+    is_guidance: true
+    summary: Was Stim allowed to keep error mechanisms that it could not decompose?
+    expanded: *id003
+  dem-block-decomposition-from-introducing-remnant-edges:
+    is_guidance: true
+    summary: Was Stim forbidden from introducing remnant edges during decomposition?
+    expanded: *id003
+  sampling-circuit-artifact:
+    is_guidance: true
+    summary: Upload the exact Stim circuit used to sample this experiment, including its noise
+      instructions.
+    expanded: *id004
+  detector-error-model-artifact:
+    is_guidance: true
+    summary: Upload the frozen detector error model generated from this circuit with the recorded
+      Stim arguments.
+    expanded: *id004
+  manifest-artifact:
+    is_guidance: true
+    summary: Optionally upload a manifest documenting the circuit files and their provenance.
+    expanded: *id004
+  code-tags:
+    is_guidance: true
+    summary: Classify the code or code family used by this circuit.
+    expanded: *id005
+  ecz-terms:
+    is_guidance: true
+    summary: Choose applicable code classifications from the Error Correction Zoo.
+    expanded: *id005
+  experiment-tags:
+    is_guidance: true
+    summary: Classify the experiment, such as memory, surgery, cultivation or logical computation.
+    expanded: *id005
+  collections:
+    is_guidance: true
+    summary: Add this revision to collections that you curate.
+    expanded: null

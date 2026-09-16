@@ -83,7 +83,7 @@ def test_circuit_explorer_combines_scientific_filters_and_column_state(
         "detectors",
         "errors",
     ]
-    assert "Table view options (3/14)" in response.content.decode()
+    assert "Table view options (3/15)" in response.content.decode()
     content = response.content.decode()
     assert 'id="circuit-filters"' in content
     assert "data-filter-tag-cell" in content

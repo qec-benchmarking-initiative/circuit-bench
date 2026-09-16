@@ -1,0 +1,498 @@
+record_type: decoder
+version: '0.5'
+status: Provisional 0.x definitions for development and review.
+definitions:
+  decoder-versions-and-linear-history:
+    is_guidance: false
+    summary: Decoder versions and linear history
+    expanded: 'There is no separate decoder-family record. The first/root decoder version
+      is
+
+      the stable identity of the lineage, and every later version points directly to
+
+      its predecessor through `previous_version_id`. The lineage containing a version
+
+      is derived by following these links to the root.
+
+
+      History is strictly linear. A version has at most one predecessor, a predecessor
+
+      has at most one child, and cycles are forbidden. The current version is the
+
+      unique leaf: the version in the lineage which has no child. There is no stored
+
+      `decoder_id`, root ID, family ID, or current-version pointer.
+
+
+      `id` identifies one version. The root version''s `id` is also used as the
+
+      stable lineage identity in lineage URLs and exports. Each version has its
+
+      own unique slug for direct links; equal slugs are not used as a hidden family
+
+      key. The contributor controls the version label, which need not follow semantic
+
+      versioning, and version labels must be unique within the derived lineage.
+
+
+      Capabilities and algorithm tags belong to the decoder version. A change
+
+      which materially alters corrections, reported probabilities, preparation
+
+      requirements, or hyperparameter behaviour normally creates a new decoder
+
+      version.'
+  credits-and-submission-ownership:
+    is_guidance: false
+    summary: Credits and submission ownership
+    expanded: 'Every version has an ordered, non-empty list of credits. A credit is either
+      an
+
+      unverified display-name string or a registered site account. Identical strings
+
+      on different records do not assert that they identify the same person.
+
+
+      The uploader is always the registered account in `submitted_by`; this is
+
+      separate from the credits. A registered user may later request to claim matching
+
+      name credits. The uploader approves or rejects the request and may retain or
+
+      remove the name-string credit when adding the account credit. Claim decisions
+
+      are audited but do not create a new decoder version.'
+  general-and-revision-descriptions:
+    is_guidance: false
+    summary: General and revision descriptions
+    expanded: '`revision_description` is non-empty for every version, including the root.
+      It
+
+      describes what that particular version introduced or changed. On the root
+
+      version form, the visible field is prefilled with `first revision`; later
+
+      version forms leave the field blank. This is a form default rather than a
+
+      database default: the submitted value is always stored and validated.
+
+
+      `description` is a general description. It is required on the root version and
+
+      may be null on every later version. To display a lineage page, start at the
+
+      current leaf and follow `previous_version_id` until the first non-null
+
+      description is found. Show that general description together with the current
+
+      leaf''s `revision_description`, and provide links to the earlier versions.
+
+
+      Adding, removing, or changing a predecessor is accepted only when the result is
+
+      one linear, acyclic history with a described root and no predecessor with two
+
+      children. Slugs and version labels are not used to infer order or currentness.'
+  circuit-skeleton-preparation:
+    is_guidance: false
+    summary: Does the decoder need preparation specific to the circuit structure?
+    expanded: 'The circuit skeleton is the structure of the decoding problem: its
+
+      detectors, observables, possible error mechanisms, and their connectivity,
+
+      without the numerical probabilities or weights assigned to those mechanisms.
+
+
+      `circuit_skeleton = required` means that the target skeleton must be
+
+      available more than ten seconds before the decoder can accept its first
+
+      syndrome while providing the behaviour claimed for this decoder version.
+
+
+      `circuit_skeleton = not_required` may be claimed only when, on first uncached
+
+      exposure to the target skeleton, the decoder can become ready to accept
+
+      its first syndrome within ten seconds. Previously generated target-specific
+
+      files do not satisfy this claim.
+
+
+      The elapsed readiness time need not be reported. Ten seconds is a strict
+
+      classification boundary, not the primary quantity being compared.'
+  circuit-prior-preparation:
+    is_guidance: false
+    summary: Circuit-prior preparation
+    expanded: 'Circuit priors are the numerical probabilities or weights associated
+
+      with a circuit skeleton.
+
+
+      `circuit_priors = required` means that the target priors must be available
+
+      more than ten seconds before the decoder can accept its first syndrome while
+
+      providing the behaviour claimed for this decoder version.
+
+
+      `circuit_priors = not_required` may be claimed only when, on first uncached
+
+      exposure to the target priors, the decoder can become ready to accept its first
+
+      syndrome within ten seconds. To isolate this capability, the circuit skeleton
+
+      may have been supplied earlier; a file prepared for the target priors may
+
+      not have been supplied or cached.
+
+
+      Generic training or optimisation which does not depend on the target
+
+      skeleton or priors does not by itself make either preparation requirement
+
+      `required`. Preparation duration and methodological detail may be disclosed on
+
+      individual results or in linked files.'
+  failure-probability-capability:
+    is_guidance: false
+    summary: Failure-probability capability
+    expanded: '`provides_failure_probability = true` means that the decoder version can return
+
+      for each shot a number `q` in the closed interval `[0, 1]` which it claims is:
+
+
+      > the probability that the returned correction has at least one logical error,
+
+      > conditioned on the syndrome and the supplied error model.
+
+
+      For a circuit with multiple logical observables, the event is that one or more
+
+      reported logical outcomes are wrong. A gap, logit, confidence, or ranking score
+
+      which is not claimed to be a probability does not qualify.
+
+
+      Decoder authors may use any calibration method to turn an internal score into
+
+      a probability. The mapping is part of the decoder version. If a result exercises
+
+      this capability, the probability must be available when the associated decoder
+
+      invocation completes. Calibration and discrimination measurements belong to
+
+      the individual circuit result, not this capability declaration.'
+  algorithm-tags:
+    is_guidance: true
+    summary: Choose tags describing the algorithmic methods used by this decoder.
+    expanded: '`algorithm_tags` is a non-exclusive list of stable slugs from the site tag
+
+      registry. Tags describe algorithmic ingredients for discovery and filtering;
+
+      they do not determine comparability or leaderboard membership.
+
+
+      Tags have a `custom`, `official`, or `deprecated` lifecycle. Search prioritises
+
+      official tags, followed by matching custom tags. Users may create a custom tag
+
+      when no suitable tag exists. Administrators periodically promote custom tags,
+
+      merge synonyms, or deprecate misleading tags. Promotion preserves the tag''s
+
+      identity. Merged and deprecated slugs continue to resolve to their canonical
+
+      replacement so old links and exports do not break.
+
+
+      Tag curation is descriptive metadata and does not create a decoder version or
+
+      a decoder-schema release.'
+  hyperparameters:
+    is_guidance: false
+    summary: Hyperparameters
+    expanded: '`hyperparameter_definitions` is optional free text describing the tunable
+
+      parameters of this decoder version, including their meanings, units, ranges,
+
+      defaults, and the keys used in a machine-readable values file where useful.
+
+
+      `hyperparameter_schema` optionally identifies an uploaded JSON Schema Draft
+
+      2020-12 document for validating result-level hyperparameter values. The schema:
+
+
+      - declares `https://json-schema.org/draft/2020-12/schema` in `$schema`;
+
+      - validates against the official Draft 2020-12 meta-schema;
+
+      - has a top-level instance type of `object`;
+
+      - uses standard JSON Schema keywords rather than a custom dialect;
+
+      - may use local references such as `#/$defs/...`;
+
+      - does not cause the server to retrieve external references; and
+
+      - is at most 32 KiB as UTF-8 JSON.
+
+
+      The schema author decides which keys are required and whether
+
+      `additionalProperties` are permitted. JSON Schema `default` values are
+
+      annotations and are not inserted into uploaded values.
+
+
+      An individual result may contain optional free-text hyperparameter values and/or
+
+      an uploaded UTF-8 JSON object no larger than 8 KiB. Duplicate keys are rejected.
+
+      If this decoder version supplies `hyperparameter_schema`, an uploaded values
+
+      object must validate against it. Files are content-addressed with SHA-256 and
+
+      are treated solely as data.'
+  links:
+    is_guidance: false
+    summary: Links
+    expanded: 'Links are ordered and classified by their purpose. The optional label is
+
+      presentation text; the URL is the identity of the link.'
+  record-visibility:
+    is_guidance: false
+    summary: Record visibility
+    expanded: '`public` makes the exact record available through public pages and APIs.
+
+      `private` restricts it to its contributor and site administrators, including
+
+      during review. The contributor may change visibility without creating a new
+
+      scientific revision unless an official benchmark requires the record to remain
+
+      public. Visibility is access-control metadata and does not alter scientific
+
+      meaning.'
+  lifecycle-metadata:
+    is_guidance: false
+    summary: Lifecycle metadata
+    expanded: '`id`, `slug`, `state`, `submitted_by`, and the timestamps are server-managed
+
+      infrastructure fields. Scientific and descriptive content is editable while the
+
+      record is pending review, pending reapproval, or has changes requested. A
+
+      rejected record is retained privately and is not editable or publishable. A
+
+      published version is immutable except for audited attribution claims, tag
+
+      curation, predecessor corrections, and withdrawal. A material decoder change
+
+      creates a new version.'
+  deliberate-omissions:
+    is_guidance: false
+    summary: Deliberate omissions
+    expanded: 'Decoder records do not contain circuit results, machine details, benchmark
+
+      completion, calibration measurements, preparation duration, training workload,
+
+      or performance claims. Those belong to results, supporting files, or
+
+      benchmark records.'
+  visibility:
+    is_guidance: true
+    summary: Private records remain visible to their contributor and site administrators.
+    expanded: '`public` makes the exact record available through public pages and APIs.
+
+      `private` restricts it to its contributor and site administrators, including
+
+      during review. The contributor may change visibility without creating a new
+
+      scientific revision unless an official benchmark requires the record to remain
+
+      public. Visibility is access-control metadata and does not alter scientific
+
+      meaning.'
+  slug:
+    is_guidance: true
+    summary: Choose a unique, URL-safe name using lowercase letters, digits and hyphens.
+    expanded: null
+  name:
+    is_guidance: true
+    summary: Give this record a concise, recognisable display name.
+    expanded: null
+  version:
+    is_guidance: true
+    summary: Give this revision a version label distinct from earlier revisions in the same
+      history.
+    expanded: null
+  previous-version:
+    is_guidance: true
+    summary: Select the preceding published version when submitting a revision of an existing
+      decoder.
+    expanded: 'There is no separate decoder-family record. The first/root decoder version
+      is
+
+      the stable identity of the lineage, and every later version points directly to
+
+      its predecessor through `previous_version_id`. The lineage containing a version
+
+      is derived by following these links to the root.
+
+
+      History is strictly linear. A version has at most one predecessor, a predecessor
+
+      has at most one child, and cycles are forbidden. The current version is the
+
+      unique leaf: the version in the lineage which has no child. There is no stored
+
+      `decoder_id`, root ID, family ID, or current-version pointer.
+
+
+      `id` identifies one version. The root version''s `id` is also used as the
+
+      stable lineage identity in lineage URLs and exports. Each version has its
+
+      own unique slug for direct links; equal slugs are not used as a hidden family
+
+      key. The contributor controls the version label, which need not follow semantic
+
+      versioning, and version labels must be unique within the derived lineage.
+
+
+      Capabilities and algorithm tags belong to the decoder version. A change
+
+      which materially alters corrections, reported probabilities, preparation
+
+      requirements, or hyperparameter behaviour normally creates a new decoder
+
+      version.'
+  description:
+    is_guidance: true
+    summary: Describe the scientific method and cite its sources.
+    expanded: '`description` is a general description. It is required on the root version
+      and
+
+      may be null on every later version. To display a lineage page, start at the
+
+      current leaf and follow `previous_version_id` until the first non-null
+
+      description is found. Show that general description together with the current
+
+      leaf''s `revision_description`, and provide links to the earlier versions.'
+  revision-description:
+    is_guidance: true
+    summary: Explain what this revision changes.
+    expanded: '`revision_description` is non-empty for every version, including the root.
+      It
+
+      describes what that particular version introduced or changed. On the root
+
+      version form, the visible field is prefilled with `first revision`; later
+
+      version forms leave the field blank. This is a form default rather than a
+
+      database default: the submitted value is always stored and validated.'
+  circuit-priors-preparation:
+    is_guidance: false
+    summary: Does the decoder need preparation specific to the circuit's noise probabilities?
+    expanded: 'Circuit priors are the numerical probabilities or weights associated
+
+      with a circuit skeleton.
+
+
+      `circuit_priors = required` means that the target priors must be available
+
+      more than ten seconds before the decoder can accept its first syndrome while
+
+      providing the behaviour claimed for this decoder version.
+
+
+      `circuit_priors = not_required` may be claimed only when, on first uncached
+
+      exposure to the target priors, the decoder can become ready to accept its first
+
+      syndrome within ten seconds. To isolate this capability, the circuit skeleton
+
+      may have been supplied earlier; a file prepared for the target priors may
+
+      not have been supplied or cached.
+
+
+      Generic training or optimisation which does not depend on the target
+
+      skeleton or priors does not by itself make either preparation requirement
+
+      `required`. Preparation duration and methodological detail may be disclosed on
+
+      individual results or in linked files.'
+  provides-failure-probability:
+    is_guidance: false
+    summary: Can this decoder report a per-shot probability that its correction has a logical
+      error?
+    expanded: '`provides_failure_probability = true` means that the decoder version can return
+
+      for each shot a number `q` in the closed interval `[0, 1]` which it claims is:
+
+
+      > the probability that the returned correction has at least one logical error,
+
+      > conditioned on the syndrome and the supplied error model.
+
+
+      For a circuit with multiple logical observables, the event is that one or more
+
+      reported logical outcomes are wrong. A gap, logit, confidence, or ranking score
+
+      which is not claimed to be a probability does not qualify.
+
+
+      Decoder authors may use any calibration method to turn an internal score into
+
+      a probability. The mapping is part of the decoder version. If a result exercises
+
+      this capability, the probability must be available when the associated decoder
+
+      invocation completes. Calibration and discrimination measurements belong to
+
+      the individual circuit result, not this capability declaration.'
+  hyperparameter-definitions:
+    is_guidance: false
+    summary: Describe the tunable parameters, their meanings, units, ranges and defaults.
+    expanded: '`hyperparameter_definitions` is optional free text describing the tunable
+
+      parameters of this decoder version, including their meanings, units, ranges,
+
+      defaults, and the keys used in a machine-readable values file where useful.'
+  hyperparameter-schema-artifact:
+    is_guidance: false
+    summary: Optionally provide a JSON Schema defining valid hyperparameter values for this
+      decoder.
+    expanded: '`hyperparameter_schema` optionally identifies an uploaded JSON Schema Draft
+
+      2020-12 document for validating result-level hyperparameter values. The schema:
+
+
+      - declares `https://json-schema.org/draft/2020-12/schema` in `$schema`;
+
+      - validates against the official Draft 2020-12 meta-schema;
+
+      - has a top-level instance type of `object`;
+
+      - uses standard JSON Schema keywords rather than a custom dialect;
+
+      - may use local references such as `#/$defs/...`;
+
+      - does not cause the server to retrieve external references; and
+
+      - is at most 32 KiB as UTF-8 JSON.
+
+
+      The schema author decides which keys are required and whether
+
+      `additionalProperties` are permitted. JSON Schema `default` values are
+
+      annotations and are not inserted into uploaded values.'

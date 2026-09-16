@@ -1,0 +1,101 @@
+record_type: machine
+version: '0.2'
+status: Provisional 0.x definitions for development and review.
+definitions:
+  machine-class:
+    is_guidance: true
+    summary: Machine class
+    expanded: "`class` is a coarse hardware partition used for filtering and honest\nleaderboard\
+      \ grouping:\n\n- `cpu`: execution is attributed to general-purpose CPU resources;\n\
+      - `gpu`: execution is attributed to GPU resources;\n- `fpga`: execution is attributed\
+      \ to an FPGA implementation;\n- `asic`: execution is attributed to an application-specific\
+      \ integrated\n  circuit; and\n- `hybrid`: the claimed execution materially combines\
+      \ more than one of those\n  classes.\n\nThe class is not a normalized performance unit.\
+      \ Circuit Bench does not convert\nmeasurements from different classes into a universal\
+      \ hardware-independent\nspeed ranking."
+  execution-environment-description:
+    is_guidance: false
+    summary: Execution-environment description
+    expanded: '`description` states the device and resources used to the extent needed
+
+      to interpret and reproduce a machine-dependent measurement. It should include,
+
+      where applicable, processor or accelerator model, device count, relevant
+
+      allocation, and material host constraints. Software builds and runtime details
+
+      specific to a run remain on the result.
+
+
+      The description names the resources actually used, rather than the maximum
+
+      resources physically installed in a host.'
+  evidence-status:
+    is_guidance: false
+    summary: Evidence status
+    expanded: '`physical` means the reported measurement was obtained from the described
+
+      physical execution environment. `simulated` means it came from a simulation of
+
+      that environment. `estimated` means the value is an analytical or extrapolated
+
+      estimate rather than an execution measurement. These categories must remain
+
+      visible when machine-dependent results are compared.'
+  record-visibility:
+    is_guidance: false
+    summary: Record visibility
+    expanded: '`public` makes the exact record available through public pages and APIs.
+
+      `private` restricts it to its contributor and site administrators. The
+
+      contributor may change visibility without creating a new scientific record
+
+      unless an official benchmark requires it to remain public. Visibility is
+
+      access-control metadata and does not alter scientific meaning.'
+  correction-and-infrastructure:
+    is_guidance: false
+    summary: Correction and infrastructure
+    expanded: 'A published machine record is immutable. A materially corrected description
+
+      creates another machine record which may identify its predecessor using
+
+      `supersedes_machine_id`. Existing results retain their original machine
+
+      reference.
+
+
+      `schema`, `id`, `slug`, lifecycle state, submitter, and timestamps are identity
+
+      and infrastructure fields. They carry no scientific performance value by
+
+      themselves.'
+  visibility:
+    is_guidance: true
+    summary: Private records remain visible to their contributor and site administrators.
+    expanded: '`public` makes the exact record available through public pages and APIs.
+
+      `private` restricts it to its contributor and site administrators. The
+
+      contributor may change visibility without creating a new scientific record
+
+      unless an official benchmark requires it to remain public. Visibility is
+
+      access-control metadata and does not alter scientific meaning.'
+  slug:
+    is_guidance: true
+    summary: Slug
+    expanded: null
+  description:
+    is_guidance: true
+    summary: Describe the scientific method and cite its sources.
+    expanded: null
+  status:
+    is_guidance: true
+    summary: Status
+    expanded: null
+  supersedes-machine:
+    is_guidance: true
+    summary: Supersedes machine
+    expanded: null

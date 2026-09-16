@@ -92,6 +92,7 @@ TABLE_TO_PUBLIC_FIELD = {
     "probability": "provides_failure_probability",
     "circuit": "circuit_name",
     "noise_model": "noise_model",
+    "noise_parameter": "noise_parameter",
     "machine_class": "machine_class",
     "machine": "machine_slug",
     "shots": "shots_total",

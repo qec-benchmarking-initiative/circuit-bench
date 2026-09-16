@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Upload result batch · Circuit Bench{% endblock %}
+{% block content %}
+<div class="page-shell compact-page">
+  <header class="page-heading compact-page-heading"><p class="eyebrow"><a href="{% url 'submissions:create' kind='result' %}">Submit a result</a></p><h1>Upload a batch of results</h1></header>
+  {% include "components/api_submission_notice.html" %}
+  <aside class="policy-bar"><strong>Approval process v0.1</strong><span>Every result requires admin review. Referenced circuits, decoders, evaluators and machines must already be published and accessible to you. Private results remain visible to administrators.</span></aside>
+  <p><a href="{% url 'submissions:result-batch-schema' %}">Batch manifest schema</a> · <a href="{% url 'submissions:schema' kind='result' %}">Individual result schema</a> · <a href="/about/api/#result-batches">Upload instructions</a></p>
+  <form class="stacked-record-form" method="post" enctype="multipart/form-data" novalidate>
+    {% include "components/batch_upload_fields.html" with form=form csrf_token=csrf_token only %}
+    <div class="form-actions"><button class="button" type="submit">Validate and preview</button><a class="button button-secondary" href="{% url 'submissions:create' kind='result' %}">Single result form</a></div>
+  </form>
+</div>
+{% endblock %}

@@ -15,13 +15,13 @@
       <section class="tag-create-workbench">
         {% csrf_token %}
         {% url 'taxonomy:tag-create-json' as tag_create_url %}
-        {% include "components/pickers/tag.html" with picker_id="standalone-tag-creator" label="Create custom tag" input_name="unused" tags=picker_tags selected_keys=selected_keys mode="create" namespace_choices=namespace_choices parent_tags=picker_tags create_url=tag_create_url created_redirect=True only %}
+        {% include "components/pickers/tag.html" with picker_id="standalone-tag-creator" label="Create custom tag" input_name="unused" tags=picker_tags selected_keys=selected_keys mode="create" namespace_choices=namespace_choices tag_namespace=initial_namespace parent_tags=picker_tags create_url=tag_create_url created_redirect=True only %}
       </section>
     {% else %}
       <form class="stacked-record-form" method="post" novalidate>
           {% csrf_token %}{{ form.non_field_errors }}
           {% for field in form %}{% if field.name != "predecessor" %}<div class="form-row"><div class="form-row-label">{{ field.label_tag }}</div><div class="form-row-control">{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div></div>{% endif %}{% endfor %}
-          <div class="form-row"><div class="form-row-label"><label>Previous noise-model revision</label></div><div class="form-row-control record-picker-control">{% include "components/pickers/related_record.html" with cell=predecessor_picker only %}{{ form.predecessor.errors }}</div></div>
+          <div class="form-row"><div class="form-row-label"><label>Previous noise-model revision</label></div><div class="form-row-control record-picker-control">{% include "components/pickers/related_record.html" with cell=predecessor_picker only %}<small>{{ form.predecessor.help_text }}</small>{{ form.predecessor.errors }}</div></div>
           <div class="form-actions"><button type="submit">Preview</button></div>
       </form>
     {% endif %}

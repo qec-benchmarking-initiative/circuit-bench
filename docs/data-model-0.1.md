@@ -580,6 +580,7 @@ table; the root revision is the stable lineage identity.
 | `description` | TEXT | yes | max 10,000 chars | Optional replacement general description |
 | `revision_description` | TEXT | no | 1–10,000 chars | What changed or was introduced |
 | `noise_model_id` | UUID | no | FK → `noise_model.id` | Exact registry entry |
+| `noise_parameter` | float | yes | Finite, nonnegative | Physical noise level; meaning and units defined in the noise-model description |
 | `is_css` | BOOLEAN | no | | Whether the represented circuit is CSS |
 | `code_distance_upper_bound` | INTEGER | yes | check ≥ 1 | Declared code-distance upper bound |
 | `circuit_distance_upper_bound` | INTEGER | yes | check ≥ 1 | Declared circuit-distance upper bound |

@@ -31,11 +31,12 @@
   {% if circuits %}
     <div class="table-scroll record-table-scroll">
       <table class="data-table">
-        <thead><tr><th>Circuit</th><th class="numeric">Detectors</th><th class="numeric">Errors</th></tr></thead>
+        <thead><tr><th>Circuit</th><th class="numeric">Noise parameter</th><th class="numeric">Detectors</th><th class="numeric">Errors</th></tr></thead>
         <tbody>
           {% for circuit in circuits %}
             <tr>
               <td><a href="{% url 'circuits:detail' circuit.slug %}">{{ circuit.name }}</a></td>
+              <td class="numeric">{% scientific_number circuit.noise_parameter %}</td>
               <td class="numeric">{% scientific_number circuit.num_detectors "count" %}</td>
               <td class="numeric">{% scientific_number circuit.num_errors "count" %}</td>
             </tr>

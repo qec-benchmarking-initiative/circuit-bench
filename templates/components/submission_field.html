@@ -1,8 +1,9 @@
 {% if item.type != "hidden_companion" %}<div class="submission-field submission-field-{{ item.type }}{% if item.errors %} submission-field-error{% endif %}">
+  {% if item.guidance %}{% include "components/field_guidance.html" with guidance=item.guidance label=item.bound.label required=item.required only %}{% elif item.help_text %}<p class="field-help">{{ item.help_text }}</p>{% endif %}
   {% if item.type == "boolean" %}
-    <label class="submission-boolean-field" for="{{ item.bound.id_for_label }}">{{ item.bound }} <span>{{ item.bound.label }}{% if item.required %} <span aria-label="required">*</span>{% endif %}</span>{% if item.definition_url %} <a class="field-definition-link" href="{{ item.definition_url }}">Definition</a>{% endif %}</label>
+    <label class="submission-boolean-field" for="{{ item.bound.id_for_label }}">{{ item.bound }} <span{% if item.guidance %} class="visually-hidden"{% endif %}>{{ item.bound.label }}{% if item.required %} <span aria-label="required">*</span>{% endif %}</span>{% if item.definition_url %} <a class="field-definition-link" href="{{ item.definition_url }}">Definition</a>{% endif %}</label>
   {% else %}
-    <label for="{{ item.bound.id_for_label }}">{{ item.bound.label }}{% if item.required %} <span aria-label="required">*</span>{% endif %}{% if item.definition_url %} <a class="field-definition-link" href="{{ item.definition_url }}">Definition</a>{% endif %}</label>
+    <label{% if item.guidance %} class="visually-hidden"{% endif %} for="{{ item.bound.id_for_label }}">{{ item.bound.label }}{% if item.required %} <span aria-label="required">*</span>{% endif %}{% if item.definition_url %} <a class="field-definition-link" href="{{ item.definition_url }}">Definition</a>{% endif %}</label>
     {% if item.type == "reference" %}
       {% include "components/pickers/related_record.html" with cell=item.picker_cell only %}
     {% elif item.type == "tags" %}
@@ -27,14 +28,12 @@
       <div class="submission-file-input">
         {{ item.bound }}
         {% if item.current_file %}<p class="submission-current-file">Current file: <strong>{{ item.current_file.original_filename }}</strong>. Upload a replacement only if it has changed.</p>{% endif %}
-        <label for="id_{{ item.upload_name }}">{% if item.current_file %}Replace file{% else %}Upload file{% endif %}</label>
-        <input id="id_{{ item.upload_name }}" type="file" name="{{ item.upload_name }}" data-submission-file-upload{% if item.required and not item.current_file %} required{% endif %}>
+        <input id="id_{{ item.upload_name }}" type="file" name="{{ item.upload_name }}" aria-label="{{ item.bound.label }}" data-submission-file-upload{% if item.required and not item.current_file %} required{% endif %}>
         <small>Maximum {{ item.upload_limit }}. The file is hashed and frozen before preview.</small>
       </div>
     {% else %}
       {{ item.bound }}
     {% endif %}
   {% endif %}
-  {% if item.help_text %}<p class="field-help">{{ item.help_text }}</p>{% endif %}
   {% if item.errors %}<div class="field-errors" role="alert">{{ item.errors }}</div>{% endif %}
 </div>{% endif %}

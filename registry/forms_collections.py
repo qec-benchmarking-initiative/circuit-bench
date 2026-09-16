@@ -1,5 +1,6 @@
 from django import forms
 
+from registry.forms_common import SubmissionForm
 from registry.models import CircuitCollection, CircuitRevision, EczTerm, Tag
 from registry.models.common import LifecycleState, RecordVisibility
 from registry.services.collections import collection_queryset_for
@@ -7,11 +8,12 @@ from registry.services.tags import active_tag_queryset
 from registry.services.visibility import actor_visibility_q
 
 
-class CircuitCollectionForm(forms.Form):
+class CircuitCollectionForm(SubmissionForm):
     slug = forms.SlugField(max_length=200)
     name = forms.CharField(max_length=200)
     description = forms.CharField(widget=forms.Textarea, required=False)
     visibility = forms.ChoiceField(
+        widget=forms.RadioSelect(attrs={"class": "visibility-options"}),
         choices=RecordVisibility.choices,
         label="Collection page visibility",
         help_text=(
@@ -70,7 +72,7 @@ class CircuitCollectionForm(forms.Form):
         return slug
 
 
-class CircuitCollectionMembershipForm(forms.Form):
+class CircuitCollectionMembershipForm(SubmissionForm):
     circuits = forms.ModelMultipleChoiceField(
         queryset=CircuitRevision.objects.none(),
         required=False,

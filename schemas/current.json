@@ -1,0 +1,12 @@
+{
+  "current_submission_schemas": {
+    "decoder": "0.7",
+    "circuit": "0.4",
+    "machine": "0.3",
+    "result": "0.5",
+    "noise_model": "0.1",
+    "tag": "0.1",
+    "benchmark": "0.1",
+    "evaluator": "0.1"
+  }
+}

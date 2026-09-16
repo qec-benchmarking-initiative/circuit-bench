@@ -67,7 +67,7 @@ LAYOUTS = {
             (("stack", ("description", "revision_description")),),
         ),
         (
-            "Preparation and output capabilities",
+            "Capabilities",
             "These claims apply to the decoder version, not to one benchmark run.",
             (
                 (
@@ -86,15 +86,20 @@ LAYOUTS = {
                 "Tags are searchable shared vocabulary; hyperparameters remain "
                 "free text."
             ),
-            (("stack", ("algorithm_tags", "hyperparameter_definitions")),),
+            (("stack", ("algorithm_tags",)),),
         ),
         (
-            "Machine-readable hyperparameters",
+            "Hyperparameters",
             (
                 "Choose a schema from a previous decoder revision, or upload a "
                 "new JSON Schema file."
             ),
-            (("stack", ("hyperparameter_schema_artifact",)),),
+            (
+                (
+                    "stack",
+                    ("hyperparameter_definitions", "hyperparameter_schema_artifact"),
+                ),
+            ),
         ),
     ),
     SubmissionKind.CIRCUIT: (
@@ -106,7 +111,7 @@ LAYOUTS = {
         (
             "Revision lineage and noise model",
             "Both references point to versioned registry records.",
-            (("stack", ("previous_revision", "noise_model")),),
+            (("stack", ("previous_revision", "noise_model", "noise_parameter")),),
         ),
         (
             "Scientific description",
@@ -271,7 +276,10 @@ LAYOUTS = {
 
 
 def submission_form_sections(form, kind: SubmissionKind | str):
+    from registry.schema_contracts import release_for
+
     kind = SubmissionKind(kind)
+    form.definition_release = release_for(kind)
     sections = [
         {
             "title": "Visibility",
@@ -310,6 +318,8 @@ def submission_form_sections(form, kind: SubmissionKind | str):
 
 
 def _field_context(form, name, kind, section_index):
+    from registry.schema_contracts import field_guidance
+
     bound = form[name]
     context = {
         "name": name,
@@ -318,6 +328,7 @@ def _field_context(form, name, kind, section_index):
         "disabled": bound.field.disabled,
         "errors": bound.errors,
         "help_text": bound.help_text,
+        "guidance": field_guidance(kind, name, release=form.definition_release),
         "type": "standard",
         "definition_url": (
             CIRCUIT_DEFINITION_LINKS.get(name)
@@ -325,6 +336,10 @@ def _field_context(form, name, kind, section_index):
             else None
         ),
     }
+    if context["guidance"]:
+        context["definition_url"] = (
+            None  # The shared guidance panel owns its source link.
+        )
     if name in ARTIFACT_FIELDS:
         value = bound.value()
         current_file = None

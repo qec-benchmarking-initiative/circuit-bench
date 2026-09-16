@@ -72,6 +72,12 @@ def result_cell_map(
     except NoReverseMatch:
         result_url = None
     return {
+        "noise_parameter": {
+            "key": "noise_parameter",
+            "value": circuit.noise_parameter,
+            "numeric": True,
+            "number_profile": "default",
+        },
         "result": {
             "key": "result",
             "value": f"{str(result.id)[:8]}…",

@@ -1,0 +1,733 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:circuit-bench:schema:result:0.4",
+  "title": "Result record 0.4",
+  "description": "One self-contained Circuit Bench claim over one declared set of attempted shots.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "byte_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "url",
+        "sha256",
+        "byte_size",
+        "media_type"
+      ]
+    },
+    "nullableArtifact": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/artifact"
+        }
+      ]
+    },
+    "attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "enum": [
+            "source_archive",
+            "documentation",
+            "configuration",
+            "reproduction_bundle",
+            "other"
+          ]
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "artifact": {
+          "$ref": "#/$defs/artifact"
+        }
+      },
+      "required": [
+        "role",
+        "position",
+        "artifact"
+      ]
+    },
+    "credit": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "account_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "account_id"
+          ]
+        }
+      ]
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "paper",
+            "source",
+            "documentation",
+            "artifact",
+            "configuration",
+            "raw_trace",
+            "other"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "kind",
+        "url",
+        "label"
+      ]
+    },
+    "resultScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "score_definition_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "definition_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": [
+            "lower_is_better",
+            "higher_is_better",
+            "not_ranked"
+          ]
+        },
+        "primary_value_kind": {
+          "enum": [
+            "estimate",
+            "lower_bound",
+            "upper_bound"
+          ]
+        },
+        "value": {
+          "type": "number"
+        },
+        "point_estimate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "lower_bound": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "upper_bound": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "confidence_level": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "sample_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "event_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "details": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "score_definition_id",
+        "key",
+        "definition_url",
+        "unit",
+        "direction",
+        "primary_value_kind",
+        "value",
+        "point_estimate",
+        "lower_bound",
+        "upper_bound",
+        "confidence_level",
+        "sample_count",
+        "event_count",
+        "details"
+      ]
+    },
+    "nullableUuid": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "nullableDateTime": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "result/0.4"
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "private"
+      ],
+      "x-definition": "../../definitions/result/0.4.yaml#record-visibility"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "decoder_version_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "circuit_revision_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "evaluator_version_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "machine_id": {
+      "$ref": "#/$defs/nullableUuid"
+    },
+    "credits": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/credit"
+      }
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "hyperparameter_values": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 20000
+    },
+    "hyperparameter_values_artifact": {
+      "$ref": "#/$defs/nullableArtifact"
+    },
+    "shots_total": {
+      "type": "integer",
+      "minimum": 1,
+      "x-definition": "../../definitions/result/0.4.yaml#shot-population-and-outcomes"
+    },
+    "successful_shots": {
+      "type": "integer",
+      "minimum": 0,
+      "x-definition": "../../definitions/result/0.4.yaml#shot-population-and-outcomes"
+    },
+    "logical_failure_shots": {
+      "type": "integer",
+      "minimum": 0,
+      "x-definition": "../../definitions/result/0.4.yaml#shot-population-and-outcomes"
+    },
+    "timeout_shots": {
+      "type": "integer",
+      "minimum": 0,
+      "x-definition": "../../definitions/result/0.4.yaml#shot-population-and-outcomes"
+    },
+    "decoder_error_shots": {
+      "type": "integer",
+      "minimum": 0,
+      "x-definition": "../../definitions/result/0.4.yaml#shot-population-and-outcomes"
+    },
+    "failure_probability_shots": {
+      "type": "integer",
+      "minimum": 0,
+      "x-definition": "../../definitions/result/0.4.yaml#measurement-coverage-counts"
+    },
+    "latency_shots": {
+      "type": "integer",
+      "minimum": 0,
+      "x-definition": "../../definitions/result/0.4.yaml#measurement-coverage-counts"
+    },
+    "preparation_duration_seconds": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "x-definition": "../../definitions/result/0.4.yaml#preparation-and-timing"
+    },
+    "training_workload_description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 20000
+    },
+    "software_environment": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 20000
+    },
+    "t_1000_ns": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "x-definition": "../../definitions/result/0.4.yaml#preparation-and-timing"
+    },
+    "scores": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/resultScore"
+      },
+      "x-definition": "../../definitions/result/0.4.yaml#stored-scores"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attachment"
+      }
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/link"
+      }
+    },
+    "supersedes_result_id": {
+      "$ref": "#/$defs/nullableUuid"
+    },
+    "reproduction_status": {
+      "enum": [
+        "independent_reproduction",
+        "decoder_author_verified"
+      ],
+      "x-definition": "../../definitions/result/0.4.yaml#independent-reproduction-and-decoder-author-verification"
+    },
+    "state": {
+      "enum": [
+        "pending_review",
+        "pending_reapproval",
+        "changes_requested",
+        "rejected",
+        "published",
+        "withdrawn"
+      ]
+    },
+    "submitted_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    },
+    "withdrawn_at": {
+      "$ref": "#/$defs/nullableDateTime"
+    }
+  },
+  "required": [
+    "schema",
+    "visibility",
+    "id",
+    "decoder_version_id",
+    "circuit_revision_id",
+    "evaluator_version_id",
+    "machine_id",
+    "credits",
+    "description",
+    "hyperparameter_values",
+    "hyperparameter_values_artifact",
+    "shots_total",
+    "successful_shots",
+    "logical_failure_shots",
+    "timeout_shots",
+    "decoder_error_shots",
+    "failure_probability_shots",
+    "latency_shots",
+    "preparation_duration_seconds",
+    "training_workload_description",
+    "software_environment",
+    "t_1000_ns",
+    "scores",
+    "attachments",
+    "links",
+    "supersedes_result_id",
+    "reproduction_status",
+    "state",
+    "submitted_by",
+    "created_at",
+    "published_at",
+    "withdrawn_at"
+  ],
+  "x-definitions": {
+    "path": "../../definitions/result/0.4.yaml",
+    "version": "0.4",
+    "sha256": "02dc13b4918268d5cf36a9d855ca488ee9c2c9d6658c3b4da6c6a300897634c9"
+  },
+  "x-form-definitions": {
+    "visibility": "visibility",
+    "decoder_version": "decoder-version",
+    "circuit_revision": "circuit-revision",
+    "evaluator_version": "evaluator-version",
+    "machine": "machine",
+    "description": "description",
+    "hyperparameter_values": "hyperparameter-values",
+    "hyperparameter_values_artifact": "hyperparameter-values-artifact",
+    "shots_total": "shots-total",
+    "successful_shots": "successful-shots",
+    "logical_failure_shots": "logical-failure-shots",
+    "timeout_shots": "timeout-shots",
+    "decoder_error_shots": "decoder-error-shots",
+    "failure_probability_shots": "failure-probability-shots",
+    "latency_shots": "latency-shots",
+    "preparation_duration_seconds": "preparation-duration-seconds",
+    "training_workload_description": "training-workload-description",
+    "software_environment": "software-environment",
+    "t_1000_ns": "t-1000-ns",
+    "supersedes_result": "supersedes-result",
+    "scores_json": "scores-json"
+  },
+  "x-submission-schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "urn:circuit-bench:submission:result:0.2",
+    "title": "Circuit Bench result submission 0.1",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "visibility": {
+        "enum": [
+          "public",
+          "private"
+        ],
+        "x-definition": "../../definitions/result/0.4.yaml#visibility"
+      },
+      "decoder_version": {
+        "type": "string",
+        "format": "uuid",
+        "x-definition": "../../definitions/result/0.4.yaml#machine"
+      },
+      "circuit_revision": {
+        "type": "string",
+        "format": "uuid",
+        "x-definition": "../../definitions/result/0.4.yaml#machine"
+      },
+      "evaluator_version": {
+        "type": "string",
+        "format": "uuid",
+        "x-definition": "../../definitions/result/0.4.yaml#machine"
+      },
+      "machine": {
+        "type": "string",
+        "format": "uuid",
+        "x-definition": "../../definitions/result/0.4.yaml#machine"
+      },
+      "description": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "x-definition": "../../definitions/result/0.4.yaml#software-environment"
+      },
+      "hyperparameter_values": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "x-definition": "../../definitions/result/0.4.yaml#software-environment"
+      },
+      "hyperparameter_values_artifact": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uuid",
+        "x-definition": "../../definitions/result/0.4.yaml#supersedes-result"
+      },
+      "shots_total": {
+        "type": "integer",
+        "minimum": 1,
+        "x-definition": "../../definitions/result/0.4.yaml#shots-total"
+      },
+      "successful_shots": {
+        "type": "integer",
+        "minimum": 0,
+        "x-definition": "../../definitions/result/0.4.yaml#successful-shots"
+      },
+      "logical_failure_shots": {
+        "type": "integer",
+        "minimum": 0,
+        "x-definition": "../../definitions/result/0.4.yaml#logical-failure-shots"
+      },
+      "timeout_shots": {
+        "type": "integer",
+        "minimum": 0,
+        "x-definition": "../../definitions/result/0.4.yaml#timeout-shots"
+      },
+      "decoder_error_shots": {
+        "type": "integer",
+        "minimum": 0,
+        "x-definition": "../../definitions/result/0.4.yaml#decoder-error-shots"
+      },
+      "failure_probability_shots": {
+        "type": "integer",
+        "minimum": 0,
+        "x-definition": "../../definitions/result/0.4.yaml#failure-probability-shots"
+      },
+      "latency_shots": {
+        "type": "integer",
+        "minimum": 0,
+        "x-definition": "../../definitions/result/0.4.yaml#latency-shots"
+      },
+      "preparation_duration_seconds": {
+        "oneOf": [
+          {
+            "type": "number",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "x-definition": "../../definitions/result/0.4.yaml#preparation-duration-seconds"
+      },
+      "training_workload_description": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "x-definition": "../../definitions/result/0.4.yaml#software-environment"
+      },
+      "software_environment": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "x-definition": "../../definitions/result/0.4.yaml#software-environment"
+      },
+      "t_1000_ns": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 1,
+        "x-definition": "../../definitions/result/0.4.yaml#t-1000-ns"
+      },
+      "supersedes_result": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "uuid",
+        "x-definition": "../../definitions/result/0.4.yaml#supersedes-result"
+      },
+      "scores": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "score_definition": {
+              "type": "string",
+              "format": "uuid",
+              "x-definition": "../../definitions/result/0.4.yaml#machine"
+            },
+            "value": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "point_estimate": {
+              "type": [
+                "number",
+                "string",
+                "null"
+              ]
+            },
+            "lower_bound": {
+              "type": [
+                "number",
+                "string",
+                "null"
+              ]
+            },
+            "upper_bound": {
+              "type": [
+                "number",
+                "string",
+                "null"
+              ]
+            },
+            "confidence_level": {
+              "type": [
+                "number",
+                "string",
+                "null"
+              ]
+            },
+            "sample_count": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "event_count": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "details": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "score_definition",
+            "value"
+          ]
+        }
+      },
+      "schema_version": {
+        "const": "0.4"
+      }
+    },
+    "required": [
+      "decoder_version",
+      "circuit_revision",
+      "evaluator_version",
+      "machine",
+      "description",
+      "hyperparameter_values",
+      "hyperparameter_values_artifact",
+      "shots_total",
+      "successful_shots",
+      "logical_failure_shots",
+      "timeout_shots",
+      "decoder_error_shots",
+      "failure_probability_shots",
+      "latency_shots",
+      "preparation_duration_seconds",
+      "training_workload_description",
+      "software_environment",
+      "t_1000_ns",
+      "supersedes_result",
+      "scores",
+      "schema_version"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{% if guidance %}
+  {% if guidance.expanded %}
+    <details class="control-panel field-guidance">
+      <summary><span class="field-guidance-summary">{% if label %}<strong>{{ label }}</strong>{% if required %} *{% endif %}: {% endif %}{{ guidance.summary }} <span class="field-guidance-hint">(show full {% if guidance.is_guidance %}guidance{% else %}definition{% endif %})</span></span></summary>
+      <div class="field-guidance-body">
+        <p class="field-guidance-version">{{ guidance.kind|capfirst }} definitions {{ guidance.version }} · <a href="{{ guidance.url }}">Versioned source</a></p>
+        {{ guidance.expanded_html }}
+      </div>
+    </details>
+  {% else %}
+    <div class="field-guidance field-guidance-static"><span>{% if label %}<strong>{{ label }}</strong>{% if required %} *{% endif %}{% if label != guidance.summary %}: {{ guidance.summary }}{% endif %}{% else %}{{ guidance.summary }}{% endif %}</span></div>
+  {% endif %}
+{% endif %}

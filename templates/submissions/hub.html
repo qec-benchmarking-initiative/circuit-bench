@@ -15,14 +15,27 @@
           {% include "components/approval_policy_bar.html" with policy=card.policy only %}
           <p><a class="button" href="{% url 'submissions:create' kind=card.kind %}">Submit {{ card.spec.label }}</a></p>
         </section>
+        {% if card.kind == "result" %}
+          <section class="submission-kind">
+            <h2>Benchmark attempt</h2>
+            {% include "components/approval_policy_bar.html" with policy=benchmark_attempt_policy only %}
+            <p><a class="button" href="{% url 'benchmark-submissions:attempt-create' %}">Submit benchmark attempt</a></p>
+          </section>
+        {% endif %}
       {% endfor %}
       <section class="submission-kind">
-        <h2>Benchmark</h2>
-        <div class="submission-kind-actions"><a class="button" href="{% url 'benchmark-submissions:create' %}">Submit benchmark revision</a><a class="button button-secondary" href="{% url 'benchmark-submissions:attempt-create' %}">Submit benchmark attempt</a></div>
+        <h2>Community benchmark</h2>
+        {% include "components/approval_policy_bar.html" with policy=benchmark_policy only %}
+        <p><a class="button" href="{% url 'benchmark-submissions:create' %}">Submit community benchmark</a></p>
+      </section>
+      <section class="submission-kind">
+        <h2>Noise model</h2>
+        {% include "components/approval_policy_bar.html" with policy=noise_model_policy only %}
+        <p><a class="button" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a></p>
       </section>
       <section class="submission-kind">
         <h2>Taxonomy</h2>
-        <div class="submission-kind-actions"><a class="button" href="{% url 'taxonomy:noise-model-create' %}">Submit noise model</a><a class="button button-secondary" href="{% url 'taxonomy:tag-create' %}">Create custom tag</a></div>
+        <div class="submission-kind-actions"><a class="button" href="{% url 'taxonomy:tag-create' %}?namespace=code">Create code tag</a><a class="button" href="{% url 'taxonomy:tag-create' %}?namespace=experiment">Create circuit tag</a><a class="button" href="{% url 'taxonomy:tag-create' %}?namespace=algorithm">Create decoding algorithm tag</a></div>
       </section>
     </div>
   </div>

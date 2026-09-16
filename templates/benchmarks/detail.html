@@ -6,7 +6,18 @@
 {% block content %}
   <article class="page-shell record-layout benchmark-record-layout">
     <header class="record-heading">
-      {% include "components/record_header.html" with record=record only %}
+      {% include "components/record_header.html" with record=record hide_tags=True only %}
+      <div class="tag-list" aria-label="Benchmark recognition">
+        {% if benchmark.recognition_status == "official" %}
+          <span class="tag tag-official">Official</span>
+        {% else %}
+          <span class="tag tag-community">Community</span>
+        {% endif %}
+      </div>
+      <div class="form-actions">
+        <a class="button" href="{% url 'benchmark-submissions:attempt-create' %}?benchmark_revision={{ benchmark.id }}">Submit an attempt</a>
+        {% if request.user.is_admin %}<a class="button button-secondary" href="{% url 'benchmark-submissions:candidate' benchmark.id %}">Manage benchmark</a>{% endif %}
+      </div>
     </header>
 
     <div class="record-columns">
@@ -46,19 +57,19 @@
     {% record_history benchmark "benchmark" %}
 
     <section class="record-related" aria-labelledby="benchmark-manifest-heading">
-      <h2 id="benchmark-manifest-heading">Ordered circuit manifest</h2>
-      <p>This is the frozen circuit order for this revision. Required and optional membership are shown explicitly.</p>
+      <h2 id="benchmark-manifest-heading">Benchmark circuits</h2>
       {% if manifest_has_hidden_items %}<p role="alert">One or more manifest circuits are not public and have been withheld from this view.</p>{% endif %}
       {% if public_items %}
         <div class="table-scroll record-table-scroll">
           <table class="data-table">
-            <thead><tr><th class="numeric">Position</th><th>Circuit revision</th><th>Requirement</th></tr></thead>
+            <thead><tr><th class="numeric">Position</th><th>Circuit revision</th><th class="numeric">Noise parameter</th><th>Requirement</th><th>Download</th></tr></thead>
             <tbody>
               {% for item in public_items %}
                 <tr>
                   <td class="numeric">{% scientific_number item.position "count" %}</td>
-                  <td><a href="{% url 'circuits:detail' item.circuit_revision.slug %}">{{ item.circuit_revision.name }}</a> <span class="null-value"><code>{{ item.circuit_revision.id }}</code></span></td>
+                  <td><a href="{% url 'circuits:detail' item.circuit_revision.slug %}">{{ item.circuit_revision.name }}</a> <span class="null-value"><code>{{ item.circuit_revision.id }}</code></span></td><td class="numeric">{% scientific_number item.circuit_revision.noise_parameter %}</td>
                   <td>{{ item.is_required|yesno:"Required,Optional" }}</td>
+                  <td>{% include "components/circuit_download_links.html" with circuit=item.circuit_revision only %}</td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -69,52 +80,8 @@
       {% endif %}
     </section>
 
-    <section class="record-related" aria-labelledby="benchmark-attempts-heading">
-      <h2 id="benchmark-attempts-heading">Published attempts</h2>
-      <p>Attempts group existing circuit results. The site does not pool them or calculate an aggregate benchmark score.</p>
-      {% if request.user.is_authenticated %}<p><a class="button button-secondary button-compact" href="{% url 'benchmark-submissions:attempt-create' %}?benchmark_revision={{ benchmark.id }}">Submit an attempt</a></p>{% endif %}
-      {% for summary in attempt_summaries %}
-        <article class="record-section benchmark-attempt" id="attempt-{{ summary.attempt.id }}">
-          <h3>{{ summary.attempt.decoder_version.name }} {{ summary.attempt.decoder_version.version }}</h3>
-          <p>
-            {% if summary.is_complete %}<strong>Complete:</strong>{% else %}<strong>Incomplete or inconsistent:</strong>{% endif %}
-            {% scientific_number summary.required_result_count "count" %} of {% scientific_number summary.required_count "count" %} required circuits have exactly one matching public result.
-            Attempt <code>{{ summary.attempt.id }}</code> · submitted by {{ summary.attempt.submitted_by.display_name }}.
-          </p>
-          {% if summary.attempt.description %}<p>{{ summary.attempt.description }}</p>{% endif %}
-          {% if summary.issues %}<ul>{% for issue in summary.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
-          <div class="table-scroll record-table-scroll">
-            <table class="data-table">
-              <thead><tr><th class="numeric">Position</th><th>Circuit revision</th><th>Requirement</th><th>Result</th><th>Evaluator</th><th>Machine</th></tr></thead>
-              <tbody>
-                {% for row in summary.items %}
-                  <tr>
-                    <td class="numeric">{% scientific_number row.item.position "count" %}</td>
-                    <td><a href="{% url 'circuits:detail' row.item.circuit_revision.slug %}">{{ row.item.circuit_revision.name }}</a></td>
-                    <td>{{ row.item.is_required|yesno:"Required,Optional" }}</td>
-                    <td>
-                      {% if row.membership %}<a href="{{ result_detail_base_url }}{{ row.membership.result.id }}/"><code>{{ row.membership.result.id }}</code></a>{% else %}<span class="null-value">—</span>{% endif %}
-                      {% if row.issue %}<br><span role="alert">{{ row.issue }}</span>{% endif %}
-                    </td>
-                    <td>{% if row.membership %}{{ row.membership.result.evaluator_version.version }}{% else %}<span class="null-value">—</span>{% endif %}</td>
-                    <td>{% if row.membership and row.membership.result.machine %}<a href="{% url 'machines:detail' row.membership.result.machine.slug %}">{{ row.membership.result.machine.slug }}</a>{% else %}<span class="null-value">—</span>{% endif %}</td>
-                  </tr>
-                {% endfor %}
-                {% for membership in summary.unexpected_memberships %}
-                  <tr><td class="numeric">—</td><td>{{ membership.circuit_revision.name }}</td><td>Outside manifest</td><td><a href="{{ result_detail_base_url }}{{ membership.result.id }}/"><code>{{ membership.result.id }}</code></a></td><td>{{ membership.result.evaluator_version.version }}</td><td>{% if membership.result.machine %}{{ membership.result.machine.slug }}{% else %}<span class="null-value">—</span>{% endif %}</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </article>
-      {% empty %}
-        {% include "components/empty_state.html" with title="No published attempts" message="No published attempt currently resolves against this benchmark revision." only %}
-      {% endfor %}
-    </section>
-
     <section class="record-related" aria-labelledby="benchmark-results-heading">
-      <h2 id="benchmark-results-heading">Constituent result comparison</h2>
-      <p>These are the individual published results referenced by attempts on this benchmark revision. The plot and table do not pool circuits or calculate an aggregate benchmark score.</p>
+      <h2 id="benchmark-results-heading">All results submitted as part of an attempt on this benchmark</h2>
       <form class="leaderboard-filter-form" method="get">
         {% if raw_sort %}<input type="hidden" name="sort" value="{{ raw_sort }}">{% endif %}
         {% if raw_columns %}<input type="hidden" name="columns" value="{{ raw_columns }}">{% endif %}

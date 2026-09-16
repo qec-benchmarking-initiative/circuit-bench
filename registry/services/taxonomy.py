@@ -1,8 +1,8 @@
 """Transactional curation workflows for tags and noise models.
 
 This module is intentionally independent of the generic submission adapter.  Tags
-have a provisional, immediately usable vocabulary route, while noise models enter
-the review queue without becoming publicly discoverable.
+have a provisional, immediately usable vocabulary route. Noise models publish
+after validation; older pending submissions retain the admin review route.
 """
 
 from __future__ import annotations
@@ -34,6 +34,7 @@ from registry.services.histories import (
     latest_snapshot_event,
     submission_snapshot,
 )
+from registry.submission_policy import approval_decision
 
 POLICY_VERSION = "0.1"
 CUSTOM_VOCABULARY_ROUTE = "provisional_custom_vocabulary"
@@ -626,7 +627,7 @@ def submit_noise_model(
     predecessor: NoiseModel | None = None,
     visibility: str = "public",
 ) -> NoiseModelSubmissionOutcome:
-    """Store a community noise model as a private pending-review candidate."""
+    """Validate and publish a community noise model under the shared policy."""
 
     _require_active(submitter)
     slug = slug.strip()
@@ -662,12 +663,8 @@ def submit_noise_model(
 
             release = _frozen_schema_release(SchemaRelease.RecordType.NOISE_MODEL)
             history = history_for_new_record("noise_model", locked_predecessor)
-            initial_state = (
-                "pending_reapproval"
-                if locked_predecessor is not None
-                and locked_predecessor.state == "withdrawn"
-                else "pending_review"
-            )
+            decision = approval_decision("noise_model", submitter)
+            initial_state = decision.initial_state
             noise_model = NoiseModel.objects.create(
                 schema_release=release,
                 history=history,
@@ -681,7 +678,7 @@ def submit_noise_model(
                 submitted_by=submitter,
                 state=initial_state,
                 visibility=visibility,
-                published_at=None,
+                published_at=timezone.now() if not decision.requires_review else None,
                 withdrawn_at=None,
             )
             if locked_predecessor is not None:
@@ -720,15 +717,42 @@ def submit_noise_model(
                 note=(
                     "Submitted a successor community noise model for reapproval."
                     if initial_state == "pending_reapproval"
-                    else "Submitted a community noise model for admin review."
+                    else "Submitted a community noise model."
                 ),
                 details={
                     "policy_version": POLICY_VERSION,
-                    "approval_route": ADMIN_REVIEW_ROUTE,
+                    "approval_route": decision.route,
                     "projected_state": initial_state,
                 },
                 payload_snapshot=submission_snapshot("noise_model", payload),
             )
+            if not decision.requires_review:
+                details = {
+                    "policy_version": decision.policy_version,
+                    "approval_route": decision.route,
+                    "approved_by": "system",
+                    "approved_by_name": "System",
+                }
+                approval = append_history_event(
+                    kind="noise_model",
+                    record=noise_model,
+                    actor_system="submission_policy",
+                    action=RecordEvent.Action.APPROVED,
+                    note="Approved automatically under the noise model policy.",
+                    details=details,
+                    caused_by=submission_event,
+                )
+                publication = append_history_event(
+                    kind="noise_model",
+                    record=noise_model,
+                    actor_system="submission_policy",
+                    action=RecordEvent.Action.PUBLISHED,
+                    note="Published this community noise model.",
+                    details=details,
+                    caused_by=approval,
+                )
+                noise_model.published_at = publication.occurred_at
+                noise_model.save(update_fields=["published_at"])
             return NoiseModelSubmissionOutcome(noise_model, submission_event)
     except IntegrityError as error:
         raise TaxonomyConflictError(
@@ -1042,16 +1066,13 @@ def _assert_tag_taxonomy_acyclic(edges: set[tuple]) -> None:
     def visit(node) -> None:
         if state.get(node) == "active":
             tag = (
-                Tag.objects.filter(id=node)
-                .values("label", "namespace", "slug")
-                .first()
+                Tag.objects.filter(id=node).values("label", "namespace", "slug").first()
             )
             if tag is None:
                 tag_hint = f"id {node}"
             else:
                 tag_hint = (
-                    f"{tag['label']!r} ({tag['namespace']}:{tag['slug']}; "
-                    f"id {node})"
+                    f"{tag['label']!r} ({tag['namespace']}:{tag['slug']}; id {node})"
                 )
             raise TaxonomyValidationError(
                 "The tag taxonomy contains a cycle: traversal returned to tag "

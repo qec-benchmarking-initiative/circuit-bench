@@ -60,13 +60,22 @@ def approval_process(
     """Return concise, versioned public copy for the current approval route."""
 
     kind = SubmissionKind(kind)
-    if reapproval:
+    if reapproval and kind is not SubmissionKind.NOISE_MODEL:
         return {
             "version": POLICY_VERSION,
             "text": (
                 "This revision is subject to admin review. It may be edited while "
                 "pending review and is automatically published once approved. It "
                 "may then be withdrawn, and later revisions are also subject to review."
+            ),
+        }
+    if kind is SubmissionKind.NOISE_MODEL:
+        return {
+            "version": POLICY_VERSION,
+            "text": (
+                "Noise model submissions are validated and published immediately. "
+                "Publication is attributed to System. Official status is a separate "
+                "admin decision."
             ),
         }
     if kind is SubmissionKind.MACHINE:
@@ -85,7 +94,7 @@ def approval_process(
         SubmissionKind.RESULT: "result",
         SubmissionKind.TAG: "tag",
         SubmissionKind.NOISE_MODEL: "noise-model",
-        SubmissionKind.BENCHMARK: "benchmark",
+        SubmissionKind.BENCHMARK: "community benchmark",
         SubmissionKind.BENCHMARK_ATTEMPT: "benchmark-attempt",
     }[kind]
     return {
@@ -116,7 +125,7 @@ def approval_decision(
     if not submitter.is_active:
         raise ValueError("Inactive accounts cannot submit records.")
 
-    if reapproval:
+    if reapproval and kind is not SubmissionKind.NOISE_MODEL:
         return ApprovalDecision(
             policy_version=POLICY_VERSION,
             route=ApprovalRoute.ADMIN_REVIEW,
@@ -127,13 +136,14 @@ def approval_decision(
             ),
         )
 
-    if kind is SubmissionKind.MACHINE:
+    if kind in (SubmissionKind.MACHINE, SubmissionKind.NOISE_MODEL):
         return ApprovalDecision(
             policy_version=POLICY_VERSION,
             route=ApprovalRoute.IMMEDIATE_PUBLICATION,
             initial_state=LifecycleState.PUBLISHED,
             explanation=(
-                "Machine records publish immediately after validation; they do not "
+                "Machine and noise model records publish immediately after "
+                "validation; they do not "
                 "enter the approval queue."
             ),
         )
@@ -143,7 +153,7 @@ def approval_decision(
         route=ApprovalRoute.ADMIN_REVIEW,
         initial_state=LifecycleState.PENDING_REVIEW,
         explanation=(
-            "Every enabled record kind except machines requires admin approval under "
+            "Reviewed record kinds require admin approval under "
             "policy 0.1, including submissions made by admins."
         ),
     )

@@ -12,7 +12,7 @@ from .benchmarks import (
     BenchmarkRevision,
     BenchmarkRevisionItem,
 )
-from .circuits import CircuitRevision, NoiseModel
+from .circuits import CircuitRevision, CircuitSlugAlias, NoiseModel
 from .collections import (
     CircuitBatch,
     CircuitBatchItem,
@@ -41,6 +41,7 @@ from .evaluations import (
     ScoreDefinition,
 )
 from .governance import RecordEvent, RecordHistory
+from .result_batches import ResultBatch, ResultBatchItem
 from .tags import (
     CircuitRevisionCodeTag,
     CircuitRevisionExperimentTag,
@@ -51,6 +52,8 @@ from .tags import (
 )
 
 __all__ = [
+    "ResultBatch",
+    "ResultBatchItem",
     "Artifact",
     "ArtifactAttachment",
     "ArtifactGrant",
@@ -59,6 +62,7 @@ __all__ = [
     "BenchmarkRevision",
     "BenchmarkRevisionItem",
     "CircuitRevision",
+    "CircuitSlugAlias",
     "CircuitBatch",
     "CircuitBatchItem",
     "CircuitCollection",

@@ -1,0 +1,41 @@
+{
+  "circuit_revision": "38c61125-e1b7-5237-8ea2-cd851a2ee025",
+  "description": "SYNTHETIC DEMO ONLY — fabricated result 1/4 for Neural Localised Statistics Decoding 1.1 on Planar stability experiment d=5, p=0.001. No decoder was run. Scores, bounds and timings are invented and are not scientific evidence.",
+  "shots_total": 100000,
+  "successful_shots": 99905,
+  "logical_failure_shots": 95,
+  "timeout_shots": 0,
+  "decoder_error_shots": 0,
+  "failure_probability_shots": 100000,
+  "latency_shots": 100000,
+  "t_1000_ns": 650000,
+  "scores": [
+    {
+      "score_definition": "d75f071a-5182-5b2e-a7db-3289085e6d88",
+      "value": "0.0003000",
+      "point_estimate": "0.00024",
+      "lower_bound": "0.000192",
+      "upper_bound": "0.0003000",
+      "confidence_level": "0.95",
+      "sample_count": 100000,
+      "event_count": 95,
+      "details": {
+        "synthetic_plot_fixture": true
+      }
+    },
+    {
+      "score_definition": "921c4590-56ff-5c06-b059-9dea93bfb8c9",
+      "value": "0.0012",
+      "point_estimate": "0.0002",
+      "lower_bound": "0",
+      "upper_bound": "0.0012",
+      "confidence_level": "0.95",
+      "sample_count": 5000,
+      "event_count": 1,
+      "details": {
+        "acceptance": "0.05",
+        "synthetic_plot_fixture": true
+      }
+    }
+  ]
+}

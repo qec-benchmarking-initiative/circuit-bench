@@ -8,6 +8,7 @@ from django import forms
 from django.db.models import Q
 from django.http import QueryDict
 
+from registry.forms_common import SubmissionForm
 from registry.models import (
     Artifact,
     CircuitCollection,
@@ -37,7 +38,7 @@ class ResultChoiceField(forms.ModelChoiceField):
         return f"{obj.decoder_version} on {obj.circuit_revision} · {str(obj.id)[:8]}…"
 
 
-class WithdrawalForm(forms.Form):
+class WithdrawalForm(SubmissionForm):
     note = forms.CharField(
         label="Reason for withdrawal",
         widget=forms.Textarea(attrs={"rows": 5}),
@@ -45,10 +46,11 @@ class WithdrawalForm(forms.Form):
     )
 
 
-class BaseSubmissionForm(forms.Form):
+class BaseSubmissionForm(SubmissionForm):
     kind: SubmissionKind
 
     visibility = forms.ChoiceField(
+        widget=forms.RadioSelect(attrs={"class": "visibility-options"}),
         choices=RecordVisibility.choices,
         initial=RecordVisibility.PUBLIC,
         required=False,
@@ -200,6 +202,14 @@ class CircuitSubmissionForm(BaseSubmissionForm):
     )
     revision_description = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}))
     noise_model = forms.ModelChoiceField(queryset=NoiseModel.objects.none())
+    noise_parameter = forms.FloatField(
+        min_value=0,
+        required=False,
+        help_text=(
+            "Optional. Use the meaning and units defined in the selected "
+            "noise model's description."
+        ),
+    )
     is_css = forms.BooleanField(required=False, label="CSS circuit")
     code_distance_upper_bound = forms.IntegerField(min_value=1, required=False)
     circuit_distance_upper_bound = forms.IntegerField(min_value=1, required=False)
@@ -291,9 +301,13 @@ class CircuitSubmissionForm(BaseSubmissionForm):
     def clean_slug(self):
         slug = self.cleaned_data["slug"]
         matches = CircuitRevision.objects.filter(slug=slug)
+        from registry.models import CircuitSlugAlias
+
+        aliases = CircuitSlugAlias.objects.filter(slug=slug)
         if self.record is not None:
             matches = matches.exclude(id=self.record.id)
-        if matches.exists():
+            aliases = aliases.exclude(circuit_id=self.record.id)
+        if matches.exists() or aliases.exists():
             raise forms.ValidationError("That circuit slug is already in use.")
         return slug
 

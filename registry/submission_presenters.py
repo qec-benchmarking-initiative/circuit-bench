@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from registry.forms_submissions import submission_form_for_payload
 from registry.models.common import EDITABLE_CANDIDATE_STATES, REVIEW_QUEUE_STATES
+from registry.schema_contracts import field_guidance, release_for, schema_status
 from registry.services.submissions import record_label, record_url
 from registry.submission_form_layout import LAYOUTS
 from registry.submission_policy import SubmissionKind
@@ -21,6 +22,7 @@ def submission_rows(kind: SubmissionKind | str, records, *, admin=False, actor=N
     for record in records:
         row = {
             "id": record.id,
+            "schema_status": schema_status(record),
             "kind": kind.value,
             "kind_label": get_submission_spec(kind).label.title(),
             "label": record_label(kind, record),
@@ -230,6 +232,7 @@ def preview_sections(
     actor=None,
 ) -> list[dict]:
     kind = SubmissionKind(kind)
+    release = release_for(kind, payload.get("schema_version", "0.1"))
     form = submission_form_for_payload(
         kind,
         payload,
@@ -303,6 +306,7 @@ def preview_sections(
                 rendered_fields.append(
                     {
                         "name": name,
+                        "guidance": field_guidance(kind, name, release=release),
                         "label": field.label or name.replace("_", " ").title(),
                         "value": value,
                         "preformatted": preformatted,

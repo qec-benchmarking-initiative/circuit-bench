@@ -928,11 +928,19 @@ code {
   text-transform: none;
 }
 
+.policy-bar,
+.notice-bar {
+  border-top: 1px solid var(--line-strong);
+}
+
+.submission-top-actions {
+  margin-bottom: 0.65rem;
+}
+
 .submission-kind-grid,
 .submission-entry-grid {
   display: grid;
-  border-top: 1px solid var(--line-strong);
-  border-left: 1px solid var(--line-strong);
+  gap: 0.65rem;
 }
 
 .submission-kind-grid {
@@ -943,8 +951,7 @@ code {
 .submission-entry-panel {
   min-width: 0;
   padding: 0.8rem;
-  border-right: 1px solid var(--line-strong);
-  border-bottom: 1px solid var(--line-strong);
+  border: 1px solid var(--line-strong);
   background: var(--surface);
 }
 
@@ -2698,10 +2705,6 @@ code {
   border-bottom: 1px solid var(--line);
 }
 
-.circuit-facts > div:nth-last-child(-n + 6) {
-  border-bottom: 0;
-}
-
 .circuit-fact-wide {
   grid-column: span 2;
 }
@@ -2734,6 +2737,17 @@ code {
   grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
   gap: 1rem;
   padding: 0.65rem 0 0.8rem;
+}
+
+.circuit-provenance > summary {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.circuit-file-downloads {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .circuit-provenance-grid > section {
@@ -2814,6 +2828,24 @@ code {
 }
 
 /* Scientific record pages ------------------------------------------------ */
+
+.visibility-options { display: flex; flex-wrap: wrap; gap: 1rem; }
+.submission-radio-options { display: flex; flex-wrap: wrap; gap: 0.45rem 1.2rem; }
+.submission-radio-options label { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0; font-weight: 400; }
+.submission-radio-options input[type="radio"] { width: auto; min-width: 0; margin: 0; }
+.visibility-options label { display: inline-flex; align-items: center; gap: 0.35rem; margin: 0; }
+.visibility-options input[type="radio"] { width: auto; min-width: 0; height: auto; margin: 0; }
+.field-guidance { margin: 0 0 0.45rem; border: 0; background: transparent; font-size: 0.82rem; }
+.field-guidance > summary, .field-guidance-static { border: 0; background: transparent; }
+.field-guidance-summary { flex: 1; font-weight: 400; }
+.field-guidance-static { padding: 0.28rem 0.48rem; font: 400 0.76rem/1.2 var(--font-interface); }
+.field-guidance > summary { min-height: 0; font-weight: 400; }
+.field-guidance-body { padding: 0.45rem 0.65rem; max-width: 75ch; }
+.field-guidance-version, .schema-status { color: var(--muted); font: 0.75rem/1.4 var(--font-interface); }
+.schema-status-outdated { display: inline-block; border-left: 3px solid var(--accent); padding-left: 0.45rem; color: var(--ink); }
+.schema-warning-bar { margin-top: 0.45rem; padding: 0.45rem 0.6rem; border-left: 3px solid var(--accent); background: var(--accent-soft); color: var(--accent); }
+.schema-warning-bar .schema-status { border: 0; padding: 0; color: inherit; }
+.schema-warning-bar a { color: inherit; }
 
 .record-layout {
   padding-top: 0.65rem;
@@ -4475,6 +4507,8 @@ span.tag-choice-main {
 }
 
 .tag-create-fields > label,
+.tag-create-fields > .tag-create-field-description,
+.tag-create-fields > select,
 .tag-create-fields > textarea,
 .tag-create-fields > .tag-create-parent-label,
 .tag-create-fields > .tag-create-parent-control {
@@ -4488,9 +4522,22 @@ span.tag-choice-main {
 }
 
 .tag-create-fields > label,
+.tag-create-fields > .tag-create-field-description,
 .tag-create-fields > .tag-create-parent-label {
   background: var(--surface-muted);
   font: 700 0.74rem/1.3 var(--font-interface);
+}
+
+.tag-create-field-description label {
+  display: block;
+  margin: 0;
+}
+
+.tag-create-field-description small {
+  display: block;
+  margin-top: 0.2rem;
+  font-weight: 400;
+  color: var(--muted);
 }
 
 .tag-create-parent-control {

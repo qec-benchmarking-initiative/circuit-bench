@@ -163,6 +163,12 @@
       },
       "x-definition": "../../definitions/circuit/0.1.md#code-and-experiment-tags"
     },
+    "noise_parameter": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "description": "Optional physical noise parameter, interpreted according to the referenced noise model.",
+      "x-definition": "../../definitions/circuit/0.1.md#noise-model-and-realised-priors"
+    },
     "is_css": {
       "type": "boolean",
       "x-definition": "../../definitions/circuit/0.1.md#css-and-detector-basis-classification"

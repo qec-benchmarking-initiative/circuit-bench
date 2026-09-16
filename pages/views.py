@@ -131,10 +131,24 @@ def static_reference_page(request, slug):
 
 
 def definition(request, record_type, version):
-    try:
-        document = get_definition(record_type, version)
-    except ContentError as error:
-        raise Http404 from error
+    from pages.content import MarkdownDocument, render_markdown
+    from registry.schema_contracts import archived_definition_source
+
+    source = archived_definition_source(record_type, version)
+    if source is not None:
+        title, _, body = source.partition("\n")
+        document = MarkdownDocument(
+            slug=f"{record_type}/{version}",
+            title=title.lstrip("# "),
+            summary="",
+            body_markdown=body,
+            html=render_markdown(body),
+        )
+    else:
+        try:
+            document = get_definition(record_type, version)
+        except ContentError as error:
+            raise Http404 from error
     return render(request, "pages/static_page.html", {"document": document})
 
 

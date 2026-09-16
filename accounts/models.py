@@ -95,6 +95,7 @@ class PersonalApiToken(models.Model):
 
     class Scope(models.TextChoices):
         CIRCUITS_SUBMIT = "circuits:submit", "Submit circuits"
+        RESULTS_SUBMIT = "results:submit", "Submit results"
         COLLECTIONS_WRITE = "collections:write", "Manage circuit collections"
         TAGS_WRITE = "tags:write", "Manage community tags"
 

@@ -60,7 +60,10 @@ def submission_snapshot(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         for artifact in Artifact.objects.filter(id__in=artifact_ids)
     }
     return {
-        "schema": {"record_type": kind, "version": "0.1"},
+        "schema": {
+            "record_type": kind,
+            "version": payload.get("schema_version", "0.1"),
+        },
         "data": payload,
         "artifacts": artifacts,
     }
@@ -135,6 +138,18 @@ def append_history_event(
             "actor_system": actor_system,
         }
     )
+    if payload_snapshot is not None and getattr(record, "schema_release_id", None):
+        release = record.schema_release
+        payload_snapshot = {
+            **payload_snapshot,
+            "schema": {
+                "record_type": release.record_type,
+                "version": release.version,
+                "release_id": str(release.id),
+                "schema_sha256": release.json_schema_artifact.sha256,
+                "definitions_sha256": release.definitions_artifact.sha256,
+            },
+        }
     return RecordEvent.objects.create(
         history=history,
         sequence=latest + 1,

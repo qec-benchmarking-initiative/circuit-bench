@@ -1,0 +1,41 @@
+{
+  "circuit_revision": "fe8ac22d-f6d7-58d2-bb43-1e9ef8ca85e1",
+  "description": "SYNTHETIC DEMO ONLY — fabricated result 2/4 for Neural Localised Statistics Decoding 1.0 on Triangular colour-code memory d=5, p=0.001. No decoder was run. Scores, bounds and timings are invented and are not scientific evidence.",
+  "shots_total": 100000,
+  "successful_shots": 99760,
+  "logical_failure_shots": 240,
+  "timeout_shots": 0,
+  "decoder_error_shots": 0,
+  "failure_probability_shots": 100000,
+  "latency_shots": 100000,
+  "t_1000_ns": 950000,
+  "scores": [
+    {
+      "score_definition": "d75f071a-5182-5b2e-a7db-3289085e6d88",
+      "value": "0.000500",
+      "point_estimate": "0.0004",
+      "lower_bound": "0.00032",
+      "upper_bound": "0.000500",
+      "confidence_level": "0.95",
+      "sample_count": 100000,
+      "event_count": 240,
+      "details": {
+        "synthetic_plot_fixture": true
+      }
+    },
+    {
+      "score_definition": "921c4590-56ff-5c06-b059-9dea93bfb8c9",
+      "value": "0.002",
+      "point_estimate": "0.001",
+      "lower_bound": "0.0006",
+      "upper_bound": "0.002",
+      "confidence_level": "0.95",
+      "sample_count": 5000,
+      "event_count": 5,
+      "details": {
+        "acceptance": "0.05",
+        "synthetic_plot_fixture": true
+      }
+    }
+  ]
+}

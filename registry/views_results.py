@@ -40,6 +40,7 @@ RESULT_COLUMNS = (
         "experiment_tags", "Experiment tags", sortable=False, default_visible=False
     ),
     ColumnSpec("noise_model", "Noise model"),
+    ColumnSpec("noise_parameter", "Noise parameter", numeric=True),
     ColumnSpec("machine_class", "Machine type"),
     ColumnSpec("machine", "Machine"),
     ColumnSpec("shots", "Shots", numeric=True, default_direction="desc"),

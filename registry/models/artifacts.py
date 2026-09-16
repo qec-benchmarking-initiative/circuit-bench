@@ -156,6 +156,29 @@ class SchemaRelease(UUIDModel):
     def public_name(self) -> str:
         return f"{self.record_type}/{self.version}"
 
+    def save(self, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+
+        if self.pk:
+            old = type(self).objects.filter(pk=self.pk).first()
+            if old is not None and old.state in {"frozen", "retired"}:
+                immutable = (
+                    "record_type",
+                    "version",
+                    "json_schema_artifact_id",
+                    "definitions_artifact_id",
+                    "permanent_url",
+                )
+                if (
+                    any(getattr(old, key) != getattr(self, key) for key in immutable)
+                    or self.state == "draft"
+                ):
+                    raise ValidationError(
+                        "A frozen schema release cannot be rewritten. "
+                        "Create a new version."
+                    )
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         return self.public_name
 

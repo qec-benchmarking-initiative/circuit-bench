@@ -8,6 +8,7 @@
     <header class="page-heading compact-page-heading">
       <p class="eyebrow">{{ spec.label|capfirst }} submission</p>
       <h1>{{ record_label }}</h1>
+      {% if schema_status.outdated %}<div class="schema-warning-bar">{% include "components/schema_status.html" with status=schema_status only %}</div>{% endif %}
       <p><strong>State:</strong> <span class="status-badge status-{{ record.state }}">{{ record.get_state_display }}</span></p>
     </header>
 

@@ -5,7 +5,7 @@
   data-mode="{{ mode|default:'filter' }}"
   data-native-input-name="{{ input_name }}"
   {% if ecz_input_name %}data-ecz-input-name="{{ ecz_input_name }}"{% endif %}
-  {% if tag_namespace %}data-tag-namespace="{{ tag_namespace }}"{% endif %}
+  {% if tag_namespace and not namespace_choices %}data-tag-namespace="{{ tag_namespace }}"{% endif %}
   {% if excluded_key %}data-tag-excluded-key="{{ excluded_key }}"{% endif %}
   {% if create_url %}data-tag-create-url="{{ create_url }}"{% endif %}
   {% if created_redirect %}data-tag-created-redirect="true"{% endif %}
@@ -46,7 +46,7 @@
       </div>
     </dialog>
   {% else %}
-    {% include "components/pickers/tag_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=True namespace_choices=namespace_choices only %}
+    {% include "components/pickers/tag_body.html" with picker_id=picker_id label=label input_name=input_name tags=tags selected_keys=selected_keys mode=mode allow_create=True namespace_choices=namespace_choices tag_namespace=tag_namespace only %}
     <div class="picker-actions tag-create-standalone-actions">
       <button class="button-compact" type="button" data-tag-create disabled>Add new tag</button>
     </div>

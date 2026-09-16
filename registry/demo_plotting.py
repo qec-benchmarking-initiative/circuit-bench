@@ -512,6 +512,7 @@ def _seed_circuits(schema_release, contributor, published_at, tags, noises):
                 ),
                 revision_description="Synthetic first revision.",
                 noise_model=noises[spec["noise"]],
+                noise_parameter=0.001,
                 is_css=spec["is_css"],
                 code_distance_upper_bound=spec["distance"],
                 circuit_distance_upper_bound=spec["distance"],

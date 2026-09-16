@@ -135,6 +135,7 @@ def circuit_list(request):
         ColumnSpec("code_tags", "Code tags", sortable=False),
         ColumnSpec("experiment_tags", "Experiment tags", sortable=False),
         ColumnSpec("noise_model", "Noise model"),
+        ColumnSpec("noise_parameter", "Noise parameter", numeric=True),
         ColumnSpec("priors", "Randomised priors"),
         ColumnSpec("css", "CSS"),
         ColumnSpec("code_distance", "Code d ≤", numeric=True),
@@ -170,6 +171,7 @@ def circuit_list(request):
             {
                 "name": "name",
                 "noise_model": "noise_model__name",
+                "noise_parameter": "noise_parameter",
                 "priors": "noise_model__randomises_priors",
                 "css": "is_css",
                 "code_distance": "code_distance_upper_bound",
@@ -254,7 +256,13 @@ def circuit_list(request):
                 "key": "priors",
                 "value": "Yes" if circuit.noise_model.randomises_priors else "No",
             },
-            "css": {"key": "css", "value": "Yes" if circuit.is_css else "No"},
+            "noise_parameter": {
+                "key": "noise_parameter",
+                "value": circuit.noise_parameter,
+                "numeric": True,
+                "number_profile": "default",
+            },
+            "css": {"key": "css", "value": circuit.css_display},
             "code_distance": {
                 "key": "code_distance",
                 "value": circuit.code_distance_upper_bound,
@@ -340,6 +348,15 @@ def circuit_list(request):
 
 
 def circuit_detail(request, slug):
+    from django.shortcuts import redirect
+    from registry.models import CircuitSlugAlias
+    alias = CircuitSlugAlias.objects.filter(slug=slug).first()
+    if alias:
+        circuit = get_object_or_404(circuit_detail_queryset(request.user), pk=alias.circuit_id)
+        url = reverse("circuits:detail", args=[circuit.slug])
+        if request.GET:
+            url += "?" + request.GET.urlencode()
+        return redirect(url, permanent=True)
     circuit = get_object_or_404(circuit_detail_queryset(request.user), slug=slug)
     detail_url = reverse("circuits:detail", args=[circuit.slug])
     selected_tags = tuple(

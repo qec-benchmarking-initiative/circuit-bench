@@ -3,9 +3,9 @@
 <div class="submission-form-sections">
   {% for section in sections %}
     <section class="submission-form-section">
-      <header><h3>{{ section.title }}</h3>{% if section.description %}<p>{{ section.description }}</p>{% endif %}</header>
+      <header><h3>{{ section.title }}</h3></header>
       {% for group in section.groups %}
-        <div class="submission-field-group submission-field-group-{{ group.layout }}">
+        <div class="submission-field-group submission-field-group-stack">
           {% for item in group.fields %}
             {% include "components/submission_field.html" with item=item only %}
           {% endfor %}

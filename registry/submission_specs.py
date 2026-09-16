@@ -106,6 +106,7 @@ SUBMISSION_SCHEMAS: dict[SubmissionKind, dict[str, Any]] = {
             "description": NULLABLE_STRING,
             "revision_description": {"type": "string", "minLength": 1},
             "noise_model": UUID,
+            "noise_parameter": {"type": ["number", "null"], "minimum": 0},
             "is_css": {"type": "boolean"},
             "code_distance_upper_bound": NULLABLE_POSITIVE,
             "circuit_distance_upper_bound": NULLABLE_POSITIVE,
@@ -271,4 +272,5 @@ def get_submission_spec(kind: SubmissionKind | str) -> SubmissionSpec:
 
 
 def get_submission_schema(kind: SubmissionKind | str) -> dict[str, Any]:
-    return SUBMISSION_SCHEMAS[SubmissionKind(kind)]
+    from registry.schema_contracts import write_schema
+    return write_schema(kind)

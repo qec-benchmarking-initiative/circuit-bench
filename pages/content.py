@@ -130,8 +130,16 @@ def definition_documents() -> list[MarkdownDocument]:
     """Return every currently rendered versioned scientific definition."""
 
     documents = []
-    for path in sorted(DEFINITION_ROOT.glob("*/*.md")):
-        documents.append(get_definition(path.parent.name, path.stem))
+    paths = {*DEFINITION_ROOT.glob("*/*.md"), *DEFINITION_ROOT.glob("*/*.yaml")}
+    # Auxiliary form help is not a scientific definition document. Index each
+    # release once; get_definition already prefers YAML when both formats exist.
+    identifiers = {
+        (path.parent.name, path.stem)
+        for path in paths
+        if path.parent.name != "submission-guidance"
+    }
+    for record_type, version in sorted(identifiers):
+        documents.append(get_definition(record_type, version))
     return documents
 
 
@@ -141,8 +149,16 @@ def get_definition(record_type: str, version: str) -> MarkdownDocument:
     ):
         raise ContentError("Invalid definition identifier.")
     path = DEFINITION_ROOT / record_type / f"{version}.md"
+    yaml_path = path.with_suffix(".yaml")
     try:
-        source = path.read_text(encoding="utf-8")
+        if yaml_path.exists():
+            import yaml
+
+            from registry.schema_contracts import definition_markdown
+
+            source = definition_markdown(yaml.safe_load(yaml_path.read_text()))
+        else:
+            source = path.read_text(encoding="utf-8")
     except OSError as error:
         raise ContentError(f"Could not read definition file: {path}") from error
     lines = source.splitlines()

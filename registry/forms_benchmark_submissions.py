@@ -4,6 +4,7 @@ import json
 
 from django import forms
 
+from registry.forms_common import SubmissionForm
 from registry.models import BenchmarkRevision, DecoderVersion, Result
 from registry.models.common import RecordVisibility
 from registry.services.benchmark_submissions import (
@@ -12,8 +13,9 @@ from registry.services.benchmark_submissions import (
 )
 
 
-class BenchmarkRevisionSubmissionForm(forms.Form):
+class BenchmarkRevisionSubmissionForm(SubmissionForm):
     visibility = forms.ChoiceField(
+        widget=forms.RadioSelect(attrs={"class": "visibility-options"}),
         choices=RecordVisibility.choices,
         initial=RecordVisibility.PUBLIC,
         required=False,
@@ -79,7 +81,7 @@ class BenchmarkRevisionSubmissionForm(forms.Form):
         return cleaned
 
 
-class BenchmarkAttemptSelectionForm(forms.Form):
+class BenchmarkAttemptSelectionForm(SubmissionForm):
     benchmark_revision = forms.ModelChoiceField(
         queryset=BenchmarkRevision.objects.none(), label="Benchmark revision"
     )
@@ -103,7 +105,7 @@ class ResultForManifestField(forms.ModelChoiceField):
         return f"{str(result.id)[:8]}… · {machine} · {result.evaluator_version.version}"
 
 
-class BenchmarkAttemptResultsForm(forms.Form):
+class BenchmarkAttemptResultsForm(SubmissionForm):
     description = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={"rows": 3}),
@@ -125,6 +127,10 @@ class BenchmarkAttemptResultsForm(forms.Form):
                         circuit_revision=item.circuit_revision,
                     ).select_related("machine", "evaluator_version"),
                     required=item.is_required,
+                    help_text=(
+                        "Choose the published result for this circuit and "
+                        "the selected decoder version."
+                    ),
                     label=(
                         f"{item.position}. {item.circuit_revision.name} "
                         f"({'required' if item.is_required else 'optional'})"

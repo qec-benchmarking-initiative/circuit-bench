@@ -1,0 +1,44 @@
+version: '0.1'
+status: UI guidance for auxiliary forms; scientific record definitions remain in each record kind's versioned contract.
+common:
+  visibility: Public records are visible to everyone; private records are visible to their contributor and administrators.
+  slug: Choose a unique URL name using lowercase letters, digits and hyphens.
+  name: Give this record a concise, recognisable display name.
+  label: Give the tag a concise name that distinguishes its scientific concept.
+  namespace: Choose whether the tag describes a code, a circuit experiment or a decoding algorithm.
+  description: Describe the record and provide relevant context or references.
+  aliases: List alternative names or abbreviations, one per line or separated by commas.
+  parents: Choose broader concepts of the same tag type; parent relationships must not form a cycle.
+  ecz_parents: Choose broader code concepts from the Error Correction Zoo as direct parents.
+  code_tags: Choose the code families represented by these circuits.
+  ecz_terms: Choose applicable code classifications from the Error Correction Zoo.
+  experiment_tags: Choose the experiments represented, such as memory, surgery or cultivation.
+  version: Give this revision a version label distinct from earlier revisions in the same history.
+  previous_revision: Select the preceding published or withdrawn revision, if this updates an existing record.
+  revision_description: Explain what changed in this revision; describe the initial submission for a first revision.
+forms:
+  NoiseModelSubmissionForm:
+    name: Give this noise construction a recognisable name, independent of a particular physical error rate.
+    short_description: Describe the noise construction and define the meaning, units and allowed range of its noise parameter; state explicitly if none is used.
+    paper_url: Link to a paper describing this noise construction.
+    randomises_priors: Does this construction randomise the individual error probabilities when generating a circuit?
+    predecessor: Select the previous noise-model revision when updating an existing construction.
+  BenchmarkRevisionSubmissionForm:
+    description: Describe the benchmark's purpose, circuit selection and intended comparisons.
+    items_json: Select the ordered circuit revisions and mark which are required for a benchmark attempt.
+  BenchmarkAttemptSelectionForm:
+    benchmark_revision: Select the exact published benchmark revision to attempt.
+    decoder_version: Select the exact published decoder version used for all results in this attempt.
+  BenchmarkAttemptResultsForm:
+    description: Describe this attempt and any context shared by its constituent results.
+  CircuitCollectionForm:
+    description: Explain the collection's scope and how its circuits are related.
+    visibility: This controls the collection page only; member circuits retain their own visibility settings.
+  CircuitCollectionMembershipForm:
+    circuits: Select the circuits to include; changing membership does not change their ownership or visibility.
+    child_collections: Select subcollections to include; nesting must not form a cycle.
+  CircuitBatchUploadForm:
+    manifest_file: Upload a circuit-batch/0.1 JSON manifest mapping filenames to circuit submission data; alternatively paste JSON below.
+    manifest_json: Paste the manifest here instead of uploading a manifest file; supply exactly one of the two.
+    circuit_files: Upload the .stim files named in the manifest, directly or inside zip archives.
+    idempotency_key: Reuse this request key only when retrying the same batch, to avoid creating duplicate submissions.

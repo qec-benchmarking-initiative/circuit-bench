@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Submit benchmark revision · Circuit Bench{% endblock %}
+{% block title %}Submit community benchmark · Circuit Bench{% endblock %}
 
 {% block content %}
   <div class="page-shell compact-page">
     <header class="page-heading compact-page-heading">
       <p class="eyebrow">Submission</p>
-      <h1>Submit benchmark revision</h1>
+      <h1>Submit community benchmark</h1>
     </header>
     <aside class="policy-bar" aria-label="Approval process">
       <strong>Approval Process v0.1:</strong> Benchmark revisions are reviewed by an administrator before publication. Approval does not make a benchmark official; official recognition is a separate administrator decision.
@@ -29,6 +29,7 @@
 
       <section class="benchmark-manifest-field" aria-labelledby="benchmark-circuits-heading">
         <h2 id="benchmark-circuits-heading">Ordered circuit manifest</h2>
+        <p class="field-help">{{ form.items_json.help_text }}</p>
         <div class="table-scroll">
           <table class="data-table" data-benchmark-items-table>
             <thead><tr><th>Position</th><th>Circuit revision</th><th>Requirement</th><th>Order</th><th>Action</th></tr></thead>

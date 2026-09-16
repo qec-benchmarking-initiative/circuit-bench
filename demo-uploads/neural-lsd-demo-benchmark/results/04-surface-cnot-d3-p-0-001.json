@@ -1,0 +1,41 @@
+{
+  "circuit_revision": "3f41c32d-4804-53ec-bcdc-6a9bbbf1ceb8",
+  "description": "SYNTHETIC DEMO ONLY — fabricated result 4/4 for Neural Localised Statistics Decoding 1.0 on Surface-code logical CNOT d=3, p=0.001. No decoder was run. Scores, bounds and timings are invented and are not scientific evidence.",
+  "shots_total": 100000,
+  "successful_shots": 99820,
+  "logical_failure_shots": 180,
+  "timeout_shots": 0,
+  "decoder_error_shots": 0,
+  "failure_probability_shots": 100000,
+  "latency_shots": 100000,
+  "t_1000_ns": 850000,
+  "scores": [
+    {
+      "score_definition": "d75f071a-5182-5b2e-a7db-3289085e6d88",
+      "value": "0.000750",
+      "point_estimate": "0.0006",
+      "lower_bound": "0.00048",
+      "upper_bound": "0.000750",
+      "confidence_level": "0.95",
+      "sample_count": 100000,
+      "event_count": 180,
+      "details": {
+        "synthetic_plot_fixture": true
+      }
+    },
+    {
+      "score_definition": "921c4590-56ff-5c06-b059-9dea93bfb8c9",
+      "value": "0.0016",
+      "point_estimate": "0.0006",
+      "lower_bound": "0.0002",
+      "upper_bound": "0.0016",
+      "confidence_level": "0.95",
+      "sample_count": 5000,
+      "event_count": 3,
+      "details": {
+        "acceptance": "0.05",
+        "synthetic_plot_fixture": true
+      }
+    }
+  ]
+}

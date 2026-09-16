@@ -6,6 +6,14 @@ from pages.content import blog_posts, definition_documents, static_pages
 pytestmark = pytest.mark.django_db
 
 
+def test_definition_index_excludes_auxiliary_guidance_and_duplicates():
+    documents = definition_documents()
+    slugs = [document.slug for document in documents]
+    assert documents
+    assert not any(slug.startswith("submission-guidance") for slug in slugs)
+    assert len(slugs) == len(set(slugs))
+
+
 def test_home_and_about_index_link_every_static_document(client):
     home = client.get(reverse("pages:home"))
     about = client.get(reverse("pages:about"))

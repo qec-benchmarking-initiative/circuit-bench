@@ -18,22 +18,24 @@
       </div>
       <dl class="circuit-facts">
         <div class="circuit-fact-wide"><dt>Noise model</dt><dd><a href="{% url 'noise-models:detail' circuit.noise_model.slug %}">{{ circuit.noise_model.name }}</a></dd></div>
+        <div><dt>Noise parameter</dt><dd>{% scientific_number circuit.noise_parameter %}</dd></div>
         <div><dt>Priors randomised</dt><dd>{{ circuit.noise_model.randomises_priors|yesno:"Yes,No" }}</dd></div>
         <div><dt>Code distance upper bound</dt><dd>{% if circuit.code_distance_upper_bound != None %}{% scientific_number circuit.code_distance_upper_bound "count" %}{% else %}—{% endif %}</dd></div>
         <div><dt>Circuit distance upper bound</dt><dd>{% if circuit.circuit_distance_upper_bound != None %}{% scientific_number circuit.circuit_distance_upper_bound "count" %}{% else %}—{% endif %}</dd></div>
-        <div><dt>Rounds</dt><dd>{% if circuit.rounds != None %}{% scientific_number circuit.rounds "count" %}{% else %}—{% endif %}</dd></div>
         <div><dt>Detectors</dt><dd>{% scientific_number circuit.num_detectors "count" %}</dd></div>
         <div><dt>Errors</dt><dd>{% scientific_number circuit.num_errors "count" %}</dd></div>
         <div><dt>Observables</dt><dd>{% scientific_number circuit.num_observables "count" %}</dd></div>
-        <div><dt>CSS</dt><dd>{{ circuit.is_css|yesno:"Yes,No" }}</dd></div>
-        <div><dt>X only</dt><dd>{{ circuit.dem_x_detectors_only|yesno:"Yes,No" }}</dd></div>
-        <div><dt>Z only</dt><dd>{{ circuit.dem_z_detectors_only|yesno:"Yes,No" }}</dd></div>
+        <div><dt>CSS</dt><dd>{{ circuit.css_display }}</dd></div>
       </dl>
     </section>
 
     <details class="record-disclosure circuit-provenance">
       <summary>
         <span>Files and DEM construction</span>
+        <span class="circuit-file-downloads">
+          <a class="button button-secondary button-compact" href="{% url 'artifacts:download' circuit.sampling_circuit_artifact_id %}" download>Download Stim Circuit</a>
+          <a class="button button-secondary button-compact" href="{% url 'artifacts:download' circuit.detector_error_model_artifact_id %}" download>Download DEM</a>
+        </span>
         <span>Schema {{ circuit.schema_release.public_name }}</span>
       </summary>
       <div class="circuit-provenance-grid">

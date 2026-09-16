@@ -1,10 +1,28 @@
 from django.urls import path
 
-from registry import views_submissions
+from registry import views_result_batches, views_submissions
 
 app_name = "submissions"
 
 urlpatterns = [
+    path(
+        "submit/result/batch/", views_result_batches.create, name="result-batch-create"
+    ),
+    path(
+        "submit/result/batch/schema.json",
+        views_result_batches.schema,
+        name="result-batch-schema",
+    ),
+    path(
+        "submit/result/batch/<uuid:batch_id>/",
+        views_result_batches.preview,
+        name="result-batch-preview",
+    ),
+    path(
+        "submit/result/batch/<uuid:batch_id>/commit/",
+        views_result_batches.commit,
+        name="result-batch-commit",
+    ),
     path("submit/", views_submissions.submission_hub, name="hub"),
     path(
         "submit/preview/<uuid:preview_id>/",

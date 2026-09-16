@@ -33,6 +33,7 @@ from registry.services.taxonomy import (
     promote_tag_official,
     submit_noise_model,
 )
+from registry.submission_policy import approval_process
 
 PREVIEW_SESSION_KEY = "registry_taxonomy_previews"
 PREVIEW_LIMIT = 8
@@ -43,20 +44,15 @@ TAG_POLICY = {
         "vocabulary route. Administrators may later promote or deprecate them."
     ),
 }
-NOISE_MODEL_POLICY = {
-    "version": "0.1",
-    "text": (
-        "Noise-model submissions enter admin review as community models. Approval "
-        "publishes the community record; official status is a separate curation "
-        "decision."
-    ),
-}
+NOISE_MODEL_POLICY = approval_process("noise_model")
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def custom_tag_create(request):
     initial = _restored_initial(request, "tag")
+    if not initial and request.GET.get("namespace") in Tag.Namespace.values:
+        initial = {"namespace": request.GET["namespace"]}
     form = CustomTagForm(request.POST or None, initial=initial, actor=request.user)
     if request.method == "POST" and form.is_valid():
         token = _store_preview(request, "tag", form.payload())
@@ -71,6 +67,7 @@ def custom_tag_create(request):
             "policy": TAG_POLICY,
             "picker_tags": list(active_tag_queryset(actor=request.user)),
             "namespace_choices": Tag.Namespace.choices,
+            "initial_namespace": initial.get("namespace", "") if initial else "",
         },
     )
 
@@ -269,7 +266,7 @@ def noise_model_preview(request, preview_id):
                 ),
                 ("Previous revision", predecessor.name if predecessor else "None"),
                 ("Initial curation", "Community"),
-                ("Initial state", "Pending review"),
+                ("Initial state", "Published after validation"),
             ),
             "back_url": f"/taxonomy/noise-models/new/?preview={preview_id}",
             "error": error,

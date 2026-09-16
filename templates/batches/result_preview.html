@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load scientific %}
+{% block title %}Result batch preview · Circuit Bench{% endblock %}
+{% block content %}
+<div class="page-shell compact-page">
+  <header class="page-heading compact-page-heading"><p class="eyebrow">Batch preview</p><h1>{{ items|length }} result{{ items|length|pluralize }}</h1></header>
+  <aside class="policy-bar"><strong>{% if batch.committed_at %}Submitted{% else %}Nothing has been submitted yet{% endif %}</strong><span>All results enter the normal review queue. Validation runs again at submission; if any result fails, none are submitted.</span></aside>
+  <section class="table-section"><h2>Validated results</h2><div class="table-scroll"><table class="data-table"><thead><tr><th>File</th><th>Decoder</th><th>Circuit</th><th>Shots</th><th>Scores</th><th>Visibility</th></tr></thead><tbody>
+    {% for item in items %}<tr><td><code>{{ item.file_name }}</code></td><td>{{ item.decoder_label }}</td><td>{{ item.circuit_label }}</td><td>{% scientific_number item.payload.shots_total "count" %}</td><td>{{ item.payload.scores|length }}</td><td>{{ item.payload.visibility|title }}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <details class="record-disclosure"><summary><span>Validated result data</span></summary><pre><code>{{ manifest_json }}</code></pre></details>
+  <div class="page-action-bar"><a class="button button-secondary" href="{% url 'submissions:result-batch-create' %}">Back</a>{% if not batch.committed_at %}<form method="post" action="{% url 'submissions:result-batch-commit' batch.id %}">{% csrf_token %}<button class="button" type="submit">Submit results for review</button></form>{% else %}<a class="button" href="{% url 'submissions:profile' %}">View your submissions</a>{% endif %}</div>
+</div>
+{% endblock %}

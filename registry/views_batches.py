@@ -90,6 +90,8 @@ def batch_schema_json(request):
 
 @require_GET
 def openapi_json(request):
+    from registry.services.result_batches import batch_schema as result_batch_schema
+
     return JsonResponse(
         {
             "openapi": "3.1.0",
@@ -100,10 +102,73 @@ def openapi_json(request):
             "servers": [{"url": request.build_absolute_uri("/api/0.1/")}],
             "components": {
                 "securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}},
-                "schemas": {"CircuitBatchManifest": batch_schema()},
+                "schemas": {
+                    "CircuitBatchManifest": batch_schema(),
+                    "ResultBatchManifest": result_batch_schema(),
+                },
             },
             "security": [{"bearerAuth": []}],
             "paths": {
+                "/result-batches/validate/": {
+                    "post": {
+                        "summary": (
+                            "Validate result JSON files and a result-batch manifest "
+                            "(results:submit scope)"
+                        ),
+                        "requestBody": {
+                            "required": True,
+                            "content": {
+                                "multipart/form-data": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["manifest", "files"],
+                                        "properties": {
+                                            "manifest": {"type": "string"},
+                                            "files": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string",
+                                                    "format": "binary",
+                                                },
+                                            },
+                                        },
+                                    }
+                                }
+                            },
+                        },
+                        "responses": {
+                            "200": {"description": "Validated preview and commit URL"},
+                            "400": {"description": "Invalid batch"},
+                            "403": {"description": "Insufficient token scope"},
+                        },
+                    }
+                },
+                "/result-batches/{batch_id}/commit/": {
+                    "post": {
+                        "summary": (
+                            "Submit a validated result batch atomically "
+                            "(results:submit scope)"
+                        ),
+                        "parameters": [
+                            {
+                                "name": "batch_id",
+                                "in": "path",
+                                "required": True,
+                                "schema": {"type": "string", "format": "uuid"},
+                            }
+                        ],
+                        "responses": {
+                            "200": {"description": "Submitted results"},
+                            "400": {"description": "No results submitted"},
+                            "403": {
+                                "description": (
+                                    "Insufficient scope or batch owned "
+                                    "by another account"
+                                )
+                            },
+                        },
+                    }
+                },
                 "/circuit-batches/validate/": {
                     "post": {
                         "summary": "Validate circuit files and a batch manifest",

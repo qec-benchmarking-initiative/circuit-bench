@@ -11,6 +11,7 @@
       {% if record_label %}<p>Based on {{ record_label }}.</p>{% endif %}
     </header>
     {% if kind == "circuit" %}<div class="submission-top-actions"><a class="button" href="{% url 'collections:batch-create' %}">Upload a batch of circuits</a></div>{% endif %}
+    {% if kind == "result" %}<div class="submission-top-actions"><a class="button" href="{% url 'submissions:result-batch-create' %}">Upload a batch of results</a></div>{% endif %}
     {% include "components/api_submission_notice.html" %}
     {% include "components/approval_policy_bar.html" with policy=policy_statement only %}
 
@@ -19,6 +20,7 @@
         <header><h2>Structured form</h2></header>
         <form method="post" enctype="multipart/form-data" novalidate>
           <input type="hidden" name="mode" value="structured">
+          <input type="hidden" name="schema_version" value="{{ schema_version }}">
           {% include "components/revision_disposition.html" with revision_control=revision_control only %}
           {% include "components/submission_form_vertical.html" with form=structured_form sections=form_sections csrf_token=csrf_token only %}
           <div class="form-actions"><button class="button" type="submit">Preview {% if operation == "edit" %}edit{% elif operation == "successor" %}successor{% else %}structured submission{% endif %}</button></div>
@@ -28,11 +30,12 @@
       <section class="submission-entry-panel submission-json-panel">
         <header>
           <h2>JSON entry</h2>
-          <p>Circuit Bench validates this entry against the <a href="{% url 'submissions:schema' kind=kind %}">{{ spec.label }} submission schema 0.1</a> and the same semantic rules as the form.</p>
+          <p><a href="{% url 'submissions:schema' kind=kind %}">{{ spec.label|capfirst }} submission schema {{ schema_version }}</a></p>
         </header>
         <form method="post" novalidate>
           {% csrf_token %}
           <input type="hidden" name="mode" value="json">
+          <input type="hidden" name="schema_version" value="{{ schema_version }}">
           {% include "components/revision_disposition.html" with revision_control=revision_control only %}
           <label for="submission-json">Submission JSON</label>
           <textarea id="submission-json" class="submission-json" name="payload" rows="34" spellcheck="false">{{ raw_value }}</textarea>

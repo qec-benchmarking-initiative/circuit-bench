@@ -16,12 +16,13 @@
       <div class="submission-form-sections submission-preview-sections">
         {% for section in preview_sections %}
           <section class="submission-form-section">
-            <header><h3>{{ section.title }}</h3>{% if section.description %}<p>{{ section.description }}</p>{% endif %}</header>
+            <header><h3>{{ section.title }}</h3></header>
             {% for group in section.groups %}
-              <div class="submission-field-group submission-field-group-{{ group.layout }}">
+              <div class="submission-field-group submission-field-group-stack">
                 {% for item in group.fields %}
                   <div class="submission-field submission-preview-field">
-                    <span class="submission-preview-label">{{ item.label }}</span>
+                    {% include "components/field_guidance.html" with guidance=item.guidance label=item.label only %}
+                    {% if not item.guidance %}<span class="submission-preview-label">{{ item.label }}</span>{% endif %}
                     <div class="submission-preview-value">{% if item.preformatted %}<pre><code>{{ item.value }}</code></pre>{% else %}{{ item.value|linebreaksbr }}{% endif %}</div>
                   </div>
                 {% endfor %}

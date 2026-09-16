@@ -1,0 +1,41 @@
+{
+  "circuit_revision": "9b6d338a-a490-501c-ad4f-89fef776685a",
+  "description": "SYNTHETIC DEMO ONLY — fabricated result 3/4 for Neural Localised Statistics Decoding 1.1 on Bivariate bicycle 144 memory, p=0.001. No decoder was run. Scores, bounds and timings are invented and are not scientific evidence.",
+  "shots_total": 100000,
+  "successful_shots": 99720,
+  "logical_failure_shots": 280,
+  "timeout_shots": 0,
+  "decoder_error_shots": 0,
+  "failure_probability_shots": 100000,
+  "latency_shots": 100000,
+  "t_1000_ns": 1350000,
+  "scores": [
+    {
+      "score_definition": "d75f071a-5182-5b2e-a7db-3289085e6d88",
+      "value": "0.000500",
+      "point_estimate": "0.0004",
+      "lower_bound": "0.00032",
+      "upper_bound": "0.000500",
+      "confidence_level": "0.95",
+      "sample_count": 100000,
+      "event_count": 280,
+      "details": {
+        "synthetic_plot_fixture": true
+      }
+    },
+    {
+      "score_definition": "921c4590-56ff-5c06-b059-9dea93bfb8c9",
+      "value": "0.0022",
+      "point_estimate": "0.0012",
+      "lower_bound": "0.0008",
+      "upper_bound": "0.0022",
+      "confidence_level": "0.95",
+      "sample_count": 5000,
+      "event_count": 6,
+      "details": {
+        "acceptance": "0.05",
+        "synthetic_plot_fixture": true
+      }
+    }
+  ]
+}

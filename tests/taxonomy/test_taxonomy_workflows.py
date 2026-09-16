@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from django.db import IntegrityError, transaction
 from django.db.models import QuerySet
@@ -57,15 +59,24 @@ def _custom_tag(submitter, *, slug="community-decoder-method", namespace="algori
 
 
 def _pending_noise(submitter, *, slug="biased-circuit-noise", predecessor=None):
-    return submit_noise_model(
-        submitter=submitter,
-        slug=slug,
-        name=slug.replace("-", " ").title(),
-        short_description="A pending community noise model.",
-        paper_url="https://example.org/papers/community-noise",
-        randomises_priors=True,
-        predecessor=predecessor,
-    ).noise_model
+    # Preserve coverage for candidates submitted under the former review policy.
+    from registry.submission_policy import approval_decision
+
+    decision = approval_decision(
+        "circuit",
+        submitter,
+        reapproval=bool(predecessor and predecessor.state == "withdrawn"),
+    )
+    with patch("registry.services.taxonomy.approval_decision", return_value=decision):
+        return submit_noise_model(
+            submitter=submitter,
+            slug=slug,
+            name=slug.replace("-", " ").title(),
+            short_description="A pending community noise model.",
+            paper_url="https://example.org/papers/community-noise",
+            randomises_priors=True,
+            predecessor=predecessor,
+        ).noise_model
 
 
 def test_custom_tag_is_immediately_usable_with_exact_system_attribution(
@@ -193,7 +204,7 @@ def test_deprecated_alias_cannot_be_used_as_a_canonical_replacement(taxonomy_dat
         )
 
 
-def test_noise_model_submission_is_community_pending_and_not_public(taxonomy_data):
+def test_noise_model_submission_publishes_with_system_approval(taxonomy_data):
     contributor = taxonomy_data["contributor"]
     outcome = submit_noise_model(
         submitter=contributor,
@@ -205,15 +216,17 @@ def test_noise_model_submission_is_community_pending_and_not_public(taxonomy_dat
     )
     noise_model = outcome.noise_model
 
-    assert noise_model.state == "pending_review"
-    assert noise_model.published_at is None
+    assert noise_model.state == "published"
+    assert noise_model.published_at is not None
     assert noise_model.curation_status == NoiseModel.CurationStatus.COMMUNITY
-    assert not noise_model_catalogue().filter(id=noise_model.id).exists()
+    assert noise_model_catalogue().filter(id=noise_model.id).exists()
     event = noise_model.record_events.get(action="submitted")
     assert event.actor_account == contributor
     assert event.actor_system is None
-    assert event.details["approval_route"] == "admin_review"
-    assert not noise_model.record_events.filter(action="approved").exists()
+    assert event.details["approval_route"] == "immediate_publication"
+    approval = noise_model.record_events.get(action="approved")
+    assert approval.actor_account is None
+    assert approval.details["approved_by"] == "system"
 
 
 def test_noise_model_lineage_reuses_history_and_allows_one_successor(
