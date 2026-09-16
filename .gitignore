@@ -14,6 +14,7 @@ htmlcov/
 db.sqlite3
 media/
 staticfiles/
+.build-metadata.json
 
 # Environment and secrets
 .env

@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -99,6 +100,20 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEPLOYMENT_ENVIRONMENT = os.environ.get("DEPLOYMENT_ENVIRONMENT", "development")
+try:
+    _build_metadata = json.loads(
+        (BASE_DIR / ".build-metadata.json").read_text(encoding="utf-8")
+    )
+except (OSError, TypeError, json.JSONDecodeError):
+    _build_metadata = {}
+if not isinstance(_build_metadata, dict):
+    _build_metadata = {}
+DEPLOYMENT_GIT_COMMIT = os.environ.get(
+    "RENDER_GIT_COMMIT", str(_build_metadata.get("commit", ""))
+).strip()
+DEPLOYMENT_GIT_MESSAGE = os.environ.get(
+    "DEPLOYMENT_GIT_MESSAGE", str(_build_metadata.get("message", ""))
+).strip()
 PUBLIC_SITE_HOST = os.environ.get(
     "PUBLIC_SITE_HOST",
     os.environ.get("RENDER_EXTERNAL_HOSTNAME", "127.0.0.1:8000"),
